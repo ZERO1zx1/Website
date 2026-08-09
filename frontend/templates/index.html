@@ -3,74 +3,222 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Programming Learning Intelligence Platform</title>
+    <meta name="description" content="Programming Learning Intelligence Platform - Master coding through intelligent learning">
+    <title>Programming Learning Platform</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.50.0/min/vs/loader.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="app">
-        <!-- Navigation -->
-        <nav class="navbar">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="navbar-content">
             <div class="navbar-brand">
-                <h1>Programming Learning Platform</h1>
+                <span>🎓 CodeMastery</span>
             </div>
-            <div class="navbar-menu">
-                <div id="user-info" class="user-info"></div>
+            <ul class="navbar-menu">
+                <li><a href="#dashboard" class="nav-link">Dashboard</a></li>
+                <li><a href="#learn" class="nav-link">Learn</a></li>
+                <li><a href="#practice" class="nav-link">Practice</a></li>
+                <li><a href="#exams" class="nav-link">Exams</a></li>
+                <li><a href="#profile" class="nav-link">Profile</a></li>
+                <li><button id="logout-btn" class="btn btn-outline btn-sm">Logout</button></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Auth Section (shown when not logged in) -->
+        <div id="auth-section" class="auth-section hidden">
+            <div class="auth-card">
+                <h2 id="auth-title">Login</h2>
+                <form id="auth-form">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="role">Role</label>
+                        <select id="role" name="role">
+                            <option value="student">Student</option>
+                            <option value="teacher">Teacher</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <span id="auth-btn-text">Login</span>
+                    </button>
+                    <p style="text-align: center; margin-top: 1rem;">
+                        <a href="#" id="toggle-auth">Don't have an account? Sign up</a>
+                    </p>
+                </form>
             </div>
-        </nav>
+        </div>
 
-        <!-- Main Content -->
-        <main id="main-content" class="container">
-            <!-- Login Section -->
-            <section id="login-section" class="auth-section">
-                <div class="auth-card">
-                    <h2>Login</h2>
-                    <form id="login-form">
-                        <div class="form-group">
-                            <label for="email">Email</label>
-                            <input type="email" id="email" name="email" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="password">Password</label>
-                            <input type="password" id="password" name="password" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Login</button>
-                    </form>
-                    <p>Don't have an account? <a href="#" id="show-register">Register</a></p>
+        <!-- Dashboard Section -->
+        <div id="dashboard-section" class="hidden">
+            <h1>Welcome, <span id="user-name">User</span>!</h1>
+            <p class="text-muted">Your learning journey starts here</p>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-4" style="margin-top: 2rem;">
+                <div class="card">
+                    <div class="card-header">Total Skills</div>
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--primary);">
+                        <span id="total-skills">0</span>
+                    </div>
                 </div>
-            </section>
-
-            <!-- Register Section -->
-            <section id="register-section" class="auth-section" style="display: none;">
-                <div class="auth-card">
-                    <h2>Register</h2>
-                    <form id="register-form">
-                        <div class="form-group">
-                            <label for="reg-name">Name</label>
-                            <input type="text" id="reg-name" name="name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="reg-email">Email</label>
-                            <input type="email" id="reg-email" name="email" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="reg-password">Password</label>
-                            <input type="password" id="reg-password" name="password" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Register</button>
-                    </form>
-                    <p>Already have an account? <a href="#" id="show-login">Login</a></p>
+                <div class="card">
+                    <div class="card-header">Average Mastery</div>
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--success);">
+                        <span id="avg-mastery">0</span>%
+                    </div>
                 </div>
-            </section>
+                <div class="card">
+                    <div class="card-header">Problems Solved</div>
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--info);">
+                        <span id="problems-solved">0</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">Current Streak</div>
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--warning);">
+                        <span id="current-streak">0</span> days
+                    </div>
+                </div>
+            </div>
 
-            <!-- Dashboard Section -->
-            <section id="dashboard-section" style="display: none;">
-                <h2>Dashboard</h2>
-                <div id="dashboard-content"></div>
-            </section>
-        </main>
+            <!-- Recent Activity -->
+            <div style="margin-top: 2rem;">
+                <h2>Recent Activity</h2>
+                <div id="recent-activity" class="card">
+                    <p class="text-muted">No recent activity</p>
+                </div>
+            </div>
+
+            <!-- Enrolled Classes -->
+            <div style="margin-top: 2rem;">
+                <h2>My Classes</h2>
+                <div id="classes-list" class="grid grid-2">
+                    <p class="text-muted">No classes enrolled</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Learn Section -->
+        <div id="learn-section" class="hidden">
+            <h1>Learn</h1>
+            <p class="text-muted">Guided lessons to master programming concepts</p>
+            <div id="lessons-list" class="grid grid-3" style="margin-top: 2rem;">
+                <p class="text-muted">Loading lessons...</p>
+            </div>
+        </div>
+
+        <!-- Practice Section -->
+        <div id="practice-section" class="hidden">
+            <h1>Practice</h1>
+            <p class="text-muted">Solve problems and improve your skills</p>
+            <div id="problems-list" class="grid grid-3" style="margin-top: 2rem;">
+                <p class="text-muted">Loading problems...</p>
+            </div>
+        </div>
+
+        <!-- Exams Section -->
+        <div id="exams-section" class="hidden">
+            <h1>Exams</h1>
+            <p class="text-muted">Summative assessments to evaluate your knowledge</p>
+            <div id="exams-list" class="grid grid-2" style="margin-top: 2rem;">
+                <p class="text-muted">No exams available</p>
+            </div>
+        </div>
+
+        <!-- Profile Section -->
+        <div id="profile-section" class="hidden">
+            <h1>Profile</h1>
+            <div class="card">
+                <div class="card-header">User Information</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" id="profile-name" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="profile-email" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Role</label>
+                        <input type="text" id="profile-role" disabled>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mastery Heatmap -->
+            <div class="card" style="margin-top: 2rem;">
+                <div class="card-header">Skill Mastery</div>
+                <div id="mastery-heatmap" class="card-body">
+                    <p class="text-muted">Loading mastery data...</p>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <!-- Problem Modal -->
+    <div id="problem-modal" class="modal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 id="problem-title">Problem</h2>
+                <button onclick="closeProblemModal()" class="btn btn-secondary btn-sm">Close</button>
+            </div>
+            <div id="problem-content" class="card-body">
+                <p id="problem-description"></p>
+                <div style="background-color: var(--bg-tertiary); padding: 1rem; border-radius: 6px; margin: 1rem 0;">
+                    <p><strong>Difficulty:</strong> <span id="problem-difficulty" class="badge"></span></p>
+                    <p><strong>Skills:</strong> <span id="problem-skills"></span></p>
+                </div>
+                <div>
+                    <h4>Starter Code</h4>
+                    <pre><code id="problem-starter-code"></code></pre>
+                </div>
+            </div>
+            <div class="card-footer">
+                <button onclick="closeProblemModal()" class="btn btn-secondary">Cancel</button>
+                <button onclick="startProblem()" class="btn btn-primary">Start Solving</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Code Editor Modal -->
+    <div id="editor-modal" class="modal">
+        <div class="modal-content" style="max-width: 900px; width: 95%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 id="editor-title">Code Editor</h2>
+                <button onclick="closeEditorModal()" class="btn btn-secondary btn-sm">Close</button>
+            </div>
+            <div id="editor-container" style="height: 400px; border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 1rem;">
+                <textarea id="code-editor" style="width: 100%; height: 100%; padding: 1rem; font-family: var(--font-mono); font-size: 0.9rem; border: none; border-radius: 6px;"></textarea>
+            </div>
+            <div class="card-footer">
+                <button onclick="resetCode()" class="btn btn-secondary">Reset</button>
+                <button onclick="runCode()" class="btn btn-primary">Run Code</button>
+                <button onclick="submitCode()" class="btn btn-success">Submit</button>
+            </div>
+            <div id="editor-output" style="margin-top: 1rem; padding: 1rem; background-color: var(--bg-tertiary); border-radius: 6px; display: none;">
+                <h4>Output</h4>
+                <pre id="output-text"></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts Container -->
+    <div id="alerts-container" style="position: fixed; top: 80px; right: 20px; z-index: 999; max-width: 400px;"></div>
+
+    <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
