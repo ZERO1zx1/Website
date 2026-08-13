@@ -21,18 +21,29 @@ def create_app(config_name='development'):
     )
     
     # Configuration
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+    environment = os.getenv('FLASK_ENV', config_name or 'development').lower()
+    secret_key = os.getenv('SECRET_KEY')
+    if environment == 'production' and not secret_key:
+        raise RuntimeError('SECRET_KEY must be set when FLASK_ENV=production')
+    app.config['ENVIRONMENT'] = environment
+    app.config['SECRET_KEY'] = secret_key or 'dev-secret-key-change-in-production'
     app.config['JSON_SORT_KEYS'] = False
     app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
     frontend_only = os.getenv('FRONTEND_ONLY', 'false').lower() == 'true'
     app.config['FRONTEND_ONLY'] = frontend_only
     
-    # CORS Configuration
+    # CORS is explicit and environment-controlled; wildcard is not used by default.
+    cors_origins = [
+        origin.strip()
+        for origin in os.getenv('CORS_ORIGINS', 'http://localhost:5000,http://127.0.0.1:5000').split(',')
+        if origin.strip()
+    ]
+    app.config['CORS_ORIGINS'] = cors_origins
     CORS(app, resources={
         r"/api/*": {
-            "origins": ["*"],
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"]
+            "origins": cors_origins,
+            "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization", "Accept-Language"]
         }
     })
     
@@ -84,5 +95,5 @@ if __name__ == '__main__':
     app.run(
         host=os.getenv('HOST', '0.0.0.0'),
         port=int(os.getenv('PORT', 5000)),
-        debug=os.getenv('FLASK_DEBUG', False)
+        debug=os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
     )

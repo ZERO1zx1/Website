@@ -4,6 +4,7 @@ Supabase Database Client
 
 import os
 from supabase import create_client, Client
+from werkzeug.security import generate_password_hash
 
 class SupabaseDB:
     """Supabase database client wrapper"""
@@ -13,23 +14,29 @@ class SupabaseDB:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance._initialize()
+            cls._instance._client = None
         return cls._instance
-    
+
     def _initialize(self):
-        """Initialize Supabase client"""
+        """Initialize Supabase client only when a database operation is requested."""
         supabase_url = os.getenv('SUPABASE_URL')
         supabase_key = os.getenv('SUPABASE_KEY')
-        
+
         if not supabase_url or not supabase_key:
-            raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in environment")
-        
-        self.client: Client = create_client(supabase_url, supabase_key)
-    
+            raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set for backend database operations")
+
+        self._client = create_client(supabase_url, supabase_key)
+
+    @property
+    def client(self) -> Client:
+        if self._client is None:
+            self._initialize()
+        return self._client
+
     def get_client(self) -> Client:
         """Get Supabase client"""
         return self.client
-    
+
     # ============ USER OPERATIONS ============
     
     def create_user(self, email: str, password: str, name: str, role: str = 'student'):
@@ -38,7 +45,9 @@ class SupabaseDB:
             response = self.client.table('users').insert({
                 'email': email,
                 'name': name,
+                'password_hash': generate_password_hash(password),
                 'role': role,
+                'requested_role': None,
                 'teacher_approval_status': 'pending' if role == 'teacher' else 'approved'
             }).execute()
             return response.data[0] if response.data else None
@@ -59,6 +68,17 @@ class SupabaseDB:
         """Update user"""
         response = self.client.table('users').update(data).eq('id', user_id).execute()
         return response.data[0] if response.data else None
+
+    def get_pending_teacher_requests(self):
+        """Return users who requested teacher approval."""
+        response = (
+            self.client.table('users')
+            .select('id,email,name,role,requested_role,teacher_approval_status,created_at')
+            .eq('requested_role', 'teacher')
+            .eq('teacher_approval_status', 'pending')
+            .execute()
+        )
+        return response.data or []
     
     # ============ COURSE OPERATIONS ============
     
@@ -101,7 +121,12 @@ class SupabaseDB:
     def get_teacher_classes(self, teacher_id: int):
         """Get all classes for a teacher"""
         response = self.client.table('classes').select('*').eq('teacher_id', teacher_id).execute()
-        return response.data
+        return response.data or []
+
+    def get_all_classes(self):
+        """Get all classes for owner/admin dashboards."""
+        response = self.client.table('classes').select('*').execute()
+        return response.data or []
     
     # ============ PROBLEM OPERATIONS ============
     

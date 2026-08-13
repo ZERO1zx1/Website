@@ -23,12 +23,15 @@
         },
         async getDashboard() {
             const user = await this.getUser();
-            const mastery = await request(`/api/analytics/mastery/${user.id}`);
-            return normalizeDashboard(mastery);
+            const dashboard = await request('/api/analytics/dashboard');
+            return normalizeDashboard({ ...dashboard, user });
         },
         async getLearningPath(courseId) {
-            const payload = await request(`/api/courses/${courseId || 'current'}`);
-            return payload.data || payload.course || payload;
+            const payload = courseId
+                ? await request(`/api/courses/${courseId}`)
+                : await request('/api/courses');
+            const course = payload.course || payload.data?.[0] || payload.courses?.[0] || payload;
+            return { ...course, modules: course.modules || [] };
         },
         async getProblems(query = {}) {
             const params = new URLSearchParams(query);

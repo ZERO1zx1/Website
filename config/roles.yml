@@ -1,0 +1,90 @@
+version: 1
+locale:
+  default: en
+  supported:
+    - en
+    - mn
+roles:
+  owner:
+    label:
+      en: Owner
+      mn: Эзэмшигч
+    permissions:
+      - platform.read
+      - platform.settings.manage
+      - users.read
+      - users.manage
+      - roles.manage
+      - owner.manage
+      - teachers.approve
+      - courses.read
+      - courses.manage
+      - classes.manage
+      - problems.read
+      - problems.manage
+      - submissions.create
+      - submissions.read
+      - analytics.read
+      - teacher.dashboard.read
+      - student.dashboard.read
+      - audit.read
+  admin:
+    label:
+      en: Administrator
+      mn: Администратор
+    permissions:
+      - platform.read
+      - users.read
+      - users.manage
+      - roles.manage
+      - teachers.approve
+      - courses.read
+      - courses.manage
+      - classes.manage
+      - problems.read
+      - problems.manage
+      - submissions.create
+      - submissions.read
+      - analytics.read
+      - teacher.dashboard.read
+      - student.dashboard.read
+      - audit.read
+  teacher:
+    label:
+      en: Teacher
+      mn: Багш
+    permissions:
+      - courses.read
+      - courses.manage.own
+      - classes.manage.own
+      - problems.read
+      - problems.manage.own
+      - submissions.create
+      - submissions.read.assigned
+      - analytics.read.assigned
+      - teacher.dashboard.read
+  student:
+    label:
+      en: Student
+      mn: Суралцагч
+    permissions:
+      - courses.read
+      - problems.read
+      - submissions.create
+      - submissions.read.own
+      - analytics.read.own
+      - student.dashboard.read
+approval:
+  teacher_request:
+    initial_effective_role: student
+    requested_role: teacher
+    initial_status: pending
+    approvers:
+      - owner
+      - admin
+security:
+  owner_role_assigners:
+    - owner
+  owner_role_revokers:
+    - owner
+  client_role_input_allowed: false

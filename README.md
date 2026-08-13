@@ -144,6 +144,22 @@ FRONTEND_ONLY=true PYTHONPATH=. python -m flask --app 'app:create_app()' run --h
 
 The frontend includes the dashboard, learning path, practice library, assessments, profile/preferences, responsive navigation, theme switching and a mock code editor flow. Backend integration is intentionally deferred until the frontend screens and Figma structure are approved.
 
+## Backend stack and role model
+
+The backend uses Python and Flask for the application/API layer, Supabase for persistence, Docker for the web and isolated code execution environments, YAML for role/configuration data, and Markdown for architecture and integration handoff documentation.
+
+The supported roles are `owner` (**эзэмшигч**), `admin` (**администратор**), `teacher` (**багш**) and `student` (**суралцагч**). The owner is the highest platform role and can manage owner-level role assignments. Administrators manage operational resources and teacher approvals. Teachers manage their assigned classes and content. Students access their own learning, submissions and progress. The authoritative matrix is in [`docs/role-permission-spec.md`](docs/role-permission-spec.md), and the machine-readable policy is in [`config/roles.yml`](config/roles.yml).
+
+Backend work is intentionally sequenced as authentication, current user, dashboard, learning path, problems, teacher panel and submissions. Each integration preserves the frontend adapter contract and adds loading, empty, error and unauthorized states before moving to the next group.
+
+For a local container run, configure `.env` and use:
+
+```bash
+docker compose up --build
+```
+
+The backend runbook is documented in [`docs/backend-integration.md`](docs/backend-integration.md) and the project layout in [`docs/project-structure.md`](docs/project-structure.md).
+
 ## Installation
 
 ### Prerequisites
