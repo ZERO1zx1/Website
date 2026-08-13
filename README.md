@@ -126,6 +126,18 @@ programming-learning-platform/
     └── helpers.py           # Utility functions
 ```
 
+## Frontend-first workflow
+
+The current frontend prototype is intentionally complete before backend integration. It uses mock data through an adapter boundary in `frontend/static/js/app.js`, so screens and interactions can be reviewed without Supabase credentials. The design handoff is documented in [`docs/frontend-design-handoff.md`](docs/frontend-design-handoff.md).
+
+To preview the frontend without loading backend blueprints:
+
+```bash
+FRONTEND_ONLY=true PYTHONPATH=. python -m flask --app 'app:create_app()' run --host 0.0.0.0 --port 5000
+```
+
+The frontend includes the dashboard, learning path, practice library, assessments, profile/preferences, responsive navigation, theme switching and a mock code editor flow. Backend integration is intentionally deferred until the frontend screens and Figma structure are approved.
+
 ## Installation
 
 ### Prerequisites

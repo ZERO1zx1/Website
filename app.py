@@ -4,7 +4,7 @@ Flask Application Factory
 """
 
 import os
-from flask import Flask
+from flask import Flask, render_template
 from flask_cors import CORS
 from flask_login import LoginManager
 from dotenv import load_dotenv
@@ -14,12 +14,18 @@ load_dotenv()
 
 def create_app(config_name='development'):
     """Application factory function"""
-    app = Flask(__name__)
+    app = Flask(
+        __name__,
+        template_folder='frontend/templates',
+        static_folder='frontend/static',
+    )
     
     # Configuration
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     app.config['JSON_SORT_KEYS'] = False
     app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+    frontend_only = os.getenv('FRONTEND_ONLY', 'false').lower() == 'true'
+    app.config['FRONTEND_ONLY'] = frontend_only
     
     # CORS Configuration
     CORS(app, resources={
@@ -30,26 +36,33 @@ def create_app(config_name='development'):
         }
     })
     
-    # Initialize Flask-Login
-    login_manager = LoginManager()
-    login_manager.init_app(app)
-    login_manager.login_view = 'auth.login'
+    if not frontend_only:
+        # Initialize Flask-Login and register backend blueprints only when
+        # backend credentials are intentionally available.
+        login_manager = LoginManager()
+        login_manager.init_app(app)
+        login_manager.login_view = 'auth.login'
+
+        from routes.auth import auth_bp
+        from routes.courses import courses_bp
+        from routes.problems import problems_bp
+        from routes.submissions import submissions_bp
+        from routes.teacher import teacher_bp
+        from routes.analytics import analytics_bp
+
+        app.register_blueprint(auth_bp, url_prefix='/api/auth')
+        app.register_blueprint(courses_bp, url_prefix='/api/courses')
+        app.register_blueprint(problems_bp, url_prefix='/api/problems')
+        app.register_blueprint(submissions_bp, url_prefix='/api/submissions')
+        app.register_blueprint(teacher_bp, url_prefix='/api/teacher')
+        app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
     
-    # Register blueprints
-    from routes.auth import auth_bp
-    from routes.courses import courses_bp
-    from routes.problems import problems_bp
-    from routes.submissions import submissions_bp
-    from routes.teacher import teacher_bp
-    from routes.analytics import analytics_bp
-    
-    app.register_blueprint(auth_bp, url_prefix='/api/auth')
-    app.register_blueprint(courses_bp, url_prefix='/api/courses')
-    app.register_blueprint(problems_bp, url_prefix='/api/problems')
-    app.register_blueprint(submissions_bp, url_prefix='/api/submissions')
-    app.register_blueprint(teacher_bp, url_prefix='/api/teacher')
-    app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
-    
+    # Frontend shell. It intentionally renders without calling backend data APIs;
+    # the browser adapter uses mock data until the integration phase.
+    @app.route('/', methods=['GET'])
+    def frontend_shell():
+        return render_template('index.html')
+
     # Health check endpoint
     @app.route('/api/health', methods=['GET'])
     def health_check():
