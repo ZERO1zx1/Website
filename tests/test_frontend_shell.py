@@ -20,6 +20,9 @@ def test_frontend_shell_renders_without_backend_credentials(frontend_app):
     assert b'Codehaven' in response.data
     assert b'Keep your momentum' in response.data
     assert b'frontend/static' not in response.data
+    assert b'id="auth-view"' in response.data
+    assert b'id="language-select"' in response.data
+    assert b'data-auth-tab="register"' in response.data
 
 
 def test_frontend_static_assets_are_available(frontend_app):

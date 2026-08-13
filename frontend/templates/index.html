@@ -50,6 +50,7 @@
                     <span>6 lessons · 42 min</span>
                     <button class="text-button" data-view="learn">View path <span aria-hidden="true">→</span></button>
                 </div>
+                <button class="auth-preview-link" id="open-auth-screen" data-auth-view="login"><span aria-hidden="true">↗</span><span data-i18n="auth.preview">Preview login / register</span></button>
                 <div class="sidebar-user">
                     <div class="avatar avatar-small">NS</div>
                     <div><strong id="sidebar-user-name">Nara S.</strong><span>Student</span></div>
@@ -63,6 +64,13 @@
                 <button class="mobile-menu-button icon-button" id="mobile-menu" aria-label="Open navigation">☰</button>
                 <div class="breadcrumbs"><span id="breadcrumb-root">Overview</span><span class="breadcrumb-separator">/</span><strong id="breadcrumb-current">Dashboard</strong></div>
                 <div class="topbar-actions">
+                    <label class="language-select-wrap" for="language-select">
+                        <span aria-hidden="true">文</span>
+                        <select id="language-select" aria-label="Language selection">
+                            <option value="en">EN</option>
+                            <option value="mn">MN</option>
+                        </select>
+                    </label>
                     <label class="search-field" for="global-search">
                         <span aria-hidden="true">⌕</span>
                         <input id="global-search" type="search" placeholder="Search lessons, skills..." autocomplete="off">
@@ -157,7 +165,35 @@
                     <div class="profile-grid"><article class="panel profile-card"><div class="profile-header"><div class="avatar avatar-large">NS</div><div><h2>Nara Sukh</h2><p>Learning since June 2026</p><span class="pill pill-purple">PYTHON PATH</span></div><button class="button button-ghost">Edit profile</button></div><div class="profile-details"><div><span>Focus</span><strong>Python & problem solving</strong></div><div><span>Weekly goal</span><strong>15 hours</strong></div><div><span>Current level</span><strong>Intermediate</strong></div></div></article><article class="panel preferences-card"><div class="panel-heading"><div><p class="eyebrow">Preferences</p><h3>Make it yours</h3></div></div><label class="preference-row"><span><strong>Weekly reminders</strong><small>A gentle nudge when your goal is waiting.</small></span><input type="checkbox" checked><i class="toggle-control"></i></label><label class="preference-row"><span><strong>Focus mode</strong><small>Reduce visual noise while solving.</small></span><input type="checkbox"><i class="toggle-control"></i></label></article></div>
                 </section>
 
-                <section class="view" id="settings-view" data-page="settings"><div class="page-heading"><p class="eyebrow">Workspace</p><h1>Preferences</h1><p class="heading-copy">Tune the workspace for your best learning sessions.</p></div><div class="panel settings-panel"><div class="setting-row"><div><strong>Color theme</strong><span>Choose the environment that feels easiest on your eyes.</span></div><div class="segmented-control"><button class="is-active" data-theme-choice="light">Light</button><button data-theme-choice="dark">Dark</button></div></div><div class="setting-row"><div><strong>Editor font size</strong><span>Set a comfortable reading size for code.</span></div><select class="select-button"><option>14 px</option><option>16 px</option><option>18 px</option></select></div></div></section>
+                <section class="view" id="settings-view" data-page="settings"><div class="page-heading"><p class="eyebrow">Workspace</p><h1>Preferences</h1><p class="heading-copy">Tune the workspace for your best learning sessions.</p></div><div class="panel settings-panel"><div class="setting-row"><div><strong>Color theme</strong><span>Choose the environment that feels easiest on your eyes.</span></div><div class="segmented-control"><button class="is-active" data-theme-choice="light">Light</button><button data-theme-choice="dark">Dark</button></div></div><div class="setting-row"><div><strong>Language</strong><span>Choose the language for the learning workspace.</span></div><select class="select-button" id="settings-language-select"><option value="en">English</option><option value="mn">Монгол</option></select></div><div class="setting-row"><div><strong>Editor font size</strong><span>Set a comfortable reading size for code.</span></div><select class="select-button"><option>14 px</option><option>16 px</option><option>18 px</option></select></div></div></section>
+
+                <section class="view auth-view" id="auth-view" data-page="auth" aria-labelledby="auth-title">
+                    <div class="auth-shell">
+                        <div class="auth-intro">
+                            <div class="brand-lockup auth-brand"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span><span>codehaven</span></div>
+                            <div class="auth-intro-copy"><span class="pill pill-purple" data-i18n="auth.kicker">YOUR LEARNING SPACE</span><h1 data-i18n="auth.welcome">Build skills that move with you.</h1><p data-i18n="auth.intro">A focused workspace for learning, practicing and shipping better code.</p><div class="auth-benefits"><span><b>✓</b><span data-i18n="auth.benefit.progress">See progress that makes sense</span></span><span><b>✓</b><span data-i18n="auth.benefit.practice">Practice with feedback, not pressure</span></span><span><b>✓</b><span data-i18n="auth.benefit.path">Follow a path built around your goals</span></span></div></div>
+                        </div>
+                        <div class="auth-card panel">
+                            <div class="auth-card-top"><div><p class="eyebrow" data-i18n="auth.secure">SECURE ACCESS</p><h2 id="auth-title">Welcome back</h2><p id="auth-subtitle" data-i18n="auth.login.subtitle">Sign in to continue your learning journey.</p></div><button class="icon-button" data-view="dashboard" aria-label="Close authentication preview">×</button></div>
+                            <div class="auth-tabs" role="tablist"><button class="auth-tab is-active" data-auth-tab="login" role="tab" aria-selected="true" data-i18n="auth.login.tab">Sign in</button><button class="auth-tab" data-auth-tab="register" role="tab" aria-selected="false" data-i18n="auth.register.tab">Create account</button></div>
+                            <form class="auth-form" id="login-form" data-auth-form="login">
+                                <label class="auth-field"><span data-i18n="auth.email">Email address</span><div class="input-with-icon"><span aria-hidden="true">@</span><input type="email" name="email" autocomplete="email" placeholder="you@example.com" data-i18n-placeholder="auth.email.placeholder" required></div></label>
+                                <label class="auth-field"><span data-i18n="auth.password">Password</span><div class="input-with-icon"><span aria-hidden="true">•</span><input type="password" name="password" autocomplete="current-password" placeholder="Enter your password" data-i18n-placeholder="auth.password.placeholder" required><button type="button" class="password-toggle" aria-label="Show password">Show</button></div></label>
+                                <div class="auth-form-row"><label class="check-control"><input type="checkbox"><span></span><span data-i18n="auth.remember">Remember me</span></label><button type="button" class="link-button" data-i18n="auth.forgot">Forgot password?</button></div>
+                                <button class="button button-primary auth-submit" type="submit"><span data-i18n="auth.login.submit">Sign in</span><span aria-hidden="true">→</span></button>
+                            </form>
+                            <form class="auth-form is-hidden" id="register-form" data-auth-form="register">
+                                <label class="auth-field"><span data-i18n="auth.name">Full name</span><div class="input-with-icon"><span aria-hidden="true">◎</span><input type="text" name="name" autocomplete="name" placeholder="Your full name" data-i18n-placeholder="auth.name.placeholder" required></div></label>
+                                <label class="auth-field"><span data-i18n="auth.email">Email address</span><div class="input-with-icon"><span aria-hidden="true">@</span><input type="email" name="email" autocomplete="email" placeholder="you@example.com" data-i18n-placeholder="auth.email.placeholder" required></div></label>
+                                <label class="auth-field"><span data-i18n="auth.password">Password</span><div class="input-with-icon"><span aria-hidden="true">•</span><input type="password" name="password" autocomplete="new-password" placeholder="Create a password" data-i18n-placeholder="auth.register.password.placeholder" required><button type="button" class="password-toggle" aria-label="Show password">Show</button></div></label>
+                                <label class="check-control auth-terms"><input type="checkbox" required><span></span><span data-i18n="auth.terms">I agree to the Terms of Service and Privacy Policy.</span></label>
+                                <button class="button button-primary auth-submit" type="submit"><span data-i18n="auth.register.submit">Create account</span><span aria-hidden="true">→</span></button>
+                            </form>
+                            <div class="auth-divider"><span data-i18n="auth.or">or continue with</span></div><div class="social-auth"><button type="button" aria-label="Continue with Google">G</button><button type="button" aria-label="Continue with GitHub">GH</button><button type="button" aria-label="Continue with Discord">D</button></div>
+                            <p class="auth-demo-note"><span data-i18n="auth.demo">Frontend preview only.</span> <button type="button" class="link-button" id="continue-demo" data-i18n="auth.demo.continue">Continue as demo learner</button></p>
+                        </div>
+                    </div>
+                </section>
             </div>
         </main>
     </div>

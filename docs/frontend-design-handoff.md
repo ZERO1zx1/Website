@@ -72,6 +72,16 @@ FRONTEND_ONLY=true PYTHONPATH=. python -m flask --app 'app:create_app()' run --h
 
 The `FRONTEND_ONLY` switch prevents backend blueprints from loading when credentials are intentionally unavailable. It does not remove or alter the API blueprints used in the normal backend mode.
 
+For the expanded theme/i18n/auth preview, use the sidebar `Preview login / register` action, the topbar `EN/MN` selector and the theme toggle. The UI can be reviewed entirely without a Supabase connection.
+
+## Theme, localization and authentication
+
+The semantic theme contract covers page surfaces, raised panels, subtle surfaces, navigation, cards, form controls, native selects, input placeholders, checkbox states, segmented tabs, modal surfaces, chart backgrounds and focus rings. The code editor remains a stable dark work surface in both themes so syntax and output stay readable. Theme preference is persisted in local storage and is available from the topbar or Preferences.
+
+The frontend includes an English and Mongolian dictionary layer. The language selector is available in the topbar and Preferences, and the selected language is persisted in local storage. Static labels use `data-i18n`, placeholders use `data-i18n-placeholder`, and dynamic mock cards pass through the same translation layer. The language contract is intentionally frontend-only until the backend user profile can persist locale.
+
+The supplied Login/SignUp reference was used for the split-panel authentication direction, tabbed sign-in/create-account flow, social action row and responsive stacking pattern. The current auth preview adds accessible labels, password visibility control, remember-me and terms checkboxes, forgot-password affordance, demo continuation, EN/MN copy and dark mode support. The form submission remains mock-only and is ready to call the future auth adapter.
+
 ## Accessibility checklist
 
 All primary navigation is keyboard-operable through native buttons. The editor modal has a dialog role, `aria-modal`, a labelled heading, Escape close behavior and focus restoration. The chart includes a text alternative through `role="img"` and an accessible label. Status is communicated with text and shape in addition to color. Focus-visible states, reduced-motion behavior and responsive reflow are included in the CSS.
