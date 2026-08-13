@@ -4,8 +4,8 @@ Learning analytics and progress tracking
 """
 
 from flask import Blueprint, request, jsonify
-from routes.auth import token_required, teacher_required
-from db import db
+from backend.api.auth import token_required, teacher_required
+from backend.db import db
 
 analytics_bp = Blueprint('analytics', __name__)
 

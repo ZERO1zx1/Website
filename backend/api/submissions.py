@@ -4,8 +4,8 @@ Code submission and evaluation management
 """
 
 from flask import Blueprint, request, jsonify
-from routes.auth import token_required, teacher_required
-from db import db
+from backend.api.auth import token_required, teacher_required
+from backend.db import db
 from datetime import datetime
 
 submissions_bp = Blueprint('submissions', __name__)

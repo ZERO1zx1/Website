@@ -40,8 +40,11 @@ const apiAdapterContract = {
     submitCode: 'POST /api/submissions'
 };
 
+const backendEnabled = document.documentElement.dataset.backend === 'enabled';
+const selectedAdapter = backendEnabled && window.codehavenApiAdapter ? window.codehavenApiAdapter : mockAdapter;
+
 const app = {
-    dataAdapter: mockAdapter,
+    dataAdapter: selectedAdapter,
     user: null,
     currentView: 'dashboard',
     activeFilter: 'all',

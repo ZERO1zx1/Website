@@ -1,6 +1,6 @@
 import json
 
-from services.code_executor import CodeExecutor
+from backend.services.code_executor import CodeExecutor
 
 
 class FakeContainers:

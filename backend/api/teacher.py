@@ -4,8 +4,8 @@ Teacher dashboard and class management
 """
 
 from flask import Blueprint, request, jsonify
-from routes.auth import token_required, teacher_required
-from db import db
+from backend.api.auth import token_required, teacher_required
+from backend.db import db
 
 teacher_bp = Blueprint('teacher', __name__)
 

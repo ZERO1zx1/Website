@@ -43,12 +43,12 @@ def create_app(config_name='development'):
         login_manager.init_app(app)
         login_manager.login_view = 'auth.login'
 
-        from routes.auth import auth_bp
-        from routes.courses import courses_bp
-        from routes.problems import problems_bp
-        from routes.submissions import submissions_bp
-        from routes.teacher import teacher_bp
-        from routes.analytics import analytics_bp
+        from backend.api.auth import auth_bp
+        from backend.api.courses import courses_bp
+        from backend.api.problems import problems_bp
+        from backend.api.submissions import submissions_bp
+        from backend.api.teacher import teacher_bp
+        from backend.api.analytics import analytics_bp
 
         app.register_blueprint(auth_bp, url_prefix='/api/auth')
         app.register_blueprint(courses_bp, url_prefix='/api/courses')
@@ -61,7 +61,7 @@ def create_app(config_name='development'):
     # the browser adapter uses mock data until the integration phase.
     @app.route('/', methods=['GET'])
     def frontend_shell():
-        return render_template('index.html')
+        return render_template('index.html', backend_enabled=not frontend_only)
 
     # Health check endpoint
     @app.route('/api/health', methods=['GET'])

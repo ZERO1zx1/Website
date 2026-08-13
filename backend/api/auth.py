@@ -5,7 +5,7 @@ Server-side role enforcement and RBAC
 
 from flask import Blueprint, request, jsonify
 from functools import wraps
-from db import db
+from backend.db import db
 import jwt
 import os
 from datetime import datetime, timedelta

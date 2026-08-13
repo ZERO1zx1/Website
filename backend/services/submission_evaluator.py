@@ -6,8 +6,8 @@ Evaluates code submissions and manages results
 import logging
 from typing import Dict, List, Optional
 from datetime import datetime
-from services.code_executor import get_executor, SubmissionEvaluator
-from db import db
+from backend.services.code_executor import get_executor, SubmissionEvaluator
+from backend.db import db
 
 logger = logging.getLogger(__name__)
 
