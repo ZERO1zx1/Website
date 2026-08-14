@@ -3,9 +3,11 @@
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 import os
+import re
+from urllib.parse import urlencode
 
 import jwt
-from flask import Blueprint, current_app, request
+from flask import Blueprint, current_app, redirect, request, url_for
 from werkzeug.security import check_password_hash
 
 from backend.db import db
@@ -121,6 +123,123 @@ def _issue_token(user: dict) -> str:
         _secret_key(),
         algorithm="HS256",
     )
+
+
+def _auth_user_value(auth_user, key, default=None):
+    if isinstance(auth_user, dict):
+        return auth_user.get(key, default)
+    return getattr(auth_user, key, default)
+
+
+def _external_auth_payload(auth_response, provider: str):
+    auth_user = getattr(auth_response, "user", None)
+    if not auth_user:
+        raise RuntimeError("Supabase Auth did not return a user")
+    email = _auth_user_value(auth_user, "email")
+    if not email:
+        raise RuntimeError("The identity did not include an email address")
+    metadata = _auth_user_value(auth_user, "user_metadata", {}) or {}
+    name = metadata.get("full_name") or metadata.get("name") or email.split("@", 1)[0]
+    avatar_url = metadata.get("avatar_url") or metadata.get("picture")
+    local_user = db.ensure_external_user(
+        auth_user_id=str(_auth_user_value(auth_user, "id")),
+        email=email.strip().lower(),
+        name=name,
+        provider=provider,
+        avatar_url=avatar_url,
+    )
+    if not local_user:
+        raise RuntimeError("The local role record could not be created")
+    return {"token": _issue_token(local_user), "user": _public_user(local_user)}
+
+
+def _frontend_url():
+    return os.getenv("FRONTEND_URL", request.host_url.rstrip("/"))
+
+
+def _google_callback_url():
+    return os.getenv("GOOGLE_OAUTH_REDIRECT_URL") or url_for("auth.google_callback", _external=True)
+
+
+@auth_bp.route("/otp/request", methods=["POST"])
+def request_email_otp():
+    data = request.get_json(silent=True) or {}
+    email = str(data.get("email", "")).strip().lower()
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+        return error_response(
+            "invalid_email",
+            "Enter a valid Gmail or email address.",
+            "Зөв Gmail эсвэл имэйл хаяг оруулна уу.",
+            400,
+        )
+    try:
+        db.request_email_otp(email, redirect_to=os.getenv("OTP_REDIRECT_URL"))
+        return {
+            "message": "A one-time code was sent to your email.",
+            "message_mn": "Нэг удаагийн нэвтрэх кодыг таны имэйл рүү илгээлээ.",
+            "email": email,
+        }, 200
+    except Exception:
+        return error_response(
+            "otp_request_failed",
+            "The email code could not be sent. Check the Supabase email provider configuration.",
+            "Имэйлийн код илгээгдсэнгүй. Supabase-ийн email provider тохиргоог шалгана уу.",
+            502,
+        )
+
+
+@auth_bp.route("/otp/verify", methods=["POST"])
+def verify_email_otp():
+    data = request.get_json(silent=True) or {}
+    email = str(data.get("email", "")).strip().lower()
+    code = str(data.get("code", "")).strip()
+    if not email or not re.fullmatch(r"\d{6}", code):
+        return error_response(
+            "invalid_otp",
+            "Enter the email address and six-digit code.",
+            "Имэйл хаяг болон зургаан оронтой кодоо оруулна уу.",
+            400,
+        )
+    try:
+        auth_response = db.verify_email_otp(email, code)
+        return _external_auth_payload(auth_response, "email") | {
+            "message": "Email verification completed.",
+            "message_mn": "Имэйл баталгаажуулалт амжилттай боллоо.",
+        }, 200
+    except Exception:
+        return error_response(
+            "otp_verification_failed",
+            "The code is invalid or has expired.",
+            "Код буруу эсвэл хугацаа нь дууссан байна.",
+            401,
+        )
+
+
+@auth_bp.route("/google/start", methods=["GET"])
+def google_start():
+    try:
+        return {"url": db.google_login_url(_google_callback_url())}, 200
+    except Exception:
+        return error_response(
+            "google_oauth_unavailable",
+            "Google sign-in is not configured yet.",
+            "Google-ээр нэвтрэх тохиргоо одоогоор хийгдээгүй байна.",
+            503,
+        )
+
+
+@auth_bp.route("/google/callback", methods=["GET"])
+def google_callback():
+    code = request.args.get("code", "").strip()
+    if not code:
+        return redirect(f"{_frontend_url()}?auth_error=google_oauth_failed")
+    try:
+        auth_response = db.exchange_google_code(code)
+        payload = _external_auth_payload(auth_response, "google")
+        fragment = urlencode({"auth_token": payload["token"], "auth_provider": "google"})
+        return redirect(f"{_frontend_url()}#{fragment}")
+    except Exception:
+        return redirect(f"{_frontend_url()}?auth_error=google_oauth_failed")
 
 
 @auth_bp.route("/register", methods=["POST"])

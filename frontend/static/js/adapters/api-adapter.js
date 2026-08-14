@@ -2,7 +2,17 @@
 (function exposeCodehavenApiAdapter() {
     const tokenKey = 'codehaven-access-token';
 
+    function consumeOAuthSession() {
+        if (!window.location.hash) return;
+        const params = new URLSearchParams(window.location.hash.slice(1));
+        const token = params.get('auth_token');
+        if (!token) return;
+        localStorage.setItem(tokenKey, token);
+        window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`);
+    }
+
     function getToken() {
+        consumeOAuthSession();
         return localStorage.getItem(tokenKey);
     }
 
@@ -52,6 +62,24 @@
                 body: JSON.stringify({ name, email, password })
             });
             return saveSession(payload);
+        },
+        async requestOtp(email) {
+            return request('/api/auth/otp/request', {
+                method: 'POST',
+                body: JSON.stringify({ email })
+            });
+        },
+        async verifyOtp(email, code) {
+            const payload = await request('/api/auth/otp/verify', {
+                method: 'POST',
+                body: JSON.stringify({ email, code })
+            });
+            return saveSession(payload);
+        },
+        async startGoogleLogin() {
+            const payload = await request('/api/auth/google/start');
+            if (!payload.url) throw new Error('Google sign-in URL was not returned.');
+            window.location.assign(payload.url);
         },
         logout() {
             localStorage.removeItem(tokenKey);

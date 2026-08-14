@@ -41,7 +41,8 @@ const apiAdapterContract = {
 };
 
 const backendEnabled = document.documentElement.dataset.backend === 'enabled';
-const hasBackendSession = Boolean(localStorage.getItem('codehaven-access-token'));
+const hasOAuthSession = Boolean(new URLSearchParams(window.location.hash.slice(1)).get('auth_token'));
+const hasBackendSession = Boolean(localStorage.getItem('codehaven-access-token') || hasOAuthSession);
 const selectedAdapter = backendEnabled && hasBackendSession && window.codehavenApiAdapter ? window.codehavenApiAdapter : mockAdapter;
 
 const app = {
@@ -310,6 +311,16 @@ const translations = {
         'auth.name.placeholder': 'Your full name',
         'auth.terms': 'I agree to the Terms of Service and Privacy Policy.',
         'auth.or': 'or continue with',
+        'auth.useCode': 'Use an email code instead',
+        'auth.usePassword': 'Use password instead',
+        'auth.otp.subtitle': 'We will send a six-digit code to your email.',
+        'auth.otp.verifySubtitle': 'Enter the six-digit code from your email.',
+        'auth.otp.send': 'Send login code',
+        'auth.otp.code': 'Email code',
+        'auth.otp.placeholder': '000000',
+        'auth.otp.verify': 'Verify and sign in',
+        'auth.otp.resend': 'Send a new code',
+        'auth.google': 'Continue with Google',
         'auth.demo': 'Frontend preview only.',
         'auth.demo.continue': 'Continue as demo learner',
         'editor.workspace': 'Practice workspace',
@@ -354,6 +365,16 @@ const translations = {
         'auth.name.placeholder': 'Бүтэн нэрээ оруулна уу',
         'auth.terms': 'Үйлчилгээний нөхцөл болон Нууцлалын бодлогыг зөвшөөрч байна.',
         'auth.or': 'эсвэл дараахаар үргэлжлүүлэх',
+        'auth.useCode': 'Имэйлийн кодоор нэвтрэх',
+        'auth.usePassword': 'Нууц үгээр нэвтрэх',
+        'auth.otp.subtitle': 'Бид таны имэйл рүү зургаан оронтой код илгээнэ.',
+        'auth.otp.verifySubtitle': 'Имэйлээр ирсэн зургаан оронтой кодыг оруулна уу.',
+        'auth.otp.send': 'Нэвтрэх код илгээх',
+        'auth.otp.code': 'Имэйлийн код',
+        'auth.otp.placeholder': '000000',
+        'auth.otp.verify': 'Баталгаажуулаад нэвтрэх',
+        'auth.otp.resend': 'Шинэ код илгээх',
+        'auth.google': 'Google-ээр үргэлжлүүлэх',
         'auth.demo': 'Зөвхөн frontend preview.',
         'auth.demo.continue': 'Demo хэрэглэгчээр үргэлжлүүлэх',
         'editor.workspace': 'Дадлагын орчин',
@@ -397,6 +418,30 @@ function bindAuthentication() {
     document.querySelectorAll('[data-auth-tab]').forEach((tab) => {
         tab.addEventListener('click', () => setAuthMode(tab.dataset.authTab));
     });
+    document.getElementById('show-otp-login')?.addEventListener('click', () => setAuthMode('otp-request'));
+    document.getElementById('back-to-password-login')?.addEventListener('click', () => setAuthMode('login'));
+    document.getElementById('google-auth')?.addEventListener('click', async () => {
+        if (!backendEnabled || !window.codehavenApiAdapter) {
+            showToast(app.language === 'mn' ? 'Google нэвтрэлт backend mode-д ажиллана.' : 'Google sign-in is available in backend mode.', 'info');
+            return;
+        }
+        try {
+            await window.codehavenApiAdapter.startGoogleLogin();
+        } catch (error) {
+            const serverError = error.payload?.error;
+            showToast(app.language === 'mn' ? (serverError?.message_mn || 'Google-ээр нэвтрэх боломжгүй байна.') : (serverError?.message || error.message || 'Google sign-in is unavailable.'), 'error');
+        }
+    });
+    document.getElementById('resend-otp')?.addEventListener('click', async () => {
+        const email = document.querySelector('#otp-verify-form input[name="email"]')?.value;
+        if (!email || !backendEnabled || !window.codehavenApiAdapter) return;
+        try {
+            await window.codehavenApiAdapter.requestOtp(email);
+            showToast(app.language === 'mn' ? 'Шинэ код имэйл рүү илгээгдлээ.' : 'A new code was sent to your email.', 'success');
+        } catch (error) {
+            showToast(app.language === 'mn' ? 'Шинэ код илгээж чадсангүй.' : 'The new code could not be sent.', 'error');
+        }
+    });
     document.querySelectorAll('[data-auth-form]').forEach((form) => {
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -404,17 +449,33 @@ function bindAuthentication() {
             const submit = form.querySelector('.auth-submit');
             if (submit) submit.disabled = true;
             try {
-                if (backendEnabled && window.codehavenApiAdapter) {
+                if (form.id === 'otp-request-form') {
+                    if (!backendEnabled || !window.codehavenApiAdapter) {
+                        showToast(app.language === 'mn' ? 'OTP нэвтрэлт backend mode-д ажиллана.' : 'Email code sign-in is available in backend mode.', 'info');
+                        return;
+                    }
+                    await window.codehavenApiAdapter.requestOtp(fields.get('email'));
+                    document.querySelector('#otp-verify-form input[name="email"]').value = fields.get('email');
+                    setAuthMode('otp-verify');
+                    showToast(app.language === 'mn' ? 'Кодыг имэйлээ шалгана уу.' : 'Check your email for the six-digit code.', 'success');
+                    return;
+                }
+                if (form.id === 'otp-verify-form') {
+                    if (!backendEnabled || !window.codehavenApiAdapter) return;
+                    app.user = await window.codehavenApiAdapter.verifyOtp(fields.get('email'), fields.get('code'));
+                } else if (backendEnabled && window.codehavenApiAdapter) {
                     app.user = app.authMode === 'login'
                         ? await window.codehavenApiAdapter.login(fields.get('email'), fields.get('password'))
                         : await window.codehavenApiAdapter.register(fields.get('name'), fields.get('email'), fields.get('password'));
-                    app.dataAdapter = window.codehavenApiAdapter;
-                    hydrateUser(app.user);
-                    await refreshDataViews();
-                    showToast(app.language === 'mn' ? 'Амжилттай нэвтэрлээ.' : 'Signed in successfully.', 'success');
                 } else {
                     showToast(app.authMode === 'login' ? (app.language === 'mn' ? 'Demo нэвтрэлт амжилттай.' : 'Demo sign in successful.') : (app.language === 'mn' ? 'Demo бүртгэл бэлэн боллоо.' : 'Demo account created.'), 'success');
+                    window.setTimeout(() => showView('dashboard'), 500);
+                    return;
                 }
+                app.dataAdapter = window.codehavenApiAdapter;
+                hydrateUser(app.user);
+                await refreshDataViews();
+                showToast(app.language === 'mn' ? 'Амжилттай нэвтэрлээ.' : 'Signed in successfully.', 'success');
                 window.setTimeout(() => showView('dashboard'), 500);
             } catch (error) {
                 const serverError = error.payload?.error;
@@ -449,8 +510,9 @@ function setAuthMode(mode) {
     document.querySelectorAll('[data-auth-form]').forEach((form) => form.classList.toggle('is-hidden', form.dataset.authForm !== mode));
     const title = document.getElementById('auth-title');
     const subtitle = document.getElementById('auth-subtitle');
-    if (title) title.textContent = mode === 'login' ? (app.language === 'mn' ? 'Тавтай морилно уу' : 'Welcome back') : (app.language === 'mn' ? 'Бүртгэл үүсгэх' : 'Create your account');
-    if (subtitle) subtitle.dataset.i18n = mode === 'login' ? 'auth.login.subtitle' : 'auth.register.subtitle';
+    const loginFlow = mode === 'login' || mode === 'otp-request' || mode === 'otp-verify';
+    if (title) title.textContent = loginFlow ? (app.language === 'mn' ? 'Тавтай морилно уу' : 'Welcome back') : (app.language === 'mn' ? 'Бүртгэл үүсгэх' : 'Create your account');
+    if (subtitle) subtitle.dataset.i18n = mode === 'otp-request' ? 'auth.otp.subtitle' : mode === 'otp-verify' ? 'auth.otp.verifySubtitle' : loginFlow ? 'auth.login.subtitle' : 'auth.register.subtitle';
     applyLanguage();
 }
 

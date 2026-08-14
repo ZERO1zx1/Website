@@ -63,7 +63,65 @@ class SupabaseDB:
         """Get user by email"""
         response = self.client.table('users').select('*').eq('email', email).execute()
         return response.data[0] if response.data else None
-    
+
+    def get_user_by_auth_id(self, auth_user_id: str):
+        """Get a local user linked to a Supabase Auth identity."""
+        response = self.client.table('users').select('*').eq('auth_user_id', auth_user_id).execute()
+        return response.data[0] if response.data else None
+
+    def ensure_external_user(
+        self,
+        *,
+        auth_user_id: str,
+        email: str,
+        name: str,
+        provider: str,
+        avatar_url: str = None,
+    ):
+        """Link or create a local role record for an OTP/OAuth identity."""
+        user = self.get_user_by_auth_id(auth_user_id) or self.get_user_by_email(email)
+        identity_data = {
+            'auth_user_id': auth_user_id,
+            'auth_provider': provider,
+        }
+        if avatar_url:
+            identity_data['avatar_url'] = avatar_url
+        if user:
+            return self.update_user(user['id'], identity_data)
+        identity_data.update({
+            'email': email,
+            'name': name or email.split('@')[0],
+            'password_hash': None,
+            'role': 'student',
+            'requested_role': None,
+            'teacher_approval_status': 'approved',
+        })
+        response = self.client.table('users').insert(identity_data).execute()
+        return response.data[0] if response.data else None
+
+    def request_email_otp(self, email: str, redirect_to: str = None):
+        """Ask Supabase Auth to send its configured email OTP template."""
+        options = {'should_create_user': True}
+        if redirect_to:
+            options['email_redirect_to'] = redirect_to
+        return self.client.auth.sign_in_with_otp({'email': email, 'options': options})
+
+    def verify_email_otp(self, email: str, code: str):
+        """Verify a Supabase email OTP and return the Auth session."""
+        return self.client.auth.verify_otp({'email': email, 'token': code, 'type': 'email'})
+
+    def google_login_url(self, redirect_to: str):
+        """Return the Supabase-hosted Google OAuth authorization URL."""
+        response = self.client.auth.sign_in_with_oauth({
+            'provider': 'google',
+            'options': {'redirect_to': redirect_to},
+        })
+        return response.url
+
+    def exchange_google_code(self, code: str):
+        """Exchange the OAuth callback code for a Supabase Auth session."""
+        return self.client.auth.exchange_code_for_session({'auth_code': code})
+
     def update_user(self, user_id: int, data: dict):
         """Update user"""
         response = self.client.table('users').update(data).eq('id', user_id).execute()

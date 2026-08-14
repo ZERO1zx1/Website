@@ -181,6 +181,18 @@
                                 <label class="auth-field"><span data-i18n="auth.password">Password</span><div class="input-with-icon"><span aria-hidden="true">•</span><input type="password" name="password" autocomplete="current-password" placeholder="Enter your password" data-i18n-placeholder="auth.password.placeholder" required><button type="button" class="password-toggle" aria-label="Show password">Show</button></div></label>
                                 <div class="auth-form-row"><label class="check-control"><input type="checkbox"><span></span><span data-i18n="auth.remember">Remember me</span></label><button type="button" class="link-button" data-i18n="auth.forgot">Forgot password?</button></div>
                                 <button class="button button-primary auth-submit" type="submit"><span data-i18n="auth.login.submit">Sign in</span><span aria-hidden="true">→</span></button>
+                                <button type="button" class="link-button auth-otp-link" id="show-otp-login" data-i18n="auth.useCode">Use an email code instead</button>
+                            </form>
+                            <form class="auth-form is-hidden" id="otp-request-form" data-auth-form="otp-request">
+                                <label class="auth-field"><span data-i18n="auth.email">Email address</span><div class="input-with-icon"><span aria-hidden="true">@</span><input type="email" name="email" autocomplete="email" placeholder="you@example.com" data-i18n-placeholder="auth.email.placeholder" required></div></label>
+                                <button class="button button-primary auth-submit" type="submit"><span data-i18n="auth.otp.send">Send login code</span><span aria-hidden="true">→</span></button>
+                                <button type="button" class="link-button auth-otp-link" id="back-to-password-login" data-i18n="auth.usePassword">Use password instead</button>
+                            </form>
+                            <form class="auth-form is-hidden" id="otp-verify-form" data-auth-form="otp-verify">
+                                <input type="hidden" name="email">
+                                <label class="auth-field"><span data-i18n="auth.otp.code">Email code</span><input class="otp-input" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" data-i18n-placeholder="auth.otp.placeholder" required></label>
+                                <button class="button button-primary auth-submit" type="submit"><span data-i18n="auth.otp.verify">Verify and sign in</span><span aria-hidden="true">→</span></button>
+                                <button type="button" class="link-button auth-otp-link" id="resend-otp" data-i18n="auth.otp.resend">Send a new code</button>
                             </form>
                             <form class="auth-form is-hidden" id="register-form" data-auth-form="register">
                                 <label class="auth-field"><span data-i18n="auth.name">Full name</span><div class="input-with-icon"><span aria-hidden="true">◎</span><input type="text" name="name" autocomplete="name" placeholder="Your full name" data-i18n-placeholder="auth.name.placeholder" required></div></label>
@@ -189,7 +201,7 @@
                                 <label class="check-control auth-terms"><input type="checkbox" required><span></span><span data-i18n="auth.terms">I agree to the Terms of Service and Privacy Policy.</span></label>
                                 <button class="button button-primary auth-submit" type="submit"><span data-i18n="auth.register.submit">Create account</span><span aria-hidden="true">→</span></button>
                             </form>
-                            <div class="auth-divider"><span data-i18n="auth.or">or continue with</span></div><div class="social-auth"><button type="button" aria-label="Continue with Google">G</button><button type="button" aria-label="Continue with GitHub">GH</button><button type="button" aria-label="Continue with Discord">D</button></div>
+                            <div class="auth-divider"><span data-i18n="auth.or">or continue with</span></div><div class="social-auth"><button type="button" id="google-auth" aria-label="Continue with Google">G <span data-i18n="auth.google">Continue with Google</span></button></div>
                             <p class="auth-demo-note"><span data-i18n="auth.demo">Frontend preview only.</span> <button type="button" class="link-button" id="continue-demo" data-i18n="auth.demo.continue">Continue as demo learner</button></p>
                         </div>
                     </div>
