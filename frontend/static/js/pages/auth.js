@@ -39,12 +39,66 @@
         return payload?.user || payload;
     }
     function go(path) { window.location.assign(path); }
+    function isValidEmail(value) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim()); }
+    function validationCopy(key) {
+        const mn = document.documentElement.lang === 'mn';
+        const copy = {
+            email: mn ? 'Зөв имэйл хаяг оруулна уу.' : 'Enter a valid email address.',
+            password: mn ? 'Нууц үг хамгийн багадаа 8 тэмдэгттэй байна.' : 'Password must be at least 8 characters.',
+            requiredPassword: mn ? 'Нууц үгээ оруулна уу.' : 'Enter your password.',
+            token: mn ? 'Password reset холбоос буруу эсвэл дутуу байна.' : 'This password reset link is missing or invalid.',
+            summary: mn ? 'Үргэлжлүүлэхийн өмнө талбаруудыг засна уу.' : 'Please correct the highlighted fields before continuing.'
+        };
+        return copy[key] || key;
+    }
+    function clearValidation(form) {
+        form.querySelectorAll('[data-field-error]').forEach((node) => { node.textContent = ''; });
+        form.querySelectorAll('.is-invalid').forEach((node) => { node.classList.remove('is-invalid'); node.removeAttribute('aria-invalid'); });
+        const summary = form.querySelector('[data-validation-summary]');
+        if (summary) summary.textContent = '';
+    }
+    function setValidationError(form, field, text) {
+        const input = form.querySelector(`[name="${field}"]`);
+        const error = form.querySelector(`[data-field-error="${field}"]`);
+        if (input) { input.classList.add('is-invalid'); input.setAttribute('aria-invalid', 'true'); }
+        if (error) error.textContent = text;
+    }
+    function validatePageForm(form, data) {
+        const mode = form.dataset.pageAuth;
+        if (!['login', 'reset-request', 'reset-confirm'].includes(mode)) return { valid: true };
+        clearValidation(form);
+        const errors = [];
+        if (!isValidEmail(data.email) && ['login', 'reset-request'].includes(mode)) { setValidationError(form, 'email', validationCopy('email')); errors.push('email'); }
+        if (mode === 'login' && !String(data.password || '').trim()) { setValidationError(form, 'password', validationCopy('requiredPassword')); errors.push('password'); }
+        if (mode === 'login' && String(data.password || '').length > 0 && String(data.password || '').length < 8) { setValidationError(form, 'password', validationCopy('password')); errors.push('password'); }
+        if (mode === 'reset-confirm' && String(data.token || '').length < 20) { setValidationError(form, 'token', validationCopy('token')); errors.push('token'); }
+        if (mode === 'reset-confirm' && String(data.password || '').length < 8) { setValidationError(form, 'password', validationCopy('password')); errors.push('password'); }
+        if (errors.length) {
+            const summary = form.querySelector('[data-validation-summary]');
+            if (summary) summary.textContent = validationCopy('summary');
+            form.querySelector('.is-invalid')?.focus();
+            return { valid: false };
+        }
+        return { valid: true };
+    }
+    function wireValidationInputs() {
+        document.querySelectorAll('[data-page-auth] input').forEach((input) => input.addEventListener('input', () => {
+            input.classList.remove('is-invalid');
+            input.removeAttribute('aria-invalid');
+            const error = input.closest('label')?.querySelector(`[data-field-error="${input.name}"]`) || input.form?.querySelector(`[data-field-error="${input.name}"]`);
+            if (error) error.textContent = '';
+            const summary = input.form?.querySelector('[data-validation-summary]');
+            if (summary && !input.form.querySelector('.is-invalid')) summary.textContent = '';
+        }));
+    }
     function wireAuthForms() {
         document.querySelectorAll('[data-page-auth]').forEach((form) => form.addEventListener('submit', async (event) => {
             event.preventDefault();
+            const data = Object.fromEntries(new FormData(form).entries());
+            const validation = validatePageForm(form, data);
+            if (!validation.valid) return;
             const submit = form.querySelector('button[type="submit"]');
             if (submit) submit.disabled = true;
-            const data = Object.fromEntries(new FormData(form).entries());
             try {
                 if (form.dataset.pageAuth === 'login') {
                     const payload = await api.request('/api/auth/login', {method: 'POST', body: JSON.stringify({email: data.email, password: data.password})});
@@ -86,9 +140,17 @@
     }
     function wireRecoveryToken() {
         const form = document.querySelector('[data-page-auth="reset-confirm"]');
+        const requestForm = document.querySelector('[data-page-auth="reset-request"]');
         if (!form) return;
         const token = new URLSearchParams(window.location.search).get('token');
-        if (token) { form.hidden = false; form.querySelector('[name="token"]').value = token; }
+        const hasToken = Boolean(token);
+        form.hidden = !hasToken;
+        form.style.display = hasToken ? '' : 'none';
+        if (requestForm) {
+            requestForm.hidden = hasToken;
+            requestForm.style.display = hasToken ? 'none' : '';
+        }
+        if (hasToken) form.querySelector('[name="token"]').value = token;
     }
     function wireDashboard() {
         const dashboard = document.querySelector('[data-stat="mastery"]');
@@ -124,5 +186,5 @@
         if (!code) return;
         show(code === 'google_oauth_failed' ? 'Google sign-in could not be completed. Check the Supabase Google provider and callback URL.' : 'Authentication could not be completed.', 'error');
     }
-    wireAuthForms(); wireRecoveryToken(); wireDashboard(); applyProviderNote(); showCallbackError();
+    wireAuthForms(); wireValidationInputs(); wireRecoveryToken(); wireDashboard(); applyProviderNote(); showCallbackError();
 })();
