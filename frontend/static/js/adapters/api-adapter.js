@@ -93,8 +93,11 @@
             const payload = courseId
                 ? await request(`/api/courses/${courseId}`)
                 : await request('/api/courses');
-            const course = payload.course || payload.data?.[0] || payload.courses?.[0] || payload;
-            return { ...course, modules: course.modules || [] };
+            const courses = payload.courses || payload.data || (payload.course ? [payload.course] : []);
+            const course = courseId
+                ? (payload.course || courses.find((item) => String(item.id) === String(courseId)))
+                : (courses[0] || payload);
+            return { ...course, courses, modules: course?.modules || [] };
         },
         async getProblems(query = {}) {
             const params = new URLSearchParams(query);

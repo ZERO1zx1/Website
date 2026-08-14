@@ -29,6 +29,10 @@ def test_frontend_shell_renders_without_backend_credentials(frontend_app):
     assert b'js/adapters/api-adapter.js' in response.data
     assert b'data-i18n="editor.workspace"' in response.data
     assert b'data-i18n="editor.run"' in response.data
+    assert b'id="course-grid"' in response.data
+    assert b'id="curriculum-search"' in response.data
+    assert b'data-curriculum-tag="javascript"' in response.data
+    assert b'id="lesson-preview"' in response.data
     assert b'aria-live="polite"' in response.data
 
 

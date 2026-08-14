@@ -2,17 +2,17 @@
 
 const mockData = {
     user: { id: 7, name: 'Nara Sukh', initials: 'NS', role: 'Student', focus: 'Python & problem solving' },
+    courses: [
+        { id: 'python', icon: 'PY', level: { en: 'Beginner → Intermediate', mn: 'Анхан шат → Дунд шат' }, duration: { en: '6 weeks · 42 lessons', mn: '6 долоо хоног · 42 хичээл' }, title: { en: 'Python foundations', mn: 'Python-ийн суурь' }, description: { en: 'Learn Python syntax, data structures, functions, files, and practical problem solving.', mn: 'Python-ийн syntax, өгөгдлийн бүтэц, function, file болон бодит асуудал шийдэхийг сурна.' }, progress: 38, tags: ['python', 'programming', 'backend'], keywords: ['variables', 'functions', 'lists', 'dictionaries', 'oop'], modules: [{ number: '01', title: { en: 'Python essentials', mn: 'Python-ийн үндэс' }, meta: { en: 'Variables, types and control flow · 6 lessons', mn: 'Хувьсагч, төрөл, control flow · 6 хичээл' }, status: { en: 'Complete', mn: 'Дууссан' }, complete: true }, { number: '02', title: { en: 'Functions and clean code', mn: 'Function ба цэвэр код' }, meta: { en: 'Scope, arguments and reusable patterns · 7 lessons', mn: 'Scope, argument болон дахин ашиглах загвар · 7 хичээл' }, status: { en: 'Complete', mn: 'Дууссан' }, complete: true }, { number: '03', title: { en: 'Collections and comprehensions', mn: 'Collection ба comprehension' }, meta: { en: 'Lists, dictionaries and expressive iteration · 8 lessons', mn: 'List, dictionary болон iteration · 8 хичээл' }, status: { en: 'In progress', mn: 'Үргэлжилж байна' }, complete: false }] },
+        { id: 'web', icon: 'WEB', level: { en: 'Beginner', mn: 'Анхан шат' }, duration: { en: '4 weeks · 28 lessons', mn: '4 долоо хоног · 28 хичээл' }, title: { en: 'HTML & CSS responsive web', mn: 'HTML ба CSS responsive web' }, description: { en: 'Build semantic, accessible, responsive pages with modern HTML and CSS.', mn: 'Modern HTML, CSS ашиглан semantic, хүртээмжтэй, responsive page бүтээнэ.' }, progress: 0, tags: ['html', 'css', 'frontend'], keywords: ['semantic html', 'flexbox', 'grid', 'responsive', 'accessibility'], modules: [{ number: '01', title: { en: 'HTML structure', mn: 'HTML бүтэц' }, meta: { en: 'Semantic elements, forms and accessible markup · 7 lessons', mn: 'Semantic element, form болон хүртээмжтэй markup · 7 хичээл' }, status: { en: 'Start here', mn: 'Эндээс эхэл' }, complete: false }, { number: '02', title: { en: 'CSS layout systems', mn: 'CSS layout system' }, meta: { en: 'Box model, Flexbox, Grid and responsive rules · 9 lessons', mn: 'Box model, Flexbox, Grid болон responsive дүрэм · 9 хичээл' }, status: { en: 'Locked', mn: 'Түгжээтэй' }, complete: false }] },
+        { id: 'javascript', icon: 'JS', level: { en: 'Beginner → Intermediate', mn: 'Анхан шат → Дунд шат' }, duration: { en: '6 weeks · 36 lessons', mn: '6 долоо хоног · 36 хичээл' }, title: { en: 'JavaScript interactive web', mn: 'JavaScript интерактив web' }, description: { en: 'Make websites interactive with DOM, events, async requests, and browser APIs.', mn: 'DOM, event, async request болон browser API ашиглан website-ийг интерактив болгоно.' }, progress: 0, tags: ['javascript', 'frontend', 'web'], keywords: ['dom', 'events', 'fetch', 'async', 'modules'], modules: [{ number: '01', title: { en: 'JavaScript essentials', mn: 'JavaScript-ийн үндэс' }, meta: { en: 'Values, functions, arrays and objects · 8 lessons', mn: 'Утга, function, array болон object · 8 хичээл' }, status: { en: 'Start here', mn: 'Эндээс эхэл' }, complete: false }, { number: '02', title: { en: 'DOM and browser events', mn: 'DOM ба browser event' }, meta: { en: 'Build interactions that respond to real users · 8 lessons', mn: 'Бодит хэрэглэгчийн үйлдэлд хариулах interaction · 8 хичээл' }, status: { en: 'Locked', mn: 'Түгжээтэй' }, complete: false }] },
+        { id: 'flask', icon: 'API', level: { en: 'Intermediate', mn: 'Дунд шат' }, duration: { en: '5 weeks · 30 lessons', mn: '5 долоо хоног · 30 хичээл' }, title: { en: 'Python Flask backend', mn: 'Python Flask backend' }, description: { en: 'Create APIs, authentication, roles, databases, and production-ready Flask services.', mn: 'API, authentication, role, database болон production-ready Flask service бүтээнэ.' }, progress: 0, tags: ['python', 'flask', 'backend', 'api'], keywords: ['flask', 'rest api', 'jwt', 'supabase', 'docker'], modules: [{ number: '01', title: { en: 'Flask API foundations', mn: 'Flask API-ийн үндэс' }, meta: { en: 'Routes, blueprints, validation and JSON responses · 8 lessons', mn: 'Route, blueprint, validation болон JSON response · 8 хичээл' }, status: { en: 'Start here', mn: 'Эндээс эхэл' }, complete: false }, { number: '02', title: { en: 'Auth and data services', mn: 'Auth ба data service' }, meta: { en: 'JWT, role permissions and Supabase persistence · 10 lessons', mn: 'JWT, role permission болон Supabase хадгалалт · 10 хичээл' }, status: { en: 'Locked', mn: 'Түгжээтэй' }, complete: false }] },
+        { id: 'fullstack', icon: 'FS', level: { en: 'Intermediate → Advanced', mn: 'Дунд шат → Ахисан шат' }, duration: { en: '10 weeks · 60 lessons', mn: '10 долоо хоног · 60 хичээл' }, title: { en: 'Full-stack developer path', mn: 'Full-stack developer зам' }, description: { en: 'Ship a complete product from accessible frontend to secure backend and deployment.', mn: 'Хүртээмжтэй frontend-ээс найдвартай backend, deployment хүртэл бүрэн бүтээгдэхүүн бүтээнэ.' }, progress: 0, tags: ['full-stack', 'frontend', 'backend', 'deployment'], keywords: ['architecture', 'testing', 'security', 'docker', 'deployment'], modules: [{ number: '01', title: { en: 'Product architecture', mn: 'Бүтээгдэхүүний architecture' }, meta: { en: 'Design contracts across browser, API and database · 8 lessons', mn: 'Browser, API болон database хоорондын contract · 8 хичээл' }, status: { en: 'Start here', mn: 'Эндээс эхэл' }, complete: false }, { number: '02', title: { en: 'Ship and operate', mn: 'Бүтээж ажиллуулах' }, meta: { en: 'Testing, Docker, deployment and observability · 10 lessons', mn: 'Test, Docker, deployment болон observability · 10 хичээл' }, status: { en: 'Locked', mn: 'Түгжээтэй' }, complete: false }] }
+    ],
     recentPractice: [
         { title: 'Function scope', category: 'Python foundations', status: 'Completed', score: '92%', icon: 'ƒ' },
         { title: 'Flatten a nested list', category: 'Problem solving', status: 'Completed', score: '84%', icon: '[]' },
         { title: 'Dictionary frequency counter', category: 'Data structures', status: 'In progress', score: '—', icon: '{}' }
-    ],
-    modules: [
-        { number: '01', title: 'Python essentials', meta: 'Variables, types and control flow · 6 lessons', status: 'Complete', complete: true },
-        { number: '02', title: 'Functions and clean code', meta: 'Scope, arguments and reusable patterns · 7 lessons', status: 'Complete', complete: true },
-        { number: '03', title: 'Collections and comprehensions', meta: 'Lists, dictionaries and expressive iteration · 8 lessons', status: 'In progress', complete: false },
-        { number: '04', title: 'Object-oriented thinking', meta: 'Classes, composition and maintainable systems · 9 lessons', status: 'Up next', complete: false },
-        { number: '05', title: 'Working with APIs', meta: 'HTTP, JSON and your first useful integration · 6 lessons', status: 'Locked', complete: false }
     ],
     problems: [
         { id: 1, title: 'Even number filter', description: 'Practice list comprehensions by selecting values that match a condition.', difficulty: 'easy', topic: 'Python', progress: 'Solved', icon: '01' },
@@ -20,14 +20,20 @@ const mockData = {
         { id: 3, title: 'Merge overlapping ranges', description: 'Sort and combine ranges into the smallest non-overlapping set.', difficulty: 'hard', topic: 'Algorithms', progress: 'New', icon: '03' },
         { id: 4, title: 'Reverse words in place', description: 'Transform a sentence while preserving whitespace and word order rules.', difficulty: 'easy', topic: 'Strings', progress: 'Solved', icon: '04' },
         { id: 5, title: 'Balanced brackets', description: 'Build a stack-based checker for nested brackets and expressions.', difficulty: 'medium', topic: 'Stacks', progress: 'New', icon: '05' },
-        { id: 6, title: 'Shortest path grid', description: 'Find the shortest route through a grid with blocked cells.', difficulty: 'hard', topic: 'Graphs', progress: 'New', icon: '06' }
+        { id: 6, title: 'Shortest path grid', description: 'Find the shortest route through a grid with blocked cells.', difficulty: 'hard', topic: 'Graphs', progress: 'New', icon: '06', tags: ['python', 'algorithms'], keywords: ['graphs', 'bfs', 'grid'] },
+        { id: 7, title: 'Accessible profile card', description: 'Build semantic profile markup with labels, landmarks, and keyboard-friendly actions.', difficulty: 'easy', topic: 'HTML', progress: 'New', icon: '07', tags: ['html', 'frontend'], keywords: ['semantic html', 'aria', 'forms'] },
+        { id: 8, title: 'Responsive dashboard layout', description: 'Use CSS Grid and Flexbox to create a dashboard that works on small screens.', difficulty: 'easy', topic: 'CSS', progress: 'New', icon: '08', tags: ['css', 'frontend'], keywords: ['grid', 'flexbox', 'responsive'] },
+        { id: 9, title: 'Interactive theme toggle', description: 'Connect DOM events and local storage to build a persistent theme switcher.', difficulty: 'medium', topic: 'JavaScript', progress: 'New', icon: '09', tags: ['javascript', 'frontend'], keywords: ['dom', 'events', 'localstorage'] },
+        { id: 10, title: 'Flask JSON API', description: 'Create a validated Flask endpoint that returns consistent JSON responses.', difficulty: 'medium', topic: 'Flask', progress: 'New', icon: '10', tags: ['python', 'flask', 'backend'], keywords: ['routes', 'json', 'validation'] },
+        { id: 11, title: 'Role-aware full-stack route', description: 'Design a protected frontend and backend route for different user roles.', difficulty: 'hard', topic: 'Full-stack', progress: 'New', icon: '11', tags: ['full-stack', 'security'], keywords: ['auth', 'rbac', 'api'] },
+        { id: 12, title: 'Ship with Docker', description: 'Package a tested web application and document its local production workflow.', difficulty: 'hard', topic: 'Deployment', progress: 'New', icon: '12', tags: ['full-stack', 'deployment'], keywords: ['docker', 'testing', 'deployment'] }
     ]
 };
 
 const mockAdapter = {
     async getUser() { return mockData.user; },
     async getDashboard() { return { recentPractice: mockData.recentPractice }; },
-    async getLearningPath() { return { modules: mockData.modules }; },
+    async getLearningPath() { return { modules: mockData.courses[0].modules, courses: mockData.courses }; },
     async getProblems() { return { problems: mockData.problems }; }
 };
 
@@ -52,6 +58,10 @@ const app = {
     currentView: 'auth',
     activeFilter: 'all',
     problems: mockData.problems,
+    courses: mockData.courses,
+    curriculumTag: 'all',
+    curriculumQuery: '',
+    selectedCourseId: 'python',
     lastFocusedElement: null,
     theme: localStorage.getItem('codehaven-theme') || 'light',
     language: localStorage.getItem('codehaven-language') || 'en',
@@ -109,6 +119,19 @@ function bindInteractions() {
     document.getElementById('language-select')?.addEventListener('change', (event) => setLanguage(event.target.value));
     document.getElementById('settings-language-select')?.addEventListener('change', (event) => setLanguage(event.target.value));
     document.getElementById('landing-language-select')?.addEventListener('change', (event) => setLanguage(event.target.value));
+    document.getElementById('curriculum-search')?.addEventListener('input', (event) => {
+        app.curriculumQuery = event.target.value.trim().toLowerCase();
+        renderCourseCards(app.courses);
+    });
+    document.querySelectorAll('[data-curriculum-tag]').forEach((tag) => tag.addEventListener('click', () => {
+        app.curriculumTag = tag.dataset.curriculumTag;
+        document.querySelectorAll('[data-curriculum-tag]').forEach((item) => item.classList.toggle('is-active', item === tag));
+        renderCourseCards(app.courses);
+        const selected = app.courses.find((course) => course.id === app.selectedCourseId);
+        renderSelectedCourse(selected);
+    }));
+    document.getElementById('close-lesson-preview')?.addEventListener('click', () => document.getElementById('lesson-preview')?.classList.add('is-hidden'));
+    document.getElementById('complete-lesson')?.addEventListener('click', completeLessonPreview);
     document.getElementById('open-auth-screen')?.addEventListener('click', () => { setAuthMode('login'); showView('auth'); });
     document.querySelectorAll('[data-theme-choice]').forEach((button) => {
         button.addEventListener('click', () => setTheme(button.dataset.themeChoice));
@@ -190,14 +213,93 @@ async function renderDashboard() {
 
 async function renderLearningPath() {
     const path = await app.dataAdapter.getLearningPath();
-    const container = document.getElementById('module-list');
+    app.courses = path.courses?.length ? path.courses : mockData.courses;
+    renderCourseCards(app.courses);
+    renderSelectedCourse(app.courses.find((course) => course.id === app.selectedCourseId) || app.courses[0]);
+}
+
+function renderCourseCards(courses) {
+    const container = document.getElementById('course-grid');
     if (!container) return;
-    container.innerHTML = path.modules.map((module) => `
-        <article class="module-card ${module.complete ? 'is-complete' : ''}">
+    const query = app.curriculumQuery;
+    const filtered = courses.filter((course) => {
+        const searchable = [localizeContent(course.title), localizeContent(course.description), ...(course.tags || []), ...(course.keywords || [])].join(' ').toLowerCase();
+        const matchesTag = app.curriculumTag === 'all' || (course.tags || []).includes(app.curriculumTag);
+        return matchesTag && (!query || searchable.includes(query));
+    });
+    if (!filtered.length) {
+        container.innerHTML = `<div class="panel curriculum-empty" style="grid-column:1/-1">${app.language === 'mn' ? 'Ийм шүүлтүүртэй course олдсонгүй.' : 'No courses match these filters yet.'}</div>`;
+        return;
+    }
+    const selectedIsVisible = filtered.some((course) => course.id === app.selectedCourseId);
+    if (!selectedIsVisible) app.selectedCourseId = filtered[0].id;
+    container.innerHTML = filtered.map((course) => `
+        <article class="course-card ${course.id === app.selectedCourseId ? 'is-selected' : ''}">
+            <div class="course-card-top"><span class="course-icon">${course.icon}</span><span class="course-progress">${course.progress}%</span></div>
+            <h3>${localizeContent(course.title)}</h3><p>${localizeContent(course.description)}</p>
+            <div class="course-tags">${(course.tags || []).map((tag) => `<span class="tag-chip tag-chip-small">${tag}</span>`).join('')}</div>
+            <div class="course-card-meta"><span>${localizeContent(course.level)}</span><span>${localizeContent(course.duration)}</span></div>
+            <button class="text-button" data-select-course="${course.id}">${app.language === 'mn' ? 'Замыг харах' : 'View path'} <span aria-hidden="true">→</span></button>
+        </article>`).join('');
+    container.querySelectorAll('[data-select-course]').forEach((button) => button.addEventListener('click', () => {
+        app.selectedCourseId = button.dataset.selectCourse;
+        renderCourseCards(app.courses);
+        renderSelectedCourse(app.courses.find((course) => course.id === app.selectedCourseId));
+    }));
+    applyLanguage();
+}
+
+function renderSelectedCourse(course) {
+    if (!course) return;
+    const title = document.getElementById('curriculum-course-title');
+    const meta = document.getElementById('curriculum-course-meta');
+    const progress = document.getElementById('curriculum-course-progress');
+    const progressBar = document.getElementById('curriculum-progress-bar');
+    const container = document.getElementById('module-list');
+    if (title) title.textContent = localizeContent(course.title);
+    if (meta) meta.textContent = `${course.modules?.length || 0} ${app.language === 'mn' ? 'модуль' : 'modules'} · ${localizeContent(course.duration)}`;
+    if (progress) progress.textContent = `${course.progress || 0}%`;
+    if (progressBar) progressBar.style.width = `${course.progress || 0}%`;
+    if (!container) return;
+    container.innerHTML = (course.modules || []).map((module, index) => `
+        <article class="module-card ${module.complete ? 'is-complete' : ''}" data-open-lesson="${index}" tabindex="0" role="button">
             <span class="module-number">${module.complete ? '✓' : module.number}</span>
             <div class="module-content"><strong>${localizeContent(module.title)}</strong><span>${localizeContent(module.meta)}</span></div>
             <span class="module-status">${localizeContent(module.status)}</span>
         </article>`).join('');
+    container.querySelectorAll('[data-open-lesson]').forEach((moduleCard) => {
+        const open = () => openLessonPreview(course, Number(moduleCard.dataset.openLesson));
+        moduleCard.addEventListener('click', open);
+        moduleCard.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); } });
+    });
+}
+
+function openLessonPreview(course, moduleIndex) {
+    const module = course?.modules?.[moduleIndex];
+    if (!module) return;
+    const preview = document.getElementById('lesson-preview');
+    if (!preview) return;
+    preview.dataset.courseId = course.id;
+    preview.dataset.moduleIndex = String(moduleIndex);
+    document.getElementById('lesson-preview-title').textContent = localizeContent(module.title);
+    document.getElementById('lesson-preview-meta').textContent = localizeContent(module.meta);
+    document.getElementById('lesson-preview-objective').textContent = localizeContent(course.description);
+    document.getElementById('lesson-preview-keywords').innerHTML = (course.keywords || []).slice(0, 5).map((keyword) => `<span class="tag-chip tag-chip-small">${keyword}</span>`).join('');
+    preview.classList.remove('is-hidden');
+    preview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function completeLessonPreview() {
+    const preview = document.getElementById('lesson-preview');
+    const course = app.courses.find((item) => item.id === preview?.dataset.courseId);
+    const module = course?.modules?.[Number(preview?.dataset.moduleIndex)];
+    if (!module) return;
+    module.complete = true;
+    module.status = { en: 'Complete', mn: 'Дууссан' };
+    renderCourseCards(app.courses);
+    renderSelectedCourse(course);
+    preview.classList.add('is-hidden');
+    showToast(app.language === 'mn' ? 'Хичээл дууслаа. Ахиц хадгалагдлаа.' : 'Lesson complete. Progress saved in demo mode.', 'success');
 }
 
 async function renderProblems() {
@@ -230,6 +332,7 @@ function renderProblemCards(problems) {
         <article class="problem-card">
             <div class="problem-card-top"><span class="pill ${problem.progress === 'Solved' ? 'pill-teal' : 'pill-muted'}">${localizeContent(problem.progress)}</span><span class="practice-symbol">${problem.icon}</span></div>
             <h3>${localizeContent(problem.title)}</h3><p>${localizeContent(problem.description)}</p>
+            <div class="problem-tags">${(problem.tags || []).map((tag) => `<span class="tag-chip tag-chip-small">${tag}</span>`).join('')}</div>
             <div class="problem-card-footer"><span class="difficulty ${problem.difficulty}">${localizeContent(capitalize(problem.difficulty))} · ${localizeContent(problem.topic)}</span><button class="text-button" data-open-editor>${localizeContent('Solve')} <span aria-hidden="true">→</span></button></div>
         </article>`).join('');
     container.querySelectorAll('[data-open-editor]').forEach((button) => button.addEventListener('click', openEditor));
@@ -325,6 +428,16 @@ const translations = {
         'landing.feature2Text': 'Small problems, visible feedback, and room to try again.',
         'landing.feature3Title': 'See your progress',
         'landing.feature3Text': 'Mastery and activity views that make improvement tangible.',
+        'curriculum.eyebrow': 'YOUR CURRICULUM',
+        'curriculum.title': 'Learning paths',
+        'curriculum.description': 'Choose a technology, follow the sequence, and build practical confidence.',
+        'curriculum.searchPlaceholder': 'Search courses, tags, keywords...',
+        'curriculum.all': 'All',
+        'curriculum.selected': 'SELECTED PATH',
+        'lesson.previewKicker': 'LESSON PREVIEW',
+        'lesson.objective': 'What you will learn',
+        'lesson.keywords': 'Keywords',
+        'lesson.markComplete': 'Mark lesson complete',
         'auth.preview': 'Preview login / register',
         'auth.kicker': 'YOUR LEARNING SPACE',
         'auth.welcome': 'Build skills that move with you.',
@@ -400,6 +513,16 @@ const translations = {
         'landing.feature2Text': 'Жижиг бодлого, харагдах feedback, дахин оролдох боломж.',
         'landing.feature3Title': 'Ахицаа хараарай',
         'landing.feature3Text': 'Mastery болон идэвхийн ойлгомжтой мэдээллээр хөгжлөө хэмж.',
+        'curriculum.eyebrow': 'ТАНЫ СУРАЛЦАХ ЗАМ',
+        'curriculum.title': 'Суралцах замууд',
+        'curriculum.description': 'Технологио сонгож, дарааллаа дагаж, практик ур чадвараа хөгжүүлээрэй.',
+        'curriculum.searchPlaceholder': 'Course, tag, keyword хайх...',
+        'curriculum.all': 'Бүгд',
+        'curriculum.selected': 'СОНГОСОН ЗАМ',
+        'lesson.previewKicker': 'ХИЧЭЭЛИЙН ТОВЧООН',
+        'lesson.objective': 'Та юу сурах вэ?',
+        'lesson.keywords': 'Түлхүүр үгс',
+        'lesson.markComplete': 'Хичээлийг дууссан гэж тэмдэглэх',
         'auth.preview': 'Нэвтрэх / бүртгүүлэх харах',
         'auth.kicker': 'ТАНЫ СУРАЛЦАХ ОРЧИН',
         'auth.welcome': 'Өөртэй тань хамт хөгжих ур чадвар бүтээ.',
