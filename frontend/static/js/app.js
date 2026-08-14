@@ -43,12 +43,13 @@ const apiAdapterContract = {
 const backendEnabled = document.documentElement.dataset.backend === 'enabled';
 const hasOAuthSession = Boolean(new URLSearchParams(window.location.hash.slice(1)).get('auth_token'));
 const hasBackendSession = Boolean(localStorage.getItem('codehaven-access-token') || hasOAuthSession);
+const demoMode = sessionStorage.getItem('codehaven-demo-mode') === 'true';
 const selectedAdapter = backendEnabled && hasBackendSession && window.codehavenApiAdapter ? window.codehavenApiAdapter : mockAdapter;
-
 const app = {
     dataAdapter: selectedAdapter,
     user: null,
-    currentView: 'dashboard',
+    isDemoMode: demoMode,
+    currentView: 'auth',
     activeFilter: 'all',
     problems: mockData.problems,
     lastFocusedElement: null,
@@ -58,6 +59,7 @@ const app = {
 };
 
 const viewLabels = {
+    home: ['Home', 'Welcome'],
     dashboard: ['Overview', 'Dashboard'],
     learn: ['Learning', 'Learning path'],
     practice: ['Practice', 'Practice library'],
@@ -73,24 +75,32 @@ async function initializeApp() {
     document.documentElement.dataset.theme = app.theme;
     bindNavigation();
     bindInteractions();
-    try {
-        app.user = await app.dataAdapter.getUser();
-    } catch (error) {
-        window.codehavenApiAdapter?.logout?.();
-        app.dataAdapter = mockAdapter;
+    if (app.isDemoMode) {
         app.user = mockData.user;
+        app.dataAdapter = mockAdapter;
+    } else if (hasBackendSession && window.codehavenApiAdapter) {
+        try {
+            app.user = await window.codehavenApiAdapter.getUser();
+        } catch (error) {
+            window.codehavenApiAdapter.logout?.();
+            app.user = null;
+            app.dataAdapter = mockAdapter;
+        }
     }
-    hydrateUser(app.user || mockData.user);
+    hydrateUser(app.user || { name: app.language === 'mn' ? 'Зочин' : 'Guest' });
     bindAuthentication();
     applyLanguage();
-    await refreshDataViews();
+    if (app.user) await refreshDataViews();
     applyLanguage();
-    showView('dashboard');
+    showView(app.user ? 'dashboard' : 'home');
 }
 
 function bindNavigation() {
     document.querySelectorAll('[data-view]').forEach((control) => {
-        control.addEventListener('click', () => showView(control.dataset.view));
+        control.addEventListener('click', () => {
+            if (control.dataset.authTarget) setAuthMode(control.dataset.authTarget);
+            showView(control.dataset.view);
+        });
     });
 }
 
@@ -98,6 +108,7 @@ function bindInteractions() {
     document.getElementById('theme-toggle')?.addEventListener('click', toggleTheme);
     document.getElementById('language-select')?.addEventListener('change', (event) => setLanguage(event.target.value));
     document.getElementById('settings-language-select')?.addEventListener('change', (event) => setLanguage(event.target.value));
+    document.getElementById('landing-language-select')?.addEventListener('change', (event) => setLanguage(event.target.value));
     document.getElementById('open-auth-screen')?.addEventListener('click', () => { setAuthMode('login'); showView('auth'); });
     document.querySelectorAll('[data-theme-choice]').forEach((button) => {
         button.addEventListener('click', () => setTheme(button.dataset.themeChoice));
@@ -139,7 +150,14 @@ function hydrateUser(user) {
 
 function showView(viewName) {
     if (!viewLabels[viewName]) return;
+    const protectedViews = new Set(['dashboard', 'learn', 'practice', 'assessments', 'profile', 'settings']);
+    if (protectedViews.has(viewName) && !app.user) {
+        setAuthMode('login');
+        viewName = 'auth';
+    }
     app.currentView = viewName;
+    const isPublicView = !app.user && (viewName === 'home' || viewName === 'auth');
+    document.body.classList.toggle('public-view', isPublicView);
     document.querySelectorAll('.view').forEach((view) => view.classList.toggle('is-visible', view.dataset.page === viewName));
     document.querySelectorAll('.nav-item').forEach((item) => {
         const active = item.dataset.view === viewName;
@@ -286,6 +304,27 @@ window.codehaven = { app, showView, openEditor, closeEditor, apiAdapterContract 
 
 const translations = {
     en: {
+        'landing.signin': 'Sign in',
+        'landing.getStarted': 'Get started',
+        'landing.kicker': 'PRACTICAL LEARNING, BUILT AROUND YOU',
+        'landing.title': 'Build real coding confidence, one clear step at a time.',
+        'landing.description': 'Learn the fundamentals, practice with feedback, and follow a path that turns curiosity into useful skills.',
+        'landing.start': 'Start learning free',
+        'landing.returning': 'I already have an account',
+        'landing.proof1': 'Structured learning paths',
+        'landing.proof2': 'Practice with useful feedback',
+        'landing.proof3': 'Progress you can understand',
+        'landing.live': 'YOUR NEXT STEP',
+        'landing.cardTitle': 'Functions and clean code',
+        'landing.cardDescription': 'A focused lesson, a small challenge, and a clear sense of progress.',
+        'landing.complete': '68% complete',
+        'landing.mastery': 'overall mastery',
+        'landing.feature1Title': 'Learn with direction',
+        'landing.feature1Text': 'A calm path from foundations to practical programming.',
+        'landing.feature2Title': 'Practice without pressure',
+        'landing.feature2Text': 'Small problems, visible feedback, and room to try again.',
+        'landing.feature3Title': 'See your progress',
+        'landing.feature3Text': 'Mastery and activity views that make improvement tangible.',
         'auth.preview': 'Preview login / register',
         'auth.kicker': 'YOUR LEARNING SPACE',
         'auth.welcome': 'Build skills that move with you.',
@@ -340,6 +379,27 @@ const translations = {
         'editor.close': 'Close editor'
     },
     mn: {
+        'landing.signin': 'Нэвтрэх',
+        'landing.getStarted': 'Эхлэх',
+        'landing.kicker': 'ТАНД ТОХИРСОН ПРАКТИК СУРАЛЦАХ ОРЧИН',
+        'landing.title': 'Алхам бүрээр бодит код бичих итгэлээ бүтээ.',
+        'landing.description': 'Суурь ойлголтоо эзэмшиж, feedback-тэй дадлага хийж, сонирхлоо хэрэгтэй ур чадвар болгон хөгжүүлээрэй.',
+        'landing.start': 'Үнэгүй суралцаж эхлэх',
+        'landing.returning': 'Би бүртгэлтэй',
+        'landing.proof1': 'Бүтэцтэй суралцах зам',
+        'landing.proof2': 'Хэрэгтэй feedback-тэй дадлага',
+        'landing.proof3': 'Ойлгомжтой ахиц дэвшил',
+        'landing.live': 'ТАНЫ ДАРААГИЙН АЛХАМ',
+        'landing.cardTitle': 'Function ба цэвэр код',
+        'landing.cardDescription': 'Төвлөрсөн хичээл, жижиг бодлого, ойлгомжтой ахиц.',
+        'landing.complete': '68% дууссан',
+        'landing.mastery': 'нийт эзэмшилт',
+        'landing.feature1Title': 'Чиглэлтэй суралц',
+        'landing.feature1Text': 'Сууриас практик programming хүртэл тайван, бүтэцтэй зам.',
+        'landing.feature2Title': 'Дарамтгүй дадлага хий',
+        'landing.feature2Text': 'Жижиг бодлого, харагдах feedback, дахин оролдох боломж.',
+        'landing.feature3Title': 'Ахицаа хараарай',
+        'landing.feature3Text': 'Mastery болон идэвхийн ойлгомжтой мэдээллээр хөгжлөө хэмж.',
         'auth.preview': 'Нэвтрэх / бүртгүүлэх харах',
         'auth.kicker': 'ТАНЫ СУРАЛЦАХ ОРЧИН',
         'auth.welcome': 'Өөртэй тань хамт хөгжих ур чадвар бүтээ.',
@@ -472,6 +532,8 @@ function bindAuthentication() {
                     window.setTimeout(() => showView('dashboard'), 500);
                     return;
                 }
+                sessionStorage.removeItem('codehaven-demo-mode');
+                app.isDemoMode = false;
                 app.dataAdapter = window.codehavenApiAdapter;
                 hydrateUser(app.user);
                 await refreshDataViews();
@@ -497,13 +559,22 @@ function bindAuthentication() {
             button.setAttribute('aria-label', showing ? (app.language === 'mn' ? 'Нууц үгийг харах' : 'Show password') : (app.language === 'mn' ? 'Нууц үгийг нуух' : 'Hide password'));
         });
     });
-    document.getElementById('continue-demo')?.addEventListener('click', () => showView('dashboard'));
+    document.getElementById('continue-demo')?.addEventListener('click', async () => {
+        sessionStorage.setItem('codehaven-demo-mode', 'true');
+        app.isDemoMode = true;
+        app.dataAdapter = mockAdapter;
+        app.user = mockData.user;
+        hydrateUser(app.user);
+        await refreshDataViews();
+        showView('dashboard');
+    });
 }
 
 function setAuthMode(mode) {
     app.authMode = mode;
+    const tabMode = mode === 'register' ? 'register' : 'login';
     document.querySelectorAll('[data-auth-tab]').forEach((tab) => {
-        const active = tab.dataset.authTab === mode;
+        const active = tab.dataset.authTab === tabMode;
         tab.classList.toggle('is-active', active);
         tab.setAttribute('aria-selected', String(active));
     });
@@ -523,8 +594,10 @@ function setLanguage(language) {
     document.documentElement.lang = language;
     const languageSelect = document.getElementById('language-select');
     const settingsLanguageSelect = document.getElementById('settings-language-select');
+    const landingLanguageSelect = document.getElementById('landing-language-select');
     if (languageSelect) languageSelect.value = language;
     if (settingsLanguageSelect) settingsLanguageSelect.value = language;
+    if (landingLanguageSelect) landingLanguageSelect.value = language;
     applyLanguage();
     if (app.currentView === 'auth') setAuthMode(app.authMode);
     showToast(language === 'mn' ? 'Хэл Монгол хэлээр тохирлоо.' : 'Language set to English.', 'info');

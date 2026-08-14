@@ -71,7 +71,8 @@ def test_otp_request_validates_email_and_delegates(monkeypatch):
     response = client.post('/api/auth/otp/request', json={'email': 'student@gmail.com'})
 
     assert response.status_code == 200
-    assert fake_db.otp_requests == [('student@gmail.com', None)]
+    assert fake_db.otp_requests[0][0] == 'student@gmail.com'
+    assert fake_db.otp_requests[0][1].endswith('/')
     assert 'six-digit' not in response.get_json()['message_mn']
 
 

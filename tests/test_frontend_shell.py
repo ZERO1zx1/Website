@@ -19,6 +19,9 @@ def test_frontend_shell_renders_without_backend_credentials(frontend_app):
     assert response.status_code == 200
     assert b'Codehaven' in response.data
     assert b'Keep your momentum' in response.data
+    assert b'id="home-view"' in response.data
+    assert b'landing-language-select' in response.data
+    assert b'data-i18n="landing.title"' in response.data
     assert b'frontend/static' not in response.data
     assert b'id="auth-view"' in response.data
     assert b'id="language-select"' in response.data
