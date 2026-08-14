@@ -53,3 +53,7 @@ Validation checkpoint: 9 tests passed; YAML files parse; JavaScript syntax and P
 The authentication schema migration is prepared at `backend/db/migrations/001_auth_roles.sql`. It adds password hash and teacher approval fields, constrains supported roles, and explicitly requires password reset for legacy plaintext-password accounts.
 
 The latest regression run passed **15 tests** across app configuration, authentication security, RBAC, frontend shell and code executor. JavaScript syntax, Python compilation and diff checks also passed. Docker Compose YAML parses successfully; actual Docker validation remains blocked only because the sandbox does not include the Docker CLI.
+
+## Supabase migration checkpoint
+
+The authenticated Supabase SQL Editor successfully executed `backend/db/migrations/001_auth_roles.sql` against the project production database. The result reported `Success. No rows returned` and the auth schema query can now be re-run to verify the new columns. No plaintext password values were copied into `password_hash`.

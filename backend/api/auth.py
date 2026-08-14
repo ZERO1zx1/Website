@@ -110,6 +110,19 @@ def _public_user(user: dict) -> dict:
     }
 
 
+def _issue_token(user: dict) -> str:
+    return jwt.encode(
+        {
+            "user_id": user["id"],
+            "email": user["email"],
+            "role": user.get("role", "student"),
+            "exp": datetime.now(timezone.utc) + timedelta(hours=24),
+        },
+        _secret_key(),
+        algorithm="HS256",
+    )
+
+
 @auth_bp.route("/register", methods=["POST"])
 def register():
     data = request.get_json(silent=True) or {}
@@ -141,7 +154,12 @@ def register():
             name=data["name"].strip(),
             role="student",
         )
-        return {"message": "User registered successfully.", "user": _public_user(user)}, 201
+        return {
+            "message": "User registered successfully.",
+            "message_mn": "Хэрэглэгч амжилттай бүртгэгдлээ.",
+            "token": _issue_token(user),
+            "user": _public_user(user),
+        }, 201
     except Exception:
         return error_response(
             "registration_failed",
@@ -170,17 +188,7 @@ def login():
             "Имэйл эсвэл нууц үг буруу байна.",
             401,
         )
-    token = jwt.encode(
-        {
-            "user_id": user["id"],
-            "email": user["email"],
-            "role": user.get("role", "student"),
-            "exp": datetime.now(timezone.utc) + timedelta(hours=24),
-        },
-        _secret_key(),
-        algorithm="HS256",
-    )
-    return {"token": token, "user": _public_user(user)}, 200
+    return {"token": _issue_token(user), "user": _public_user(user)}, 200
 
 
 @auth_bp.route("/me", methods=["GET"])

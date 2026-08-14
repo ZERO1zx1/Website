@@ -172,6 +172,18 @@ class SupabaseDB:
         """Get submission by ID"""
         response = self.client.table('submissions').select('*').eq('id', submission_id).execute()
         return response.data[0] if response.data else None
+
+    def get_user_submissions(self, user_id: int, limit: int = 5):
+        """Get a user's most recent submissions with problem display metadata."""
+        response = (
+            self.client.table('submissions')
+            .select('*, problems(title, difficulty)')
+            .eq('user_id', user_id)
+            .order('created_at', desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return response.data or []
     
     def update_submission_status(self, submission_id: int, status: str, score: float = None):
         """Update submission status"""

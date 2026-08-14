@@ -2,7 +2,7 @@
 
 ## Current boundary
 
-The frontend is a plain HTML, CSS and JavaScript application rendered by Flask. It currently uses `mockAdapter` and does not make direct API requests. The backend is now organized under `backend/` and remains available in normal Flask mode.
+The frontend is a plain HTML, CSS and JavaScript application rendered by Flask. It uses `mockAdapter` for preview mode and switches to the authenticated API adapter in normal backend mode. The backend is organized under `backend/` and remains available in normal Flask mode.
 
 ## API groups
 
@@ -19,9 +19,11 @@ The frontend is a plain HTML, CSS and JavaScript application rendered by Flask. 
 
 Before enabling normal authentication, apply `backend/db/migrations/001_auth_roles.sql`. It adds `password_hash`, `requested_role` and `teacher_approval_status`, restricts role values to `owner`, `admin`, `teacher` and `student`, and adds an approval lookup index. Existing plaintext passwords must not be copied into `password_hash`; legacy accounts should complete a password reset before production login is enabled.
 
+After the auth migration, apply `backend/db/migrations/002_learning_platform.sql`. It creates the idempotent learning-platform tables required by courses, modules, lessons, classes, enrollments, skills, problems, test cases, hints, submissions, evaluator results, teacher feedback, exams and mastery analytics. The migration also adds foreign keys, uniqueness constraints, query indexes and `updated_at` triggers. The application can run without sample content, but courses and problems must be seeded or created by a teacher before the authenticated learning screens contain live records.
+
 ## Recommended integration order
 
-Authentication should be integrated first because all other screens need a current user and authorization state. Apply the schema migration, verify password hashing and test owner/admin/teacher/student permissions before connecting the login screen. The next step is to replace dashboard mock data with normalized analytics and submission summaries. Learning path and problem library follow. Submission integration comes last among the student flows because it requires sandbox execution, asynchronous status handling and explicit loading/error states.
+Authentication is integrated first because all other screens need a current user and authorization state. Apply both schema migrations, verify password hashing and test owner/admin/teacher/student permissions, then use the login screen to establish the API session. The dashboard adapter now consumes normalized mastery and recent-submission data; the learning path and problem library adapters consume `/api/courses` and `/api/problems`. Submission integration remains the final student-flow step because it requires sandbox execution, asynchronous status handling and explicit loading/error states.
 
 Each adapter method should normalize backend responses to the current frontend shape. The view layer should not know whether a result came from Supabase, Flask or a mock fixture.
 

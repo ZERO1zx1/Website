@@ -9,6 +9,32 @@ from flask_cors import CORS
 from flask_login import LoginManager
 from dotenv import load_dotenv
 
+
+class FlaskSessionUser:
+    """Minimal Flask-Login user wrapper for the JWT-backed database record."""
+
+    def __init__(self, record):
+        self.record = record
+        self.id = record.get('id')
+        self.name = record.get('name')
+        self.email = record.get('email')
+        self.role = record.get('role', 'student')
+
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_active(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return str(self.id)
+
 # Load environment variables
 load_dotenv()
 
@@ -53,6 +79,16 @@ def create_app(config_name='development'):
         login_manager = LoginManager()
         login_manager.init_app(app)
         login_manager.login_view = 'auth.login'
+
+        from backend.db import db
+
+        @login_manager.user_loader
+        def load_user(user_id):
+            try:
+                record = db.get_user(int(user_id))
+            except Exception:
+                return None
+            return FlaskSessionUser(record) if record else None
 
         from backend.api.auth import auth_bp
         from backend.api.courses import courses_bp

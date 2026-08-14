@@ -34,20 +34,22 @@ const mockAdapter = {
 // This interface matches the backend contract planned for phase two.
 const apiAdapterContract = {
     getUser: 'GET /api/auth/me',
-    getDashboard: 'GET /api/analytics/mastery/:userId',
+    getDashboard: 'GET /api/analytics/dashboard',
     getLearningPath: 'GET /api/courses/:courseId',
     getProblems: 'GET /api/problems',
     submitCode: 'POST /api/submissions'
 };
 
 const backendEnabled = document.documentElement.dataset.backend === 'enabled';
-const selectedAdapter = backendEnabled && window.codehavenApiAdapter ? window.codehavenApiAdapter : mockAdapter;
+const hasBackendSession = Boolean(localStorage.getItem('codehaven-access-token'));
+const selectedAdapter = backendEnabled && hasBackendSession && window.codehavenApiAdapter ? window.codehavenApiAdapter : mockAdapter;
 
 const app = {
     dataAdapter: selectedAdapter,
     user: null,
     currentView: 'dashboard',
     activeFilter: 'all',
+    problems: mockData.problems,
     lastFocusedElement: null,
     theme: localStorage.getItem('codehaven-theme') || 'light',
     language: localStorage.getItem('codehaven-language') || 'en',
@@ -70,11 +72,17 @@ async function initializeApp() {
     document.documentElement.dataset.theme = app.theme;
     bindNavigation();
     bindInteractions();
-    app.user = await app.dataAdapter.getUser();
-    hydrateUser(app.user);
+    try {
+        app.user = await app.dataAdapter.getUser();
+    } catch (error) {
+        window.codehavenApiAdapter?.logout?.();
+        app.dataAdapter = mockAdapter;
+        app.user = mockData.user;
+    }
+    hydrateUser(app.user || mockData.user);
     bindAuthentication();
     applyLanguage();
-    await Promise.all([renderDashboard(), renderLearningPath(), renderProblems()]);
+    await refreshDataViews();
     applyLanguage();
     showView('dashboard');
 }
@@ -103,15 +111,15 @@ function bindInteractions() {
     document.querySelectorAll('.filter-tab').forEach((tab) => tab.addEventListener('click', () => {
         app.activeFilter = tab.dataset.filter;
         document.querySelectorAll('.filter-tab').forEach((item) => item.classList.toggle('is-active', item === tab));
-        renderProblemCards(mockData.problems);
+        renderProblemCards(app.problems);
     }));
     document.getElementById('global-search')?.addEventListener('input', (event) => {
         const query = event.target.value.trim().toLowerCase();
         if (query.length > 0) {
             showView('practice');
-            renderProblemCards(mockData.problems.filter((problem) => `${problem.title} ${problem.topic}`.toLowerCase().includes(query)));
+            renderProblemCards(app.problems.filter((problem) => `${problem.title} ${problem.topic}`.toLowerCase().includes(query)));
         } else {
-            renderProblemCards(mockData.problems);
+            renderProblemCards(app.problems);
         }
     });
     document.addEventListener('keydown', (event) => {
@@ -141,7 +149,7 @@ function showView(viewName) {
     document.getElementById('breadcrumb-root').textContent = root;
     document.getElementById('breadcrumb-current').textContent = current;
     document.querySelector('.sidebar')?.classList.remove('is-open');
-    if (viewName === 'practice') renderProblemCards(mockData.problems);
+    if (viewName === 'practice') void renderProblems().catch(() => renderProblemCards(app.problems));
     if (viewName === 'auth') document.querySelector('.auth-card input')?.focus();
     applyLanguage();
 }
@@ -175,7 +183,20 @@ async function renderLearningPath() {
 
 async function renderProblems() {
     const result = await app.dataAdapter.getProblems();
-    renderProblemCards(result.problems);
+    app.problems = result.problems || [];
+    renderProblemCards(app.problems);
+}
+
+async function refreshDataViews() {
+    const results = await Promise.allSettled([
+        renderDashboard(),
+        renderLearningPath(),
+        renderProblems()
+    ]);
+    const failed = results.some((result) => result.status === 'rejected');
+    if (failed && backendEnabled && window.codehavenApiAdapter === app.dataAdapter) {
+        showToast(app.language === 'mn' ? 'Зарим мэдээллийг одоогоор ачаалж чадсангүй.' : 'Some live data could not be loaded yet.', 'error');
+    }
 }
 
 function renderProblemCards(problems) {
@@ -377,10 +398,33 @@ function bindAuthentication() {
         tab.addEventListener('click', () => setAuthMode(tab.dataset.authTab));
     });
     document.querySelectorAll('[data-auth-form]').forEach((form) => {
-        form.addEventListener('submit', (event) => {
+        form.addEventListener('submit', async (event) => {
             event.preventDefault();
-            showToast(app.authMode === 'login' ? (app.language === 'mn' ? 'Demo нэвтрэлт амжилттай.' : 'Demo sign in successful.') : (app.language === 'mn' ? 'Demo бүртгэл бэлэн боллоо.' : 'Demo account created.'), 'success');
-            window.setTimeout(() => showView('dashboard'), 500);
+            const fields = new FormData(form);
+            const submit = form.querySelector('.auth-submit');
+            if (submit) submit.disabled = true;
+            try {
+                if (backendEnabled && window.codehavenApiAdapter) {
+                    app.user = app.authMode === 'login'
+                        ? await window.codehavenApiAdapter.login(fields.get('email'), fields.get('password'))
+                        : await window.codehavenApiAdapter.register(fields.get('name'), fields.get('email'), fields.get('password'));
+                    app.dataAdapter = window.codehavenApiAdapter;
+                    hydrateUser(app.user);
+                    await refreshDataViews();
+                    showToast(app.language === 'mn' ? 'Амжилттай нэвтэрлээ.' : 'Signed in successfully.', 'success');
+                } else {
+                    showToast(app.authMode === 'login' ? (app.language === 'mn' ? 'Demo нэвтрэлт амжилттай.' : 'Demo sign in successful.') : (app.language === 'mn' ? 'Demo бүртгэл бэлэн боллоо.' : 'Demo account created.'), 'success');
+                }
+                window.setTimeout(() => showView('dashboard'), 500);
+            } catch (error) {
+                const serverError = error.payload?.error;
+                const message = app.language === 'mn'
+                    ? (serverError?.message_mn || 'Нэвтрэх үед алдаа гарлаа.')
+                    : (serverError?.message || error.message || 'Authentication failed.');
+                showToast(message, 'error');
+            } finally {
+                if (submit) submit.disabled = false;
+            }
         });
     });
     document.querySelectorAll('.password-toggle').forEach((button) => {
@@ -389,7 +433,7 @@ function bindAuthentication() {
             const showing = input.type === 'text';
             input.type = showing ? 'password' : 'text';
             button.textContent = showing ? (app.language === 'mn' ? 'Харах' : 'Show') : (app.language === 'mn' ? 'Нуух' : 'Hide');
-            button.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+            button.setAttribute('aria-label', showing ? (app.language === 'mn' ? 'Нууц үгийг харах' : 'Show password') : (app.language === 'mn' ? 'Нууц үгийг нуух' : 'Hide password'));
         });
     });
     document.getElementById('continue-demo')?.addEventListener('click', () => showView('dashboard'));

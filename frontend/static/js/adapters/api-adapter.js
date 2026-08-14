@@ -1,14 +1,31 @@
 /* Codehaven API adapter. It is loaded in both modes; app.js selects it only when the Flask shell enables backend mode. */
 (function exposeCodehavenApiAdapter() {
+    const tokenKey = 'codehaven-access-token';
+
+    function getToken() {
+        return localStorage.getItem(tokenKey);
+    }
+
+    function saveSession(payload) {
+        if (payload.token) localStorage.setItem(tokenKey, payload.token);
+        return payload.user || payload.data || payload;
+    }
+
     async function request(path, options = {}) {
+        const token = getToken();
         const response = await fetch(path, {
             credentials: 'include',
-            headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...(options.headers || {})
+            },
             ...options
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
-            const error = new Error(payload.error || payload.message || `Request failed: ${response.status}`);
+            const serverError = typeof payload.error === 'object' ? payload.error : null;
+            const error = new Error(serverError?.message || payload.error || payload.message || `Request failed: ${response.status}`);
             error.status = response.status;
             error.payload = payload;
             throw error;
@@ -18,8 +35,26 @@
 
     window.codehavenApiAdapter = {
         async getUser() {
+            if (!getToken()) return null;
             const payload = await request('/api/auth/me');
             return payload.user || payload.data || payload;
+        },
+        async login(email, password) {
+            const payload = await request('/api/auth/login', {
+                method: 'POST',
+                body: JSON.stringify({ email, password })
+            });
+            return saveSession(payload);
+        },
+        async register(name, email, password) {
+            const payload = await request('/api/auth/register', {
+                method: 'POST',
+                body: JSON.stringify({ name, email, password })
+            });
+            return saveSession(payload);
+        },
+        logout() {
+            localStorage.removeItem(tokenKey);
         },
         async getDashboard() {
             const user = await this.getUser();
