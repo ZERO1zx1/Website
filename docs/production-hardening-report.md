@@ -91,3 +91,10 @@ The local backend seeds three courses, modules, lessons, skills, programming pro
 The live browser verification used a real local test account (`Browser Learner`) and confirmed authenticated registration, dashboard loading, three backend courses, three backend problems, editor loading, lesson completion with HTTP 201, and dashboard refresh from `0m` to `20m` study time with a one-day streak. The browser also confirmed that the authenticated sidebar shows `Account` rather than `Preview login / register`.
 
 The isolated code execution button correctly reports `Runtime execution is temporarily unavailable` in this environment because Docker/sandbox execution services are not available. This is an explicit safe failure rather than an unsafe in-process execution fallback. Production execution still requires the sandbox service and Docker Compose stack.
+
+
+# Authentication session correction — August 2026
+
+The local browser had retained a previous test token in `sessionStorage`, which made the application appear to auto-login as `Browser Learner`. The application itself did not create that session automatically; the browser was reusing the existing token. The session was cleared during verification, and the public landing page then correctly presented the real sign-in and registration actions.
+
+The frontend now includes a real profile sign-out action, dynamically renders the authenticated user’s name, email, role and initials, and returns to the login form after sign-out. Registration and login were verified with a separate local account (`Local Test User`) and its own persisted dashboard state. Refreshing without a token no longer enters a preset learner workspace.

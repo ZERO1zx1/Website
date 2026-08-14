@@ -115,6 +115,7 @@ function bindInteractions() {
     document.getElementById('close-lesson-preview')?.addEventListener('click', () => document.getElementById('lesson-preview')?.classList.add('is-hidden'));
     document.getElementById('complete-lesson')?.addEventListener('click', completeLessonPreview);
     document.getElementById('open-auth-screen')?.addEventListener('click', () => { setAuthMode('login'); showView('auth'); });
+    document.querySelectorAll('[data-logout]').forEach((control) => control.addEventListener('click', logoutUser));
     document.querySelectorAll('[data-theme-choice]').forEach((button) => {
         button.addEventListener('click', () => setTheme(button.dataset.themeChoice));
     });
@@ -172,6 +173,24 @@ function hydrateUser(user) {
     document.querySelectorAll('.sidebar-user > div > span').forEach((node) => {
         node.textContent = user.role ? capitalize(user.role) : 'Student';
     });
+    document.querySelectorAll('[data-profile-name]').forEach((node) => { node.textContent = user.name || 'Account holder'; });
+    document.querySelectorAll('[data-profile-email]').forEach((node) => { node.textContent = user.email || 'Signed in account'; });
+    document.querySelectorAll('[data-profile-role]').forEach((node) => { node.textContent = String(user.role || 'student').toUpperCase(); });
+    document.querySelectorAll('[data-profile-level]').forEach((node) => { node.textContent = user.role ? capitalize(user.role) : 'Student'; });
+    document.querySelectorAll('[data-profile-avatar]').forEach((node) => { node.textContent = initials(user.name || user.email); });
+}
+
+function initials(value) {
+    return String(value || 'Learner').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0].toUpperCase()).join('') || 'L';
+}
+
+function logoutUser() {
+    window.codehavenApiAdapter?.logout?.();
+    app.user = null;
+    app.dataAdapter = window.codehavenApiAdapter || mockAdapter;
+    setAuthMode('login');
+    showView('auth');
+    showToast(app.language === 'mn' ? 'Та аккаунтаас гарлаа.' : 'You have been signed out.', 'success');
 }
 
 function showView(viewName) {

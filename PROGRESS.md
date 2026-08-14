@@ -261,3 +261,8 @@ See [`docs/production-hardening-report.md`](docs/production-hardening-report.md)
 The visible application no longer offers demo-learner continuation. Authenticated development mode now uses a real file-backed SQLite database when Supabase credentials are absent, with seeded courses, modules, lessons, skills, problems and test cases. The live frontend consumes the backend course catalog and problem library, persists lesson completion through `POST /api/courses/lessons/<lesson_id>/complete`, and refreshes dashboard study metrics from saved records.
 
 Browser verification confirmed registration, login, a three-course live catalog, three live practice problems, editor loading, lesson completion with HTTP 201, and dashboard study time changing from `0m` to `20m`. Isolated code execution remains explicitly unavailable until Docker and the sandbox service are running.
+
+
+## Authentication session correction — August 2026
+
+Cleared the retained browser test token that made the site appear to auto-login as `Browser Learner`. The public page now shows real sign-in and registration controls when no token exists. Added a dynamic profile view and `Sign out` action that clears the session and returns to login. Verified a separate `Local Test User` account can register, enter its own dashboard, sign out, and log back in with its own persisted data.
