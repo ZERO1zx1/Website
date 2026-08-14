@@ -8,8 +8,10 @@ persisted across requests and restarts.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import hashlib
 import json
+import secrets
 import os
 from pathlib import Path
 import sqlite3
@@ -231,6 +233,14 @@ class LocalDB:
                 auth_user_id TEXT UNIQUE,
                 auth_provider TEXT,
                 avatar_url TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                token_hash TEXT NOT NULL UNIQUE,
+                expires_at TEXT NOT NULL,
+                used_at TEXT,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
             CREATE TABLE IF NOT EXISTS courses (
@@ -463,6 +473,38 @@ class LocalDB:
         connection.commit()
 
 
+def _local_request_password_reset(self, email: str):
+    normalized = str(email or '').strip().lower()
+    user = next(iter(self.client.table('users').select('*').eq('email', normalized).execute().data), None)
+    if not user:
+        return None
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode('utf-8')).hexdigest()
+    expires_at = (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat()
+    connection = self.connection()
+    connection.execute('DELETE FROM password_reset_tokens WHERE user_id = ? AND used_at IS NULL', (user['id'],))
+    connection.execute('INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)', (user['id'], token_hash, expires_at))
+    connection.commit()
+    return token
+
+
+def _local_consume_password_reset(self, token: str, password_hash: str):
+    token_hash = hashlib.sha256(str(token or '').encode('utf-8')).hexdigest()
+    connection = self.connection()
+    row = connection.execute('SELECT id, user_id, expires_at, used_at FROM password_reset_tokens WHERE token_hash = ?', (token_hash,)).fetchone()
+    if not row or row['used_at']:
+        return None
+    expires_at = datetime.fromisoformat(row['expires_at'])
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at <= datetime.now(timezone.utc):
+        return None
+    connection.execute('UPDATE users SET password_hash = ? WHERE id = ?', (password_hash, row['user_id']))
+    connection.execute('UPDATE password_reset_tokens SET used_at = ? WHERE id = ?', (datetime.now(timezone.utc).isoformat(), row['id']))
+    connection.commit()
+    return _record(connection.execute('SELECT * FROM users WHERE id = ?', (row['user_id'],)).fetchone())
+
+
 def _record(row):
     return dict(row) if row else None
 
@@ -472,6 +514,8 @@ def _method(name, query):
     setattr(LocalDB, name, query)
 
 
+LocalDB.request_password_reset = _local_request_password_reset
+LocalDB.consume_password_reset = _local_consume_password_reset
 LocalDB.create_user = lambda self, email, password, name, role="student": _record(self.client.table("users").insert({"email": email, "name": name, "password_hash": generate_password_hash(password), "role": role, "requested_role": None, "teacher_approval_status": "approved"}).execute().data[0])
 LocalDB.get_user = lambda self, user_id: _record(self.client.table("users").select("*").eq("id", user_id).execute().data[0] if self.client.table("users").select("*").eq("id", user_id).execute().data else None)
 LocalDB.get_user_by_email = lambda self, email: next(iter(self.client.table("users").select("*").eq("email", email).execute().data), None)

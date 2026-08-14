@@ -4,11 +4,11 @@ from datetime import datetime, timedelta, timezone
 from functools import wraps
 import os
 import re
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 import jwt
 from flask import Blueprint, current_app, redirect, request, url_for
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from backend.db import db
 from backend.rbac import error_response, permission_required
@@ -181,10 +181,11 @@ def request_email_otp():
             "email": email,
         }, 200
     except Exception:
+        local_mode = getattr(db, '_local_backend', None) is not None
         return error_response(
             "otp_request_failed",
-            "The email code could not be sent. Check the Supabase email provider configuration.",
-            "Имэйлийн код илгээгдсэнгүй. Supabase-ийн email provider тохиргоог шалгана уу.",
+            "Email code sign-in requires a configured Supabase Auth email provider." if not local_mode else "Email code sign-in is unavailable in local SQLite mode; use email and password instead.",
+            "Email code нэвтрэлтэд Supabase Auth-ийн email provider шаардлагатай." if not local_mode else "Local SQLite горимд email code нэвтрэлт боломжгүй; имэйл болон нууц үгээр нэвтэрнэ үү.",
             502,
         )
 
@@ -223,8 +224,8 @@ def google_start():
     except Exception:
         return error_response(
             "google_oauth_unavailable",
-            "Google sign-in is not configured yet.",
-            "Google-ээр нэвтрэх тохиргоо одоогоор хийгдээгүй байна.",
+            "Google sign-in is unavailable until the Google provider and callback URL are configured in Supabase Auth.",
+            "Supabase Auth-д Google provider болон callback URL тохируулагдтал Google нэвтрэлт боломжгүй.",
             503,
         )
 
@@ -241,6 +242,49 @@ def google_callback():
         return redirect(f"{_frontend_url()}#{fragment}")
     except Exception:
         return redirect(f"{_frontend_url()}?auth_error=google_oauth_failed")
+
+
+@auth_bp.route("/password-reset/request", methods=["POST"])
+def request_password_reset():
+    data = request.get_json(silent=True) or {}
+    email = str(data.get("email", "")).strip().lower()
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+        return error_response("invalid_email", "Enter a valid email address.", "Зөв имэйл хаяг оруулна уу.", 400)
+    try:
+        redirect_to = os.getenv("PASSWORD_RESET_REDIRECT_URL") or f"{_frontend_url().rstrip('/')}/password-reset"
+        result = db.request_password_reset(email, redirect_to=redirect_to)
+        response = {
+            "message": "If an account exists for this email, recovery instructions are ready.",
+            "message_mn": "Энэ имэйл бүртгэлтэй бол сэргээх заавар бэлэн боллоо.",
+        }
+        if result.get("provider") == "local" and result.get("token"):
+            response["reset_url"] = f"{_frontend_url().rstrip('/')}/password-reset?token={quote(result['token'])}"
+        return response, 200
+    except Exception:
+        return error_response(
+            "password_reset_request_failed",
+            "Password recovery is unavailable. Configure the Supabase Auth email provider or use local email/password mode.",
+            "Нууц үг сэргээх боломжгүй байна. Supabase Auth-ийн email provider тохируулна уу, эсвэл local email/password горим ашиглана уу.",
+            502,
+        )
+
+
+@auth_bp.route("/password-reset/confirm", methods=["POST"])
+def confirm_password_reset():
+    data = request.get_json(silent=True) or {}
+    token = str(data.get("token", "")).strip()
+    password = str(data.get("password", ""))
+    if not token or len(password) < 8:
+        return error_response("invalid_password_reset", "A valid reset token and an 8-character password are required.", "Зөв reset token болон хамгийн багадаа 8 тэмдэгттэй нууц үг шаардлагатай.", 400)
+    try:
+        user = db.consume_password_reset(token, generate_password_hash(password))
+        if not user:
+            return error_response("password_reset_expired", "This reset link is invalid or has expired.", "Энэ reset холбоос буруу эсвэл хугацаа нь дууссан байна.", 400)
+        return {"message": "Password updated successfully.", "message_mn": "Нууц үг амжилттай шинэчлэгдлээ."}, 200
+    except RuntimeError:
+        return error_response("supabase_recovery_required", "Use the recovery link sent by Supabase to finish changing your password.", "Нууц үг солихын тулд Supabase-ээс ирсэн recovery холбоосыг ашиглана уу.", 400)
+    except Exception:
+        return error_response("password_reset_failed", "The password could not be updated.", "Нууц үгийг шинэчилж чадсангүй.", 500)
 
 
 @auth_bp.route("/register", methods=["POST"])

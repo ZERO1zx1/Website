@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en" data-backend="{{ 'enabled' if backend_enabled else 'disabled' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Codehaven{% endblock %}</title>
+    <meta name="description" content="Codehaven programming learning workspace.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/page-shell.css', v='20260815-auth-pages') }}">
+    {% block head %}{% endblock %}
+</head>
+<body class="page-body {{ page_class|default('') }}">
+    <header class="site-header">
+        <a class="brand" href="{{ url_for('frontend_shell') }}" aria-label="Codehaven home"><span class="brand-mark"><i></i><i></i><i></i></span><span>codehaven</span></a>
+        <nav class="site-nav" aria-label="Main navigation">
+            <a href="{{ url_for('home_page') }}">Home</a>
+            <a href="{{ url_for('login_page') }}">Sign in</a>
+            <a class="nav-cta" href="{{ url_for('register_page') }}">Get started</a>
+        </nav>
+    </header>
+    <main class="page-main">{% block content %}{% endblock %}</main>
+    <footer class="site-footer"><span>© 2026 Codehaven</span><span><a href="{{ url_for('password_reset_page') }}">Password reset</a> · Learn. Practice. Build.</span></footer>
+    <div id="page-toast" class="page-toast" role="status" aria-live="polite"></div>
+    <script src="{{ url_for('static', filename='js/page-auth.js', v='20260815-auth-pages') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

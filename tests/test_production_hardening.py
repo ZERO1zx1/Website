@@ -215,3 +215,51 @@ def test_course_status_is_user_owned_and_realtime(monkeypatch, tmp_path):
     assert first_after["modules"][0]["lessons"][0]["status"] == "completed"
     assert second_after["progress"] == 0
     assert second_after["modules"][0]["lessons"][0]["status"] == "not_started"
+
+
+
+def test_public_multi_page_routes_render(monkeypatch):
+    monkeypatch.setenv("FLASK_ENV", "development")
+    monkeypatch.setenv("FRONTEND_ONLY", "false")
+    monkeypatch.setenv("LOCAL_DB", "true")
+    monkeypatch.setenv("SECRET_KEY", "local-development-secret-that-is-long-enough")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+    from backend.db import db
+    db._client = None
+    client = create_app().test_client()
+    for path, marker in [
+        ("/home", b"Start learning free"),
+        ("/login", b"Forgot password?"),
+        ("/register", b"Join Codehaven"),
+        ("/password-reset", b"Reset your password."),
+        ("/dashboard", b"YOUR WORKSPACE"),
+    ]:
+        response = client.get(path)
+        assert response.status_code == 200
+        assert marker in response.data
+
+
+def test_local_password_reset_request_and_confirm(monkeypatch, tmp_path):
+    from backend.db import db
+    monkeypatch.setenv("FLASK_ENV", "development")
+    monkeypatch.setenv("FRONTEND_ONLY", "false")
+    monkeypatch.setenv("LOCAL_DB", "true")
+    monkeypatch.setenv("LOCAL_DB_PATH", str(tmp_path / "reset.sqlite3"))
+    monkeypatch.setenv("SECRET_KEY", "local-development-secret-that-is-long-enough")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+    db._client = None
+    client = create_app().test_client()
+    registered = client.post("/api/auth/register", json={"name": "Reset Learner", "email": "reset@example.com", "password": "oldpassword"})
+    assert registered.status_code == 201
+    requested = client.post("/api/auth/password-reset/request", json={"email": "reset@example.com"})
+    assert requested.status_code == 200
+    reset_url = requested.get_json()["reset_url"]
+    token = reset_url.split("token=", 1)[1]
+    confirmed = client.post("/api/auth/password-reset/confirm", json={"token": token, "password": "newpassword"})
+    assert confirmed.status_code == 200
+    login = client.post("/api/auth/login", json={"email": "reset@example.com", "password": "newpassword"})
+    assert login.status_code == 200
+    reused = client.post("/api/auth/password-reset/confirm", json={"token": token, "password": "thirdpassword"})
+    assert reused.status_code == 400

@@ -151,6 +151,26 @@ def create_app(config_name="development"):
     def frontend_shell():
         return render_template("index.html", backend_enabled=not frontend_only)
 
+    @app.route("/home", methods=["GET"])
+    def home_page():
+        return render_template("home.html", backend_enabled=not frontend_only, page_class="home-page")
+
+    @app.route("/login", methods=["GET"])
+    def login_page():
+        return render_template("login.html", backend_enabled=not frontend_only, page_class="login-page")
+
+    @app.route("/register", methods=["GET"])
+    def register_page():
+        return render_template("register.html", backend_enabled=not frontend_only, page_class="register-page")
+
+    @app.route("/password-reset", methods=["GET"])
+    def password_reset_page():
+        return render_template("password_reset.html", backend_enabled=not frontend_only, page_class="password-reset-page")
+
+    @app.route("/dashboard", methods=["GET"])
+    def dashboard_page():
+        return render_template("dashboard.html", backend_enabled=not frontend_only, page_class="dashboard-page-shell")
+
     @app.route("/api/health", methods=["GET"])
     def health_check():
         return {"status": "healthy", "version": "1.0.0", "mode": "frontend-only" if frontend_only else "backend"}, 200

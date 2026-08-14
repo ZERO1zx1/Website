@@ -126,6 +126,25 @@ class SupabaseDB:
         """Exchange the OAuth callback code for a Supabase Auth session."""
         return self.client.auth.exchange_code_for_session({'auth_code': code})
 
+    def request_password_reset(self, email: str, redirect_to: str = None):
+        """Request password recovery through Supabase or create a local SQLite token."""
+        _ = self.client
+        local_backend = getattr(self, '_local_backend', None)
+        if local_backend is not None:
+            return {'token': local_backend.request_password_reset(email), 'provider': 'local'}
+        options = {}
+        if redirect_to:
+            options['redirect_to'] = redirect_to
+        return self.client.auth.reset_password_for_email(email, options)
+
+    def consume_password_reset(self, token: str, password_hash: str):
+        """Consume a local one-time reset token. Production recovery is handled by Supabase Auth."""
+        _ = self.client
+        local_backend = getattr(self, '_local_backend', None)
+        if local_backend is None:
+            raise RuntimeError('Production password recovery must be completed through Supabase Auth.')
+        return local_backend.consume_password_reset(token, password_hash)
+
     def update_user(self, user_id: int, data: dict):
         """Update user"""
         response = self.client.table('users').update(data).eq('id', user_id).execute()

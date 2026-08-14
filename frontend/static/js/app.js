@@ -806,6 +806,7 @@ function bindAuthentication() {
     document.querySelectorAll('[data-auth-tab]').forEach((tab) => {
         tab.addEventListener('click', () => setAuthMode(tab.dataset.authTab));
     });
+    document.querySelectorAll('[data-i18n="auth.forgot"]').forEach((control) => control.addEventListener('click', () => { window.location.assign('/password-reset'); }));
     document.getElementById('show-otp-login')?.addEventListener('click', () => setAuthMode('otp-request'));
     document.getElementById('back-to-password-login')?.addEventListener('click', () => setAuthMode('login'));
     document.getElementById('google-auth')?.addEventListener('click', async () => {
