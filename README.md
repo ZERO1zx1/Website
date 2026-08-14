@@ -115,14 +115,28 @@ programming-learning-platform/
 ├── requirements.txt          # Python dependencies
 ├── frontend/
 │   ├── templates/
-│   │   └── index.html       # Main HTML template
+│   │   ├── index.html                 # Full learning workspace
+│   │   └── pages/                     # Separate public/auth/dashboard pages
+│   │       ├── base.html
+│   │       ├── home.html
+│   │       ├── login.html
+│   │       ├── register.html
+│   │       ├── password_reset.html
+│   │       └── dashboard.html
 │   └── static/
 │       ├── css/
-│       │   └── style.css    # Main stylesheet
-│       └── js/
-│           ├── app.js       # Frontend application
-│           ├── monaco-editor.js
-│           └── adapters/    # Mock/API adapter boundary
+│       │   ├── style.css              # Workspace design system
+│       │   └── site/site.css           # Shared multi-page site styling
+│       ├── js/
+│       │   ├── app.js                 # Full learning workspace
+│       │   ├── pages/auth.js          # Auth/recovery/dashboard page logic
+│       │   ├── modules/monaco-editor.js
+│       │   └── adapters/              # Live API adapter boundary
+│       └── assets/                    # images, icons, and fonts
+├── ci/
+│   ├── check.sh                       # Canonical local/CI quality gate
+│   └── validate_frontend_structure.py
+├── .github/workflows/ci.yml           # GitHub Actions quality pipeline
 ├── sandbox/
 │   ├── runner.py            # Code execution runner
 │   └── Dockerfile           # Sandbox container definition
@@ -270,14 +284,19 @@ def my_endpoint(current_user):
 ```
 
 ### Testing
-Run the Python test suite with the repository root on `PYTHONPATH`, then validate frontend syntax:
+Run the canonical CI gate locally. It is the same deterministic check invoked by GitHub Actions and covers Python compilation, the full test suite, all frontend JavaScript modules, frontend structure, Compose topology, and repository hygiene.
+
+```bash
+bash ci/check.sh
+```
+
+For a focused manual check:
 
 ```bash
 PYTHONPATH=. pytest -q
-python -m compileall -q .
-node --check frontend/static/js/app.js
-node --check frontend/static/js/adapters/api-adapter.js
-node --check frontend/static/js/monaco-editor.js
+python3 -m compileall -q .
+node --check frontend/static/js/pages/auth.js
+node --check frontend/static/js/modules/monaco-editor.js
 git diff --check
 ```
 
