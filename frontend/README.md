@@ -1,42 +1,40 @@
-# Codehaven Demo V1 Frontend
+# Flask-served frontend
 
-This directory contains the complete frontend-only Demo V1 website for the Codehaven programming education platform. It uses plain HTML, CSS, and JavaScript. The current implementation is intentionally backed by local mock data; Flask, Supabase, authentication providers, roles, and live persistence remain a later integration phase.
+The frontend is a server-rendered HTML shell with modular CSS and browser JavaScript. Flask serves `templates/index.html` and the assets under `static/`; the browser does not require a separate Node build step.
 
 ## Folder structure
 
 ```text
 frontend/
-├── templates/
-│   └── index.html                 # Complete HTML shell and all application screens
+├── templates/index.html
 └── static/
-    ├── css/
-    │   └── style.css              # Design tokens, components, themes, responsive rules
+    ├── css/style.css
     └── js/
-        ├── app.js                 # Shared state, navigation, renderers, interactions
-        ├── data/
-        │   └── curriculum.js      # Courses, modules, practice, tags, keywords
-        ├── i18n/
-        │   └── translations.js    # EN/MN dictionaries and plain text mappings
-        ├── monaco-editor.js        # Editor integration boundary
-        └── adapters/
-            ├── api-adapter.js     # Backend-ready adapter contract and live API mode
-            └── README.md          # Adapter integration notes
+        ├── app.js
+        ├── data/curriculum.js
+        ├── i18n/translations.js
+        ├── monaco-editor.js
+        └── adapters/api-adapter.js
 ```
 
-## Included frontend experience
+## Runtime modes
 
-The website includes a public landing page, sign-in/register preview, Python, HTML, CSS, JavaScript, Flask, and Full-stack learning paths, course cards, tags, keyword search, selected modules, lesson preview, lesson completion in demo mode, practice problems, code editor mock flow, assessments, profile, preferences, EN/MN localization, dark/light theme, responsive mobile layout, focus-visible keyboard states, and live-region feedback. The shared app shell stays in `app.js`, while curriculum content and translations are isolated in their own modules so future backend replacement does not require rewriting the UI.
+`FRONTEND_ONLY=true` enables an explicitly labelled preview mode. It uses the local fixture boundary in `app.js` for design review and does not require Supabase credentials. This mode is not a production data source.
 
-## Local serving
+`FRONTEND_ONLY=false` is the normal backend mode. After authentication, `api-adapter.js` calls the live Flask routes for current user, dashboard, courses, problems, visible-test execution, graded submissions, and submission status. The adapter normalizes response shapes, sends the bearer token in the request header, applies a timeout, clears expired sessions, and does not replace failed live requests with mock data.
 
-The recommended local command from the repository root is:
+## Submission flow
+
+The editor sends `POST /api/submissions/run` for visible-test execution and `POST /api/submissions` for graded evaluation. Graded submissions are tracked through `GET /api/submissions/<id>/stream` with a polling fallback. Run and Submit controls are disabled while a request is active to prevent duplicate requests. Hidden test inputs, expected outputs, and solutions are not rendered to students.
+
+## Local checks
+
+From the repository root, run:
 
 ```bash
-FRONTEND_ONLY=true PYTHONPATH=. python -m flask --app 'app:create_app()' run --host 0.0.0.0 --port 5000
+node --check frontend/static/js/app.js
+node --check frontend/static/js/adapters/api-adapter.js
+node --check frontend/static/js/monaco-editor.js
 ```
 
-Then open `http://localhost:5000`. The Flask shell serves `templates/index.html` and the static CSS/JavaScript assets. No frontend build step or framework is required.
-
-## Demo versus backend
-
-Demo V1 stores the selected language, theme, and demo session in browser storage and uses local mock data. The `api-adapter.js` file preserves the Flask/Supabase contract and is selected automatically when the Flask shell is in backend mode and a valid access token exists. Authentication actions use the live adapter in backend mode; the editor uses the local demo runner without a backend run endpoint, while **Submit solution** sends `problem_id`, `code`, and `language` to `POST /api/submissions` when a live session is active. Do not treat demo completion, demo profile values, or mock progress as persisted production records. Live submissions remain asynchronous until the backend evaluation worker is connected.
+The canonical backend integration runbook is [`../docs/backend-integration.md`](../docs/backend-integration.md). The frontend deliberately retains demo mode for visual regression and credential-free review, but authenticated backend mode is the source of truth for production data.

@@ -29,7 +29,7 @@ const apiAdapterContract = {
 
 const backendEnabled = document.documentElement.dataset.backend === 'enabled';
 const hasOAuthSession = Boolean(new URLSearchParams(window.location.hash.slice(1)).get('auth_token'));
-const hasBackendSession = Boolean(localStorage.getItem('codehaven-access-token') || hasOAuthSession);
+const hasBackendSession = Boolean(sessionStorage.getItem('codehaven-access-token') || localStorage.getItem('codehaven-access-token') || hasOAuthSession);
 const demoMode = sessionStorage.getItem('codehaven-demo-mode') === 'true';
 const selectedAdapter = backendEnabled && hasBackendSession && window.codehavenApiAdapter ? window.codehavenApiAdapter : mockAdapter;
 const app = {
@@ -75,7 +75,8 @@ async function initializeApp() {
         } catch (error) {
             window.codehavenApiAdapter.logout?.();
             app.user = null;
-            app.dataAdapter = mockAdapter;
+            app.dataAdapter = window.codehavenApiAdapter;
+            showToast(app.language === 'mn' ? 'Нэвтрэлт хүчингүй болсон. Дахин нэвтэрнэ үү.' : 'Your session is no longer valid. Please sign in again.', 'error');
         }
     }
     hydrateUser(app.user || { name: app.language === 'mn' ? 'Зочин' : 'Guest' });
@@ -224,12 +225,12 @@ async function renderLearningPath() {
     if (moduleList) renderDataState(moduleList, 'loading');
     try {
         const path = await app.dataAdapter.getLearningPath();
-        app.courses = path.courses?.length ? path.courses : mockData.courses;
+        app.courses = path.courses || [];
         renderCourseCards(app.courses);
         renderSelectedCourse(app.courses.find((course) => String(course.id) === String(app.selectedCourseId)) || app.courses[0]);
     } catch (error) {
         if (courseGrid) renderDataState(courseGrid, 'error', app.language === 'mn' ? 'Learning path ачаалж чадсангүй.' : 'Learning path could not be loaded.');
-        if (moduleList) renderDataState(moduleList, 'empty', app.language === 'mn' ? 'Module одоогоор алга.' : 'No modules are available yet.');
+        if (moduleList) renderDataState(moduleList, 'error', app.language === 'mn' ? 'Module мэдээллийг ачаалж чадсангүй.' : 'Learning modules could not be loaded.');
         throw error;
     }
 }
@@ -462,12 +463,25 @@ function setRuntimeStatus(state) {
     label.textContent = i18nTranslations[app.language]?.[key] || key;
 }
 
+let editorRequestInFlight = false;
+
+function setEditorRequestBusy(isBusy) {
+    editorRequestInFlight = isBusy;
+    const runButton = document.getElementById('run-code');
+    const submitButton = document.getElementById('submit-code');
+    [runButton, submitButton].forEach((button) => {
+        if (!button) return;
+        button.disabled = isBusy;
+        button.setAttribute('aria-busy', String(isBusy));
+    });
+}
+
 async function runCode() {
     const output = document.getElementById('code-output');
     const modal = document.getElementById('editor-modal');
     const editor = document.getElementById('code-editor');
     const problem = getProblemById(modal?.dataset.problemId);
-    if (!output) return;
+    if (!output || editorRequestInFlight) return;
     const code = editor?.value?.trim();
     if (!code) {
         showToast(app.language === 'mn' ? 'Ажиллуулах кодоо оруулна уу.' : 'Enter code before running.', 'error');
@@ -475,10 +489,11 @@ async function runCode() {
         return;
     }
 
-    if (backendEnabled && app.dataAdapter === window.codehavenApiAdapter && problem?.id && window.codehavenApiAdapter.runCode) {
-        setRuntimeStatus('running');
-        output.innerHTML = `<span class="output-label">${app.language === 'mn' ? 'RUNTIME' : 'RUNTIME'}</span><code class="output-pending">${app.language === 'mn' ? 'Sandbox дээр тест ажиллаж байна…' : 'Running tests in the sandbox…'}</code>`;
-        try {
+    setEditorRequestBusy(true);
+    try {
+        if (backendEnabled && app.dataAdapter === window.codehavenApiAdapter && problem?.id && window.codehavenApiAdapter.runCode) {
+            setRuntimeStatus('running');
+            output.innerHTML = `<span class="output-label">RUNTIME</span><code class="output-pending">${app.language === 'mn' ? 'Sandbox дээр тест ажиллаж байна…' : 'Running tests in the sandbox…'}</code>`;
             const result = await window.codehavenApiAdapter.runCode({ problem_id: problem.id, code, language: problem.language || 'python' });
             const tests = result.test_results || [];
             const passed = Number(result.passed_tests || 0);
@@ -491,20 +506,22 @@ async function runCode() {
             output.innerHTML = `<span class="output-label">RUNTIME · ${passed}/${total}</span><code class="output-runtime">${detail || (app.language === 'mn' ? 'Тестийн үр дүн ирсэнгүй.' : 'No test output returned.')}</code>`;
             setRuntimeStatus('connected');
             showToast(app.language === 'mn' ? `${passed}/${total} тест амжилттай.` : `${passed}/${total} tests completed.`, passed === total ? 'success' : 'info');
-        } catch (error) {
-            setRuntimeStatus('offline');
-            output.innerHTML = `<span class="output-label">RUNTIME ERROR</span><code class="output-error">${escapeHtml(error.message || 'Runtime execution is unavailable.')}</code>`;
-            showToast(app.language === 'mn' ? 'Runtime одоогоор ажиллахгүй байна.' : 'Runtime execution is unavailable.', 'error');
+            return;
         }
-        return;
-    }
 
-    setRuntimeStatus('running');
-    const outputLabel = app.language === 'mn' ? 'DEMO ГАРАЛТ · 0.18с' : 'DEMO OUTPUT · 0.18s';
-    const outputStatus = app.language === 'mn' ? 'Demo runner амжилттай дууслаа.' : 'Demo runner finished with exit code 0.';
-    output.innerHTML = `<span class="output-label">${outputLabel}</span><code style="color:#75e6c5">[2, 4]<br><br>${outputStatus}</code>`;
-    setRuntimeStatus('ready');
-    showToast(app.language === 'mn' ? 'Demo код амжилттай ажиллалаа.' : 'Demo code ran successfully.', 'success');
+        setRuntimeStatus('running');
+        const outputLabel = app.language === 'mn' ? 'DEMO ГАРАЛТ · 0.18с' : 'DEMO OUTPUT · 0.18s';
+        const outputStatus = app.language === 'mn' ? 'Demo runner амжилттай дууслаа.' : 'Demo runner finished with exit code 0.';
+        output.innerHTML = `<span class="output-label">${outputLabel}</span><code style="color:#75e6c5">[2, 4]<br><br>${outputStatus}</code>`;
+        setRuntimeStatus('ready');
+        showToast(app.language === 'mn' ? 'Demo код амжилттай ажиллалаа.' : 'Demo code ran successfully.', 'success');
+    } catch (error) {
+        setRuntimeStatus('offline');
+        output.innerHTML = `<span class="output-label">RUNTIME ERROR</span><code class="output-error">${escapeHtml(error.message || 'Runtime execution is unavailable.')}</code>`;
+        showToast(app.language === 'mn' ? 'Runtime одоогоор ажиллахгүй байна.' : 'Runtime execution is unavailable.', 'error');
+    } finally {
+        setEditorRequestBusy(false);
+    }
 }
 
 async function submitCode() {
@@ -517,7 +534,10 @@ async function submitCode() {
         editor?.focus();
         return;
     }
+    if (editorRequestInFlight) return;
+
     if (backendEnabled && app.dataAdapter === window.codehavenApiAdapter && problem?.id) {
+        setEditorRequestBusy(true);
         try {
             setRuntimeStatus('queued');
             const result = await window.codehavenApiAdapter.submitCode({ problem_id: problem.id, code, language: problem.language || 'python' });
@@ -527,11 +547,14 @@ async function submitCode() {
             await refreshDataViews();
             if (submissionId) void pollSubmissionStatus(submissionId);
         } catch (error) {
+            setRuntimeStatus('offline');
             showToast(app.language === 'mn' ? 'Илгээлтийг серверт хүргэж чадсангүй.' : (error.message || 'The submission could not be sent.'), 'error');
+        } finally {
+            setEditorRequestBusy(false);
         }
         return;
     }
-    runCode();
+    await runCode();
     showToast(app.language === 'mn' ? 'Demo шийдэл хадгалагдлаа.' : 'Demo solution saved to your practice history.', 'success');
     window.setTimeout(closeEditor, 500);
 }

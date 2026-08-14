@@ -58,3 +58,6 @@ yarn-error.log
 # OS
 Thumbs.db
 .DS_Store
+
+# Local agent checkpoints
+.agentcore_checkpoint.md

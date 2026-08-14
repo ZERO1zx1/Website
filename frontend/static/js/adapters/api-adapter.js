@@ -1,46 +1,78 @@
-/* Codehaven API adapter. It is loaded in both modes; app.js selects it only when the Flask shell enables backend mode. */
+/* Codehaven API adapter for authenticated backend mode. */
 (function exposeCodehavenApiAdapter() {
     const tokenKey = 'codehaven-access-token';
+    const requestTimeoutMs = 15000;
 
     function consumeOAuthSession() {
         if (!window.location.hash) return;
         const params = new URLSearchParams(window.location.hash.slice(1));
         const token = params.get('auth_token');
         if (!token) return;
-        localStorage.setItem(tokenKey, token);
+        sessionStorage.setItem(tokenKey, token);
         window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`);
     }
 
     function getToken() {
         consumeOAuthSession();
-        return localStorage.getItem(tokenKey);
+        const sessionToken = sessionStorage.getItem(tokenKey);
+        if (sessionToken) return sessionToken;
+        const legacyToken = localStorage.getItem(tokenKey);
+        if (legacyToken) {
+            sessionStorage.setItem(tokenKey, legacyToken);
+            localStorage.removeItem(tokenKey);
+            return legacyToken;
+        }
+        return null;
+    }
+
+    function clearSession() {
+        sessionStorage.removeItem(tokenKey);
+        localStorage.removeItem(tokenKey);
     }
 
     function saveSession(payload) {
-        if (payload.token) localStorage.setItem(tokenKey, payload.token);
+        clearSession();
+        if (payload.token) sessionStorage.setItem(tokenKey, payload.token);
         return payload.user || payload.data || payload;
     }
 
     async function request(path, options = {}) {
         const token = getToken();
-        const response = await fetch(path, {
-            credentials: 'include',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                ...(options.headers || {})
-            },
-            ...options
-        });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-            const serverError = typeof payload.error === 'object' ? payload.error : null;
-            const error = new Error(serverError?.message || payload.error || payload.message || `Request failed: ${response.status}`);
-            error.status = response.status;
-            error.payload = payload;
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), requestTimeoutMs);
+        try {
+            const response = await fetch(path, {
+                credentials: 'include',
+                ...options,
+                signal: options.signal || controller.signal,
+                headers: {
+                    Accept: 'application/json',
+                    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    ...(options.headers || {})
+                }
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                if (response.status === 401) clearSession();
+                const serverError = typeof payload.error === 'object' ? payload.error : null;
+                const error = new Error(serverError?.message || payload.error || payload.message || `Request failed: ${response.status}`);
+                error.status = response.status;
+                error.code = serverError?.code;
+                error.payload = payload;
+                throw error;
+            }
+            return payload;
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                const timeoutError = new Error('The request timed out. Please retry.');
+                timeoutError.code = 'TIMEOUT';
+                throw timeoutError;
+            }
             throw error;
+        } finally {
+            window.clearTimeout(timeout);
         }
-        return payload;
     }
 
     window.codehavenApiAdapter = {
@@ -82,7 +114,7 @@
             window.location.assign(payload.url);
         },
         logout() {
-            localStorage.removeItem(tokenKey);
+            clearSession();
         },
         async getDashboard() {
             const user = await this.getUser();
@@ -96,10 +128,10 @@
             const courses = payload.courses || payload.data || (payload.course ? [payload.course] : []);
             const course = courseId
                 ? (payload.course || courses.find((item) => String(item.id) === String(courseId)))
-                : (courses[0] || payload);
+                : (courses[0] || null);
             if (!courseId && course?.id && !(course.modules || []).length) return this.getLearningPath(course.id);
-            const normalizedCourse = normalizeCourse(course || {});
-            return { ...normalizedCourse, courses: courses.length ? courses.map(normalizeCourse) : [normalizedCourse], modules: normalizedCourse.modules || [] };
+            const normalizedCourse = course ? normalizeCourse(course) : null;
+            return { ...normalizedCourse, courses: courses.map(normalizeCourse), modules: normalizedCourse?.modules || [] };
         },
         async getProblems(query = {}) {
             const params = new URLSearchParams(query);

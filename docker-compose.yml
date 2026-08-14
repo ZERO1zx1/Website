@@ -11,17 +11,18 @@ services:
       FLASK_ENV: production
       FRONTEND_ONLY: "false"
       SANDBOX_URL: http://sandbox:8080
-      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-change-this-in-production}
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:?SANDBOX_TOKEN must be set}
       SUBMISSION_QUEUE_MODE: redis
       REDIS_URL: redis://redis:6379/0
     ports:
       - "5000:5000"
     depends_on:
       redis:
-        condition: service_started
+        condition: service_healthy
       sandbox:
         condition: service_healthy
     networks:
+      - app_network
       - sandbox_internal
     restart: unless-stopped
 
@@ -35,16 +36,17 @@ services:
       FLASK_ENV: production
       FRONTEND_ONLY: "false"
       SANDBOX_URL: http://sandbox:8080
-      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-change-this-in-production}
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:?SANDBOX_TOKEN must be set}
       SUBMISSION_QUEUE_MODE: redis
       REDIS_URL: redis://redis:6379/0
     command: ["python", "-m", "backend.worker"]
     depends_on:
       redis:
-        condition: service_started
+        condition: service_healthy
       sandbox:
         condition: service_healthy
     networks:
+      - app_network
       - sandbox_internal
     restart: unless-stopped
 
@@ -53,6 +55,11 @@ services:
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
     networks:
       - sandbox_internal
     restart: unless-stopped
@@ -63,8 +70,10 @@ services:
       dockerfile: Dockerfile
     image: codehaven-sandbox:local
     environment:
+      FLASK_ENV: production
       SANDBOX_PORT: 8080
-      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-change-this-in-production}
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:?SANDBOX_TOKEN must be set}
+      SANDBOX_REQUIRE_TOKEN: "true"
     read_only: true
     mem_limit: 256m
     cpus: 0.50
@@ -88,5 +97,6 @@ volumes:
   redis_data:
 
 networks:
+  app_network:
   sandbox_internal:
     internal: true

@@ -132,17 +132,17 @@ programming-learning-platform/
 └── docs/                    # Design and integration handoff
 ```
 
-## Frontend-first workflow
+## Development modes and full-stack integration
 
-The current frontend prototype is intentionally complete before backend integration. It uses mock data through an adapter boundary in `frontend/static/js/app.js`, so screens and interactions can be reviewed without Supabase credentials. The design handoff is documented in [`docs/frontend-design-handoff.md`](docs/frontend-design-handoff.md).
+The frontend is served by Flask in both supported modes. `FRONTEND_ONLY=true` is an explicitly labelled demo mode for UI review without Supabase credentials; it may use local fixtures and a simulated editor flow. Normal backend mode (`FRONTEND_ONLY=false`) uses the live API adapter for authentication, dashboard data, courses, problems, visible-test execution, graded submissions, SSE submission updates, and polling fallback. A failed live request remains an error state and is never silently replaced with believable mock data.
 
-To preview the frontend without loading backend blueprints:
+To preview the labelled frontend-only mode:
 
 ```bash
 FRONTEND_ONLY=true PYTHONPATH=. python -m flask --app 'app:create_app()' run --host 0.0.0.0 --port 5000
 ```
 
-The frontend includes the dashboard, learning path, practice library, assessments, profile/preferences, responsive navigation, theme switching and a mock code editor flow. Backend integration is intentionally deferred until the frontend screens and Figma structure are approved.
+For backend mode, configure the required values in `.env` using `.env.example`, apply migrations in numeric order (`001_auth_roles.sql`, `002_learning_platform.sql`, `003_external_auth_identities.sql`), optionally apply `backend/db/seed/001_demo_content.sql`, and start Flask with `PYTHONPATH=. python app.py`. The backend requires real Supabase configuration; production also requires a strong `SECRET_KEY`, a non-empty `SANDBOX_TOKEN` when the sandbox is enabled, and `REDIS_URL` when Redis queue mode is selected.
 
 ## Backend stack and role model
 
@@ -219,9 +219,11 @@ The application will be available at `http://localhost:5000`
 - `DELETE /api/problems/<problem_id>` - Delete problem (teacher only)
 
 ### Submissions
-- `POST /api/submissions` - Submit code for evaluation
-- `GET /api/submissions/<submission_id>` - Get submission results
-- `GET /api/submissions/user/<user_id>` - Get user's submissions
+- `POST /api/submissions/run` - Run code against visible tests without creating a graded submission
+- `POST /api/submissions` - Submit code for asynchronous evaluation
+- `GET /api/submissions/<submission_id>` - Get an authorized submission and non-sensitive results
+- `GET /api/submissions/<submission_id>/stream` - Stream submission status over SSE
+- `GET /api/submissions/user/<user_id>` - Get an authorized user's submissions
 
 ### Teacher
 - `GET /api/teacher/classes` - Get teacher's classes
@@ -236,11 +238,13 @@ The application will be available at `http://localhost:5000`
 ## Security Considerations
 
 1. **Role Enforcement**: All role checks are performed server-side. Never trust client-provided role data.
-2. **Code Sandbox**: Student code executes in isolated Docker containers with strict resource limits.
-3. **Token Security**: JWT tokens are signed with a secret key and include expiration.
-4. **Input Validation**: All user inputs are validated and sanitized.
-5. **CORS**: Cross-Origin Resource Sharing is configured for security.
-6. **SQL Injection**: Supabase client library handles parameterized queries.
+2. **Code Sandbox**: Student code executes through the internal sandbox service, never directly in the Flask web process. Docker applies non-root execution, resource limits, no network, read-only filesystems, dropped capabilities, and no-new-privileges.
+3. **Sandbox Authentication**: Production Compose requires `SANDBOX_TOKEN`; there is no known default token, and the sandbox refuses unauthenticated production startup.
+4. **Token Security**: JWT tokens are signed with a secret key and include expiration. Browser sessions use session storage and remove legacy local-storage tokens during migration.
+5. **Input Validation**: All user inputs and request sizes are validated server-side. Hidden test inputs and expected outputs are filtered from student submission responses and streams.
+6. **CORS and Headers**: CORS origins are explicit and production security headers include CSP, clickjacking protection, MIME sniffing protection, and secure referrer policy.
+7. **SQL Injection**: Supabase client library handles parameterized queries.
+8. **Readiness**: `/api/health` reports process liveness; `/api/ready` checks configuration and, when enabled, Supabase, Redis, and sandbox availability.
 
 ## Development
 
@@ -266,11 +270,26 @@ def my_endpoint(current_user):
 ```
 
 ### Testing
+Run the Python test suite with the repository root on `PYTHONPATH`, then validate frontend syntax:
 
-Run tests with pytest:
 ```bash
-pytest tests/
+PYTHONPATH=. pytest -q
+python -m compileall -q .
+node --check frontend/static/js/app.js
+node --check frontend/static/js/adapters/api-adapter.js
+node --check frontend/static/js/monaco-editor.js
+git diff --check
 ```
+
+Docker validation requires Docker Engine:
+
+```bash
+docker compose config
+docker compose build
+docker compose up
+```
+
+Compose requires a populated local `.env` with a strong `SANDBOX_TOKEN`; Redis and sandbox ports are not published to the host.
 
 ## Deployment
 

@@ -70,16 +70,17 @@ Every data-bearing surface must support four explicit states: loading, populated
 
 ## Interaction and state contract
 
-The current browser selects `mockAdapter` for demo mode and `codehavenApiAdapter` when backend mode has a valid session token. Presentation code calls adapter methods rather than `fetch` directly. Authentication uses the live adapter in backend mode, while demo mode remains local. The Editor Run action is explicitly a demo runner because no `/run` endpoint exists; Submit sends `problem_id`, `code` and `language` to `POST /api/submissions` in a live session, then consumes `/api/submissions/<id>/stream` with a polling fallback when SSE is unavailable. The editor runtime badge exposes ready, queued, running, connected and offline states.
+The current browser selects `mockAdapter` only for explicitly labelled demo mode and `codehavenApiAdapter` for authenticated backend mode. Presentation code calls adapter methods rather than `fetch` directly. Authentication uses the live adapter in backend mode, while demo mode remains local. The Editor Run action calls `POST /api/submissions/run` against visible tests in backend mode; Submit sends `problem_id`, `code` and `language` to `POST /api/submissions`, then consumes `/api/submissions/<id>/stream` with a polling fallback when SSE is unavailable. The editor runtime badge exposes ready, queued, running, connected and offline states.
 
-Dynamic HTML rendering must escape user- or server-provided values before inserting them into markup. Adapter failures must fall back to a readable error state rather than silently replacing live data with mock data. The backend evaluator is implemented with an in-process thread queue for single-process local mode and a Redis-backed `backend.worker` process for the compose deployment. The UI refreshes or polls the pending submission until a final result is available. The evaluator is not considered production-ready until the Supabase project, Redis, sandbox healthcheck and migration/seed setup pass the readiness validator.
+Dynamic HTML rendering must escape user- or server-provided values before inserting them into markup. Adapter failures must remain readable loading/error/unauthorized states rather than silently replacing live data with mock data. The backend evaluator is implemented with an in-process thread queue for single-process local mode and a Redis-backed `backend.worker` process for the Compose deployment. The UI refreshes or streams the pending submission until a final result is available. Production Compose uses split external and internal networks, requires `SANDBOX_TOKEN`, and keeps Redis and the sandbox off the host network. The evaluator is not considered live end-to-end verified until the Supabase project, Redis, sandbox healthcheck and migration/seed setup pass the readiness validator.
 
 | Frontend method | Future endpoint | Expected responsibility |
 |---|---|---|
 | `getUser()` | `GET /api/auth/me` | Return authenticated user and role |
-| `getDashboard()` | `GET /api/analytics/mastery/:userId` plus activity/submission summary | Return recent practice, mastery and activity data |
+| `getDashboard()` | `GET /api/analytics/dashboard` | Return recent practice, mastery and activity data for an authorized role |
 | `getLearningPath()` | `GET /api/courses/:courseId` | Return modules, lessons and progress state |
 | `getProblems()` | `GET /api/problems` | Return problem cards and filters |
+| `runCode()` | `POST /api/submissions/run` | Execute visible tests without creating a graded record |
 | `submitCode()` | `POST /api/submissions` | Submit code and return evaluation status/result |
 
 No Supabase credentials are needed for frontend preview. Start it with:
@@ -118,4 +119,4 @@ The final frontend pass covers dynamic localization rather than only static shel
 
 The browser verification sequence covered the authentication shell, dashboard, Practice, code editor Run flow, Learning path, Assessments, Profile and Preferences. A 390px mobile screenshot confirmed collapsed navigation, two-column KPI cards, full-width learning card and no horizontal clipping. HTML accessibility checks cover the main landmark, dialog state, language selector, auth inputs, code editor and live toast region.
 
-Final local acceptance status: 24 Python regression tests passed, JavaScript syntax passed, Flask frontend-only preview returned HTTP 200, static assets returned HTTP 200 and `git diff --check` passed. Five existing `datetime.utcnow()` deprecation warnings remain in the code executor tests. Live code evaluation is wired through the Redis worker and internal sandbox service in Docker Compose; actual Supabase credentials and migrations are still required for a real end-to-end run.
+Final local acceptance status: 30 Python regression tests passed, JavaScript syntax checks passed, Python compilation passed and `git diff --check` passed. The sandbox, queue, readiness, hidden-test filtering and configuration hardening have regression coverage. Flask frontend-only preview and Docker Compose runtime were not fully exercised in this sandbox because Docker is unavailable; live Supabase end-to-end behavior still requires real credentials and an applied migration/seed set.
