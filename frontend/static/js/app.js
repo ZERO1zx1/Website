@@ -269,6 +269,7 @@ async function renderDashboard() {
     if (streakNode) streakNode.innerHTML = `${streak}<span> ${streak === 1 ? 'day' : 'days'}</span>`;
     const continueCourse = livePath?.courses?.find((course) => Number(course.progress || 0) < 100) || livePath?.courses?.[0];
     const continueLesson = continueCourse?.modules?.flatMap((module) => module.lessons || []).find((lesson) => lesson.status !== 'completed');
+    renderDashboardFocus(livePath);
     const continueTitle = document.getElementById('continue-course-title');
     const continueDescription = document.getElementById('continue-course-description');
     const continueProgress = document.getElementById('continue-course-progress');
@@ -301,6 +302,38 @@ async function renderDashboard() {
         </div>`).join('') : `<div class="empty-state">${app.language === 'mn' ? 'Одоогоор дадлагын түүх алга.' : 'No practice history yet.'}</div>`;
     container.querySelectorAll('[data-open-editor]').forEach((button) => button.addEventListener('click', openEditor));
     applyLanguage();
+}
+
+function renderDashboardFocus(livePath) {
+    const focusList = document.getElementById('focus-list');
+    const focusCount = document.querySelector('.focus-count');
+    if (!focusList) return;
+    const pending = (livePath?.courses || []).flatMap((course) => (course.modules || []).flatMap((module, moduleIndex) =>
+        (module.lessons || []).filter((lesson) => lesson.status !== 'completed').map((lesson) => ({ course, module, moduleIndex, lesson }))
+    ));
+    const focusItems = pending.slice(0, 3);
+    if (focusCount) focusCount.textContent = `${focusItems.length} / 3`;
+    if (!focusItems.length) {
+        focusList.innerHTML = `<p class="empty-state">${app.language === 'mn' ? 'Бүх боломжит хичээл дууссан байна. Дараагийн замыг сонгоорой.' : 'You are caught up. Choose another path when you are ready.'}</p>`;
+        return;
+    }
+    focusList.innerHTML = focusItems.map(({ course, module, moduleIndex, lesson }, index) => `
+        <button class="focus-item" type="button" data-focus-course="${escapeHtml(course.id)}" data-focus-module="${moduleIndex}">
+            <span class="focus-item-number">${String(index + 1).padStart(2, '0')}</span>
+            <span class="focus-item-copy"><strong>${escapeHtml(localizeContent(lesson.title || module.title))}</strong><small>${escapeHtml(localizeContent(course.title))} · ${escapeHtml(formatLessonStatus(lesson.status))}</small></span>
+            <span class="focus-item-arrow" aria-hidden="true">→</span>
+        </button>`).join('');
+    focusList.querySelectorAll('[data-focus-course]').forEach((button) => button.addEventListener('click', async () => {
+        app.selectedCourseId = button.dataset.focusCourse;
+        showView('learn');
+        try {
+            await renderLearningPath();
+            const course = app.courses.find((item) => String(item.id) === String(button.dataset.focusCourse));
+            if (course) await openLessonPreview(course, Number(button.dataset.focusModule));
+        } catch (error) {
+            showToast(app.language === 'mn' ? 'Дараагийн хичээлийг нээж чадсангүй.' : 'The next lesson could not be opened.', 'error');
+        }
+    }));
 }
 
 async function renderLearningPath() {
