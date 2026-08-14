@@ -65,10 +65,13 @@
     }
     function validatePageForm(form, data) {
         const mode = form.dataset.pageAuth;
-        if (!['login', 'reset-request', 'reset-confirm'].includes(mode)) return { valid: true };
+        if (!['login', 'register', 'reset-request', 'reset-confirm'].includes(mode)) return { valid: true };
         clearValidation(form);
         const errors = [];
-        if (!isValidEmail(data.email) && ['login', 'reset-request'].includes(mode)) { setValidationError(form, 'email', validationCopy('email')); errors.push('email'); }
+        if (!isValidEmail(data.email) && ['login', 'register', 'reset-request'].includes(mode)) { setValidationError(form, 'email', validationCopy('email')); errors.push('email'); }
+        if (mode === 'register' && String(data.name || '').trim().length < 2) { setValidationError(form, 'name', document.documentElement.lang === 'mn' ? 'Нэрээ оруулна уу.' : 'Enter your full name.'); errors.push('name'); }
+        if (mode === 'register' && String(data.password || '').length < 8) { setValidationError(form, 'password', validationCopy('password')); errors.push('password'); }
+        if (mode === 'register' && !data.terms) { setValidationError(form, 'terms', document.documentElement.lang === 'mn' ? 'Үйлчилгээний нөхцөлийг зөвшөөрнө үү.' : 'Accept the Terms of Service to continue.'); errors.push('terms'); }
         if (mode === 'login' && !String(data.password || '').trim()) { setValidationError(form, 'password', validationCopy('requiredPassword')); errors.push('password'); }
         if (mode === 'login' && String(data.password || '').length > 0 && String(data.password || '').length < 8) { setValidationError(form, 'password', validationCopy('password')); errors.push('password'); }
         if (mode === 'reset-confirm' && String(data.token || '').length < 20) { setValidationError(form, 'token', validationCopy('token')); errors.push('token'); }
@@ -156,28 +159,50 @@
         const dashboard = document.querySelector('[data-stat="mastery"]');
         if (!dashboard) return;
         if (!sessionStorage.getItem(tokenKey)) { go('/login'); return; }
-        Promise.all([api.request('/api/analytics/dashboard'), api.request('/api/courses')]).then(([statsPayload, coursesPayload]) => {
-            const stats = statsPayload.stats || {};
-            const name = statsPayload.user?.name || statsPayload.name || '';
-            const nameNode = document.querySelector('[data-dashboard-name]');
-            if (nameNode) nameNode.textContent = name ? `, ${name}` : '';
-            document.querySelector('[data-stat="mastery"]').textContent = `${Number(stats.overall_mastery || 0)}%`;
-            document.querySelector('[data-stat="solved"]').textContent = String(stats.solved_problems || 0);
-            const minutes = Number(stats.study_minutes || 0);
-            document.querySelector('[data-stat="study"]').textContent = minutes >= 60 ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : `${minutes}m`;
-            document.querySelector('[data-stat="streak"]').textContent = `${Number(stats.current_streak || 0)} days`;
-            const courses = coursesPayload.courses || [];
-            const course = courses.find((item) => Number(item.progress || 0) < 100) || courses[0];
-            const lessons = (course?.modules || []).flatMap((module) => module.lessons || []);
-            const next = lessons.find((lesson) => lesson.status !== 'completed');
-            document.querySelector('[data-live-course]').textContent = course?.title || 'Your learning path';
-            document.querySelector('[data-live-description]').textContent = course?.description || 'Your next lesson will appear here.';
-            document.querySelector('[data-live-progress-bar]').style.width = `${Number(course?.progress || 0)}%`;
-            document.querySelector('[data-live-next]').textContent = next?.title || 'Start a lesson';
-            const focus = document.querySelector('[data-focus-list]');
-            if (focus) focus.innerHTML = lessons.filter((lesson) => lesson.status !== 'completed').slice(0, 3).map((lesson) => `<div><strong>${escapeHtml(lesson.title)}</strong><small>${escapeHtml(lesson.status || 'not_started')}</small></div>`).join('') || '<p class="muted">You are caught up.</p>';
-        }).catch((error) => show(message(error, 'Dashboard data could not be loaded.'), 'error'));
+        const statusNode = document.querySelector('[data-dashboard-status]');
+        const refreshButton = document.querySelector('[data-dashboard-refresh]');
+        const setStatus = (text, type = 'info') => { if (statusNode) { statusNode.textContent = text; statusNode.dataset.state = type; } };
+        const setBusy = (busy) => { if (refreshButton) refreshButton.disabled = busy; document.querySelector('.dashboard-page')?.classList.toggle('is-loading', busy); };
+        const loadDashboard = async () => {
+            setBusy(true);
+            setStatus('Loading your private dashboard…');
+            try {
+                const [mePayload, statsPayload, coursesPayload] = await Promise.all([
+                    api.request('/api/auth/me'),
+                    api.request('/api/analytics/dashboard'),
+                    api.request('/api/courses')
+                ]);
+                const stats = statsPayload.stats || {};
+                const user = mePayload.user || mePayload;
+                const name = user?.name || statsPayload.user?.name || '';
+                const nameNode = document.querySelector('[data-dashboard-name]');
+                if (nameNode) nameNode.textContent = name ? `, ${name}` : '';
+                document.querySelector('[data-stat="mastery"]').textContent = `${Number(stats.overall_mastery || 0)}%`;
+                document.querySelector('[data-stat="solved"]').textContent = String(stats.solved_problems || 0);
+                const minutes = Number(stats.study_minutes || 0);
+                document.querySelector('[data-stat="study"]').textContent = minutes >= 60 ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : `${minutes}m`;
+                document.querySelector('[data-stat="streak"]').textContent = `${Number(stats.current_streak || 0)} days`;
+                const courses = coursesPayload.courses || [];
+                const course = courses.find((item) => Number(item.progress || 0) < 100) || courses[0];
+                const lessons = (course?.modules || []).flatMap((module) => (module.lessons || []).map((lesson) => ({...lesson, moduleTitle: module.title})));
+                const next = lessons.find((lesson) => lesson.status !== 'completed');
+                document.querySelector('[data-live-course]').textContent = course?.title || 'Your learning path';
+                document.querySelector('[data-live-description]').textContent = course?.description || 'Your next lesson will appear here.';
+                document.querySelector('[data-live-progress-bar]').style.width = `${Number(course?.progress || 0)}%`;
+                document.querySelector('[data-live-next]').textContent = next?.title || 'Start a lesson';
+                const focus = document.querySelector('[data-focus-list]');
+                if (focus) focus.innerHTML = lessons.filter((lesson) => lesson.status !== 'completed').slice(0, 3).map((lesson) => `<div class="focus-item"><span><strong>${escapeHtml(lesson.title)}</strong><small>${escapeHtml(lesson.moduleTitle || 'Lesson')} · ${escapeHtml(lesson.status || 'not_started')}</small></span><span class="focus-arrow">→</span></div>`).join('') || '<p class="muted">You are caught up.</p>';
+                setStatus(`Updated ${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`, 'success');
+            } catch (error) {
+                if (error.status === 401) { sessionStorage.removeItem(tokenKey); go('/login'); return; }
+                setStatus(message(error, 'Dashboard data could not be loaded.'), 'error');
+                show(message(error, 'Dashboard data could not be loaded.'), 'error');
+            } finally { setBusy(false); }
+        };
+        refreshButton?.addEventListener('click', loadDashboard);
         document.querySelector('[data-page-logout]')?.addEventListener('click', () => { sessionStorage.removeItem(tokenKey); go('/login'); });
+        loadDashboard();
+        window.setInterval(loadDashboard, 15000);
     }
     function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, (character) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[character])); }
     function applyProviderNote() { document.querySelectorAll('[data-provider-note]').forEach((node) => { node.textContent = backendEnabled ? '' : 'Sign in and recovery actions require backend mode.'; }); }

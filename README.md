@@ -172,7 +172,7 @@ For a local container run, configure `.env` and use:
 docker compose up --build
 ```
 
-The backend runbook is documented in [`docs/backend-integration.md`](docs/backend-integration.md) and the project layout in [`docs/project-structure.md`](docs/project-structure.md).
+The backend runbook is documented in [`docs/backend-integration.md`](docs/backend-integration.md), the complete Supabase Email/Google and local backend setup is in [`docs/supabase-and-local-backend.md`](docs/supabase-and-local-backend.md), and the project layout is in [`docs/project-structure.md`](docs/project-structure.md).
 
 ## Installation
 
@@ -213,6 +213,11 @@ The application will be available at `http://localhost:5000`
 ### Authentication
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - Login and get JWT token
+- `POST /api/auth/password-reset/request` - Request password recovery
+- `POST /api/auth/password-reset/confirm` - Consume a local reset token
+- `POST /api/auth/otp/request` - Request Supabase email OTP
+- `POST /api/auth/otp/verify` - Verify Supabase email OTP
+- `GET /api/auth/google/start` - Start Google OAuth
 - `GET /api/auth/me` - Get current user info
 - `POST /api/auth/request-teacher-role` - Request teacher role
 - `POST /api/auth/approve-teacher/<user_id>` - Admin: Approve teacher

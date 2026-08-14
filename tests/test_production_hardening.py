@@ -263,3 +263,38 @@ def test_local_password_reset_request_and_confirm(monkeypatch, tmp_path):
     assert login.status_code == 200
     reused = client.post("/api/auth/password-reset/confirm", json={"token": token, "password": "thirdpassword"})
     assert reused.status_code == 400
+
+
+
+def test_register_page_contains_client_validation_contract(monkeypatch):
+    monkeypatch.setenv("FLASK_ENV", "development")
+    monkeypatch.setenv("FRONTEND_ONLY", "false")
+    monkeypatch.setenv("LOCAL_DB", "true")
+    monkeypatch.setenv("SECRET_KEY", "local-development-secret-that-is-long-enough")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+    from backend.db import db
+    db._client = None
+    html = create_app().test_client().get("/register").data
+    assert b"data-validation-summary" in html
+    assert b"data-field-error=\"terms\"" in html
+    assert b"novalidate" in html
+
+
+def test_dashboard_returns_authenticated_user_profile(monkeypatch, tmp_path):
+    from backend.db import db
+    monkeypatch.setenv("FLASK_ENV", "development")
+    monkeypatch.setenv("FRONTEND_ONLY", "false")
+    monkeypatch.setenv("LOCAL_DB", "true")
+    monkeypatch.setenv("LOCAL_DB_PATH", str(tmp_path / "dashboard-user.sqlite3"))
+    monkeypatch.setenv("SECRET_KEY", "local-development-secret-that-is-long-enough")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+    db._client = None
+    client = create_app().test_client()
+    registered = client.post("/api/auth/register", json={"name": "Dashboard User", "email": "dashboard@example.com", "password": "password123"})
+    token = registered.get_json()["token"]
+    response = client.get("/api/analytics/dashboard", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+    assert response.get_json()["user"]["name"] == "Dashboard User"
+    assert response.get_json()["user"]["role"] == "student"

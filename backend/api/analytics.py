@@ -40,6 +40,12 @@ def get_dashboard(current_user):
         overall_mastery = round(sum(mastery_scores) / len(mastery_scores)) if mastery_scores else 0
         return {
             "user_id": current_user["id"],
+            "user": {
+                "id": current_user.get("id"),
+                "name": current_user.get("name"),
+                "email": current_user.get("email"),
+                "role": current_user.get("role", "student"),
+            },
             "role": current_user.get("role", "student"),
             "mastery": mastery_data,
             "skills": mastery_data,
