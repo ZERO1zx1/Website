@@ -4,8 +4,8 @@ Problem bank management with test cases and hints
 """
 
 from flask import Blueprint, request, jsonify
-from routes.auth import token_required, teacher_required
-from db import db
+from backend.api.auth import token_required, teacher_required
+from backend.db import db
 import hashlib
 
 problems_bp = Blueprint('problems', __name__)

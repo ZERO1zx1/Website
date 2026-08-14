@@ -4,6 +4,7 @@ Supabase Database Client
 
 import os
 from supabase import create_client, Client
+from werkzeug.security import generate_password_hash
 
 class SupabaseDB:
     """Supabase database client wrapper"""
@@ -13,23 +14,29 @@ class SupabaseDB:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance._initialize()
+            cls._instance._client = None
         return cls._instance
-    
+
     def _initialize(self):
-        """Initialize Supabase client"""
+        """Initialize Supabase client only when a database operation is requested."""
         supabase_url = os.getenv('SUPABASE_URL')
         supabase_key = os.getenv('SUPABASE_KEY')
-        
+
         if not supabase_url or not supabase_key:
-            raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in environment")
-        
-        self.client: Client = create_client(supabase_url, supabase_key)
-    
+            raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set for backend database operations")
+
+        self._client = create_client(supabase_url, supabase_key)
+
+    @property
+    def client(self) -> Client:
+        if self._client is None:
+            self._initialize()
+        return self._client
+
     def get_client(self) -> Client:
         """Get Supabase client"""
         return self.client
-    
+
     # ============ USER OPERATIONS ============
     
     def create_user(self, email: str, password: str, name: str, role: str = 'student'):
@@ -38,7 +45,9 @@ class SupabaseDB:
             response = self.client.table('users').insert({
                 'email': email,
                 'name': name,
+                'password_hash': generate_password_hash(password),
                 'role': role,
+                'requested_role': None,
                 'teacher_approval_status': 'pending' if role == 'teacher' else 'approved'
             }).execute()
             return response.data[0] if response.data else None
@@ -54,11 +63,80 @@ class SupabaseDB:
         """Get user by email"""
         response = self.client.table('users').select('*').eq('email', email).execute()
         return response.data[0] if response.data else None
-    
+
+    def get_user_by_auth_id(self, auth_user_id: str):
+        """Get a local user linked to a Supabase Auth identity."""
+        response = self.client.table('users').select('*').eq('auth_user_id', auth_user_id).execute()
+        return response.data[0] if response.data else None
+
+    def ensure_external_user(
+        self,
+        *,
+        auth_user_id: str,
+        email: str,
+        name: str,
+        provider: str,
+        avatar_url: str = None,
+    ):
+        """Link or create a local role record for an OTP/OAuth identity."""
+        user = self.get_user_by_auth_id(auth_user_id) or self.get_user_by_email(email)
+        identity_data = {
+            'auth_user_id': auth_user_id,
+            'auth_provider': provider,
+        }
+        if avatar_url:
+            identity_data['avatar_url'] = avatar_url
+        if user:
+            return self.update_user(user['id'], identity_data)
+        identity_data.update({
+            'email': email,
+            'name': name or email.split('@')[0],
+            'password_hash': None,
+            'role': 'student',
+            'requested_role': None,
+            'teacher_approval_status': 'approved',
+        })
+        response = self.client.table('users').insert(identity_data).execute()
+        return response.data[0] if response.data else None
+
+    def request_email_otp(self, email: str, redirect_to: str = None):
+        """Ask Supabase Auth to send its configured email OTP template."""
+        options = {'should_create_user': True}
+        if redirect_to:
+            options['email_redirect_to'] = redirect_to
+        return self.client.auth.sign_in_with_otp({'email': email, 'options': options})
+
+    def verify_email_otp(self, email: str, code: str):
+        """Verify a Supabase email OTP and return the Auth session."""
+        return self.client.auth.verify_otp({'email': email, 'token': code, 'type': 'email'})
+
+    def google_login_url(self, redirect_to: str):
+        """Return the Supabase-hosted Google OAuth authorization URL."""
+        response = self.client.auth.sign_in_with_oauth({
+            'provider': 'google',
+            'options': {'redirect_to': redirect_to},
+        })
+        return response.url
+
+    def exchange_google_code(self, code: str):
+        """Exchange the OAuth callback code for a Supabase Auth session."""
+        return self.client.auth.exchange_code_for_session({'auth_code': code})
+
     def update_user(self, user_id: int, data: dict):
         """Update user"""
         response = self.client.table('users').update(data).eq('id', user_id).execute()
         return response.data[0] if response.data else None
+
+    def get_pending_teacher_requests(self):
+        """Return users who requested teacher approval."""
+        response = (
+            self.client.table('users')
+            .select('id,email,name,role,requested_role,teacher_approval_status,created_at')
+            .eq('requested_role', 'teacher')
+            .eq('teacher_approval_status', 'pending')
+            .execute()
+        )
+        return response.data or []
     
     # ============ COURSE OPERATIONS ============
     
@@ -101,7 +179,12 @@ class SupabaseDB:
     def get_teacher_classes(self, teacher_id: int):
         """Get all classes for a teacher"""
         response = self.client.table('classes').select('*').eq('teacher_id', teacher_id).execute()
-        return response.data
+        return response.data or []
+
+    def get_all_classes(self):
+        """Get all classes for owner/admin dashboards."""
+        response = self.client.table('classes').select('*').execute()
+        return response.data or []
     
     # ============ PROBLEM OPERATIONS ============
     
@@ -147,6 +230,18 @@ class SupabaseDB:
         """Get submission by ID"""
         response = self.client.table('submissions').select('*').eq('id', submission_id).execute()
         return response.data[0] if response.data else None
+
+    def get_user_submissions(self, user_id: int, limit: int = 5):
+        """Get a user's most recent submissions with problem display metadata."""
+        response = (
+            self.client.table('submissions')
+            .select('*, problems(title, difficulty)')
+            .eq('user_id', user_id)
+            .order('created_at', desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return response.data or []
     
     def update_submission_status(self, submission_id: int, status: str, score: float = None):
         """Update submission status"""

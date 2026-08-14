@@ -4,8 +4,8 @@ Course and class management with teacher authorization
 """
 
 from flask import Blueprint, request, jsonify
-from routes.auth import token_required, teacher_required, admin_required
-from db import db
+from backend.api.auth import token_required, teacher_required, admin_required
+from backend.db import db
 import string
 import random
 

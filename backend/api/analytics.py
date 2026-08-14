@@ -4,18 +4,66 @@ Learning analytics and progress tracking
 """
 
 from flask import Blueprint, request, jsonify
-from routes.auth import token_required, teacher_required
-from db import db
+from backend.api.auth import token_required
+from backend.db import db
+from backend.rbac import permission_required
 
 analytics_bp = Blueprint('analytics', __name__)
+
+
+@analytics_bp.route('/dashboard', methods=['GET'])
+@token_required
+@permission_required('student.dashboard.read')
+def get_student_dashboard(current_user):
+    """Return normalized dashboard data for the authenticated student."""
+    try:
+        mastery_data = db.get_user_mastery(current_user['id']) or []
+        submissions = db.get_user_submissions(current_user['id'], limit=5) or []
+        recent_practice = []
+        for submission in submissions:
+            problem = submission.get('problems') or {}
+            score = submission.get('score')
+            recent_practice.append({
+                'id': submission.get('id'),
+                'title': problem.get('title') or f"Problem #{submission.get('problem_id')}",
+                'category': problem.get('difficulty', 'Practice').title(),
+                'status': submission.get('status', 'pending').replace('_', ' ').title(),
+                'score': f"{float(score):.0f}%" if score is not None else '—',
+                'icon': str(submission.get('problem_id', 0)).zfill(2),
+                'created_at': submission.get('created_at')
+            })
+        return {
+            'user_id': current_user['id'],
+            'mastery': mastery_data,
+            'skills': mastery_data,
+            'recentPractice': recent_practice,
+            'recent_practice': recent_practice,
+            'total_skills': len(mastery_data),
+            'message': 'Student dashboard loaded.',
+            'message_mn': 'Суралцагчийн хяналтын самбар ачааллаа.'
+        }, 200
+    except Exception:
+        return {
+            'error': {
+                'code': 'student_dashboard_failed',
+                'message': 'The student dashboard could not be loaded.',
+                'message_mn': 'Суралцагчийн хяналтын самбар ачаалахад алдаа гарлаа.'
+            }
+        }, 500
 
 @analytics_bp.route('/mastery/<int:user_id>', methods=['GET'])
 @token_required
 def get_user_mastery(current_user, user_id):
     """Get user mastery for all skills"""
     # Check authorization
-    if current_user['id'] != user_id and current_user['role'] not in ['teacher', 'admin']:
-        return {'error': 'You do not have permission to view this data'}, 403
+    if current_user['id'] != user_id and current_user['role'] not in ['owner', 'admin', 'teacher']:
+        return {
+            'error': {
+                'code': 'permission_denied',
+                'message': 'You do not have permission to view this data.',
+                'message_mn': 'Танд энэ мэдээллийг харах зөвшөөрөл байхгүй байна.'
+            }
+        }, 403
     
     try:
         mastery_data = db.get_user_mastery(user_id)

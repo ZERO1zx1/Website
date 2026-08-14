@@ -1,0 +1,26 @@
+application:
+  name: codehaven
+  default_locale: en
+  supported_locales:
+    - en
+    - mn
+  frontend_only_env: FRONTEND_ONLY
+  backend_mode_env: BACKEND_MODE
+server:
+  host_env: HOST
+  port_env: PORT
+  debug_env: FLASK_DEBUG
+security:
+  secret_key_env: SECRET_KEY
+  supabase_url_env: SUPABASE_URL
+  supabase_key_env: SUPABASE_KEY
+  cors_origins_env: CORS_ORIGINS
+  jwt_expiry_hours: 24
+services:
+  sandbox:
+    image: codehaven-sandbox:local
+    network_disabled: true
+    memory_limit: 256m
+    cpus: 0.5
+  web:
+    port: 5000

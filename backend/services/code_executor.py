@@ -11,6 +11,23 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
+SUPPORTED_LANGUAGES = {'python', 'javascript'}
+MIN_TIMEOUT_SECONDS = 1
+MAX_TIMEOUT_SECONDS = 15
+MIN_MEMORY_MB = 64
+MAX_MEMORY_MB = 512
+MAX_CODE_LENGTH = 100_000
+MAX_TEST_CASES = 100
+
+
+def _error_result(message: str) -> Dict:
+    return {
+        'status': 'error',
+        'error': message,
+        'timestamp': datetime.utcnow().isoformat(),
+    }
+
+
 class CodeExecutor:
     """Execute code in isolated Docker containers"""
     
@@ -64,6 +81,25 @@ class CodeExecutor:
         Returns:
             Dictionary with execution results
         """
+        if not isinstance(code, str) or not code.strip():
+            return _error_result('Code must be a non-empty string.')
+        if len(code) > MAX_CODE_LENGTH:
+            return _error_result(f'Code exceeds the {MAX_CODE_LENGTH} character limit.')
+        if language not in SUPPORTED_LANGUAGES:
+            return _error_result(
+                f'Unsupported language. Choose one of: {", ".join(sorted(SUPPORTED_LANGUAGES))}.')
+        try:
+            timeout = int(timeout)
+            memory_limit_mb = int(memory_limit_mb)
+        except (TypeError, ValueError):
+            return _error_result('Timeout and memory limit must be integers.')
+        if not MIN_TIMEOUT_SECONDS <= timeout <= MAX_TIMEOUT_SECONDS:
+            return _error_result(
+                f'Timeout must be between {MIN_TIMEOUT_SECONDS} and {MAX_TIMEOUT_SECONDS} seconds.')
+        if not MIN_MEMORY_MB <= memory_limit_mb <= MAX_MEMORY_MB:
+            return _error_result(
+                f'Memory limit must be between {MIN_MEMORY_MB} and {MAX_MEMORY_MB} MB.')
+
         try:
             # Prepare input data
             input_data = {
@@ -83,6 +119,12 @@ class CodeExecutor:
                 memswap_limit=f'{memory_limit_mb}m',
                 cpu_quota=100000,  # 0.1 CPU
                 cpu_period=100000,
+                network_disabled=True,
+                cap_drop=['ALL'],
+                security_opt=['no-new-privileges:true'],
+                pids_limit=64,
+                read_only=True,
+                tmpfs={'/tmp': 'rw,noexec,nosuid,size=16m'},
                 timeout=timeout + 5,  # Add buffer
                 remove=True
             )
@@ -95,11 +137,7 @@ class CodeExecutor:
         
         except docker.errors.ImageNotFound:
             logger.error(f"Docker image not found: {self.image_name}")
-            return {
-                'status': 'error',
-                'error': f'Sandbox image not found. Please build it first.',
-                'timestamp': datetime.utcnow().isoformat()
-            }
+            return _error_result('Sandbox image not found. Please build it first.')
         
         except Exception as e:
             logger.error(f"Code execution failed: {str(e)}")
@@ -124,6 +162,11 @@ class CodeExecutor:
         Returns:
             Dictionary with results for all test cases
         """
+        if not isinstance(test_cases, list):
+            return _error_result('Test cases must be provided as a list.')
+        if len(test_cases) > MAX_TEST_CASES:
+            return _error_result(f'Test case count exceeds the {MAX_TEST_CASES} case limit.')
+
         results = {
             'total_tests': len(test_cases),
             'passed_tests': 0,

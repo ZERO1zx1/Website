@@ -97,22 +97,22 @@ An elegant, polished, and fully-featured online coding education platform built 
 ```
 programming-learning-platform/
 ├── app.py                    # Flask application factory
-├── db.py                     # Supabase database client
+├── backend/
+│   ├── __init__.py
+│   ├── db.py                 # Supabase database client
+│   ├── api/
+│   │   ├── __init__.py
+│   │   ├── auth.py           # Authentication and RBAC
+│   │   ├── courses.py        # Course management
+│   │   ├── problems.py       # Problem bank
+│   │   ├── submissions.py    # Code submissions and evaluation
+│   │   ├── teacher.py        # Teacher dashboard
+│   │   └── analytics.py      # Analytics and reporting
+│   └── services/
+│       ├── __init__.py
+│       ├── code_executor.py  # Docker sandbox executor
+│       └── submission_evaluator.py
 ├── requirements.txt          # Python dependencies
-├── routes/
-│   ├── auth.py              # Authentication and RBAC
-│   ├── courses.py           # Course management
-│   ├── problems.py          # Problem bank
-│   ├── submissions.py       # Code submissions and evaluation
-│   ├── teacher.py           # Teacher dashboard
-│   └── analytics.py         # Analytics and reporting
-├── services/
-│   ├── code_executor.py     # Docker sandbox executor
-│   ├── ai_tutor.py          # Socratic AI integration
-│   └── notification.py      # Notification service
-├── sandbox/
-│   ├── runner.py            # Code execution runner
-│   └── Dockerfile           # Sandbox container definition
 ├── frontend/
 │   ├── templates/
 │   │   └── index.html       # Main HTML template
@@ -120,11 +120,45 @@ programming-learning-platform/
 │       ├── css/
 │       │   └── style.css    # Main stylesheet
 │       └── js/
-│           └── app.js       # Frontend application
-└── utils/
-    ├── validators.py        # Input validation
-    └── helpers.py           # Utility functions
+│           ├── app.js       # Frontend application
+│           ├── monaco-editor.js
+│           └── adapters/    # Mock/API adapter boundary
+├── sandbox/
+│   ├── runner.py            # Code execution runner
+│   └── Dockerfile           # Sandbox container definition
+├── tests/
+│   ├── test_frontend_shell.py
+│   └── test_code_executor.py
+└── docs/                    # Design and integration handoff
 ```
+
+## Frontend-first workflow
+
+The current frontend prototype is intentionally complete before backend integration. It uses mock data through an adapter boundary in `frontend/static/js/app.js`, so screens and interactions can be reviewed without Supabase credentials. The design handoff is documented in [`docs/frontend-design-handoff.md`](docs/frontend-design-handoff.md).
+
+To preview the frontend without loading backend blueprints:
+
+```bash
+FRONTEND_ONLY=true PYTHONPATH=. python -m flask --app 'app:create_app()' run --host 0.0.0.0 --port 5000
+```
+
+The frontend includes the dashboard, learning path, practice library, assessments, profile/preferences, responsive navigation, theme switching and a mock code editor flow. Backend integration is intentionally deferred until the frontend screens and Figma structure are approved.
+
+## Backend stack and role model
+
+The backend uses Python and Flask for the application/API layer, Supabase for persistence, Docker for the web and isolated code execution environments, YAML for role/configuration data, and Markdown for architecture and integration handoff documentation.
+
+The supported roles are `owner` (**эзэмшигч**), `admin` (**администратор**), `teacher` (**багш**) and `student` (**суралцагч**). The owner is the highest platform role and can manage owner-level role assignments. Administrators manage operational resources and teacher approvals. Teachers manage their assigned classes and content. Students access their own learning, submissions and progress. The authoritative matrix is in [`docs/role-permission-spec.md`](docs/role-permission-spec.md), and the machine-readable policy is in [`config/roles.yml`](config/roles.yml).
+
+Backend work is intentionally sequenced as authentication, current user, dashboard, learning path, problems, teacher panel and submissions. Each integration preserves the frontend adapter contract and adds loading, empty, error and unauthorized states before moving to the next group.
+
+For a local container run, configure `.env` and use:
+
+```bash
+docker compose up --build
+```
+
+The backend runbook is documented in [`docs/backend-integration.md`](docs/backend-integration.md) and the project layout in [`docs/project-structure.md`](docs/project-structure.md).
 
 ## Installation
 
@@ -212,7 +246,7 @@ The application will be available at `http://localhost:5000`
 
 ### Adding a New Route
 
-1. Create a new file in `routes/` directory
+1. Create a new file in `backend/api/` directory
 2. Define your blueprint with Flask
 3. Register it in `app.py`
 4. Add appropriate decorators for authentication and role enforcement
@@ -220,7 +254,7 @@ The application will be available at `http://localhost:5000`
 Example:
 ```python
 from flask import Blueprint, request, jsonify
-from routes.auth import token_required, role_required
+from backend.api.auth import token_required, role_required
 
 my_bp = Blueprint('my_feature', __name__)
 

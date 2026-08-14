@@ -1,0 +1,61 @@
+import os
+
+import pytest
+
+from app import create_app
+
+
+@pytest.fixture()
+def frontend_app(monkeypatch):
+    monkeypatch.setenv('FRONTEND_ONLY', 'true')
+    return create_app()
+
+
+def test_frontend_shell_renders_without_backend_credentials(frontend_app):
+    client = frontend_app.test_client()
+
+    response = client.get('/')
+
+    assert response.status_code == 200
+    assert b'Codehaven' in response.data
+    assert b'Keep your momentum' in response.data
+    assert b'id="home-view"' in response.data
+    assert b'landing-language-select' in response.data
+    assert b'data-i18n="landing.title"' in response.data
+    assert b'frontend/static' not in response.data
+    assert b'id="auth-view"' in response.data
+    assert b'id="language-select"' in response.data
+    assert b'data-auth-tab="register"' in response.data
+    assert b'js/adapters/api-adapter.js' in response.data
+    assert b'data-i18n="editor.workspace"' in response.data
+    assert b'data-i18n="editor.run"' in response.data
+    assert b'id="course-grid"' in response.data
+    assert b'id="curriculum-search"' in response.data
+    assert b'data-curriculum-tag="javascript"' in response.data
+    assert b'id="lesson-preview"' in response.data
+    assert b'aria-live="polite"' in response.data
+
+
+def test_frontend_static_assets_are_available(frontend_app):
+    client = frontend_app.test_client()
+
+    css_response = client.get('/static/css/style.css')
+    adapter_response = client.get('/static/js/adapters/api-adapter.js')
+    js_response = client.get('/static/js/app.js')
+
+    assert css_response.status_code == 200
+    assert b'--color-action-primary' in css_response.data
+    assert adapter_response.status_code == 200
+    assert b'codehavenApiAdapter' in adapter_response.data
+    assert js_response.status_code == 200
+    assert b'mockAdapter' in js_response.data
+    assert b'localizeContent' in js_response.data
+
+
+def test_frontend_only_mode_keeps_health_endpoint(frontend_app):
+    client = frontend_app.test_client()
+
+    response = client.get('/api/health')
+
+    assert response.status_code == 200
+    assert response.get_json()['status'] == 'healthy'
