@@ -16,8 +16,9 @@ RUN useradd -m -u 1000 runner
 # Set working directory
 WORKDIR /sandbox
 
-# Copy entrypoint script
+# Copy runner and internal HTTP service
 COPY runner.py /sandbox/runner.py
+COPY service.py /sandbox/service.py
 
 # Switch to non-root user
 USER runner
@@ -25,5 +26,7 @@ USER runner
 # Set resource limits
 ENV PYTHONUNBUFFERED=1
 
-# Default entrypoint
-ENTRYPOINT ["python", "/sandbox/runner.py"]
+EXPOSE 8080
+
+# Default internal service entrypoint
+CMD ["python", "/sandbox/service.py"]

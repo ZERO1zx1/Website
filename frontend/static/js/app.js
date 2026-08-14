@@ -11,7 +11,10 @@ const mockData = {
 const mockAdapter = {
     async getUser() { return mockData.user; },
     async getDashboard() { return { recentPractice: mockData.recentPractice }; },
-    async getLearningPath() { return { modules: mockData.courses[0].modules, courses: mockData.courses }; },
+    async getLearningPath() {
+        const firstCourse = mockData.courses[0] || { modules: [] };
+        return { modules: firstCourse.modules || [], courses: mockData.courses };
+    },
     async getProblems() { return { problems: mockData.problems }; }
 };
 
@@ -114,9 +117,17 @@ function bindInteractions() {
     document.querySelectorAll('[data-theme-choice]').forEach((button) => {
         button.addEventListener('click', () => setTheme(button.dataset.themeChoice));
     });
-    document.getElementById('mobile-menu')?.addEventListener('click', () => {
-        document.querySelector('.sidebar')?.classList.toggle('is-open');
-    });
+    const mobileMenu = document.getElementById('mobile-menu');
+    const sidebar = document.querySelector('.sidebar');
+    const sidebarScrim = document.getElementById('sidebar-scrim');
+    const setSidebarOpen = (isOpen) => {
+        sidebar?.classList.toggle('is-open', isOpen);
+        sidebarScrim?.classList.toggle('is-visible', isOpen);
+        sidebarScrim?.setAttribute('aria-hidden', String(!isOpen));
+        mobileMenu?.setAttribute('aria-expanded', String(isOpen));
+    };
+    mobileMenu?.addEventListener('click', () => setSidebarOpen(!sidebar?.classList.contains('is-open')));
+    sidebarScrim?.addEventListener('click', () => setSidebarOpen(false));
     document.querySelectorAll('[data-open-editor]').forEach((button) => button.addEventListener('click', openEditor));
     document.querySelectorAll('[data-close-editor]').forEach((button) => button.addEventListener('click', closeEditor));
     document.getElementById('run-code')?.addEventListener('click', runCode);
@@ -127,10 +138,10 @@ function bindInteractions() {
         renderProblemCards(app.problems);
     }));
     document.getElementById('global-search')?.addEventListener('input', (event) => {
-        const query = event.target.value.trim().toLowerCase();
+            const query = event.target.value.trim().toLowerCase();
         if (query.length > 0) {
             showView('practice');
-            renderProblemCards(app.problems.filter((problem) => `${problem.title} ${problem.topic}`.toLowerCase().includes(query)));
+            renderProblemCards(app.problems.filter((problem) => `${localizeContent(problem.title)} ${localizeContent(problem.description)} ${problem.topic} ${(problem.tags || []).join(' ')} ${(problem.keywords || []).join(' ')}`.toLowerCase().includes(query)));
         } else {
             renderProblemCards(app.problems);
         }
@@ -140,7 +151,13 @@ function bindInteractions() {
             event.preventDefault();
             document.getElementById('global-search')?.focus();
         }
-        if (event.key === 'Escape') closeEditor();
+        if (event.key === 'Escape') {
+            closeEditor();
+            document.querySelector('.sidebar')?.classList.remove('is-open');
+            document.getElementById('sidebar-scrim')?.classList.remove('is-visible');
+            document.getElementById('sidebar-scrim')?.setAttribute('aria-hidden', 'true');
+            document.getElementById('mobile-menu')?.setAttribute('aria-expanded', 'false');
+        }
         if ((event.metaKey || event.ctrlKey) && event.key === 'Enter' && document.getElementById('editor-modal')?.classList.contains('is-open')) runCode();
     });
 }
@@ -169,31 +186,52 @@ function showView(viewName) {
     document.getElementById('breadcrumb-root').textContent = root;
     document.getElementById('breadcrumb-current').textContent = current;
     document.querySelector('.sidebar')?.classList.remove('is-open');
+    document.getElementById('sidebar-scrim')?.classList.remove('is-visible');
+    document.getElementById('sidebar-scrim')?.setAttribute('aria-hidden', 'true');
+    document.getElementById('mobile-menu')?.setAttribute('aria-expanded', 'false');
     if (viewName === 'practice') void renderProblems().catch(() => renderProblemCards(app.problems));
     if (viewName === 'auth') document.querySelector('.auth-card input')?.focus();
     applyLanguage();
 }
 
 async function renderDashboard() {
-    const dashboard = await app.dataAdapter.getDashboard();
     const container = document.getElementById('recent-practice-list');
     if (!container) return;
-    container.innerHTML = dashboard.recentPractice.map((item) => `
+    renderDataState(container, 'loading');
+    let dashboard;
+    try {
+        dashboard = await app.dataAdapter.getDashboard();
+    } catch (error) {
+        renderDataState(container, 'error', app.language === 'mn' ? 'Dashboard мэдээллийг ачаалж чадсангүй.' : 'Dashboard data could not be loaded.');
+        throw error;
+    }
+    const recentPractice = Array.isArray(dashboard?.recentPractice) ? dashboard.recentPractice : [];
+    container.innerHTML = recentPractice.length ? recentPractice.map((item) => `
         <div class="practice-row">
-            <div class="practice-title"><span class="practice-symbol">${item.icon}</span><div><strong>${item.title}</strong><small>${item.category}</small></div></div>
-            <span class="practice-meta"><span class="status-dot"></span>${item.status}</span>
-            <span class="practice-score">${item.score}</span>
-            <button class="text-button" data-open-editor>Review <span aria-hidden="true">→</span></button>
-        </div>`).join('');
+            <div class="practice-title"><span class="practice-symbol">${escapeHtml(item.icon || '01')}</span><div><strong>${escapeHtml(localizeContent(item.title || 'Practice'))}</strong><small>${escapeHtml(localizeContent(item.category || 'Practice'))}</small></div></div>
+            <span class="practice-meta"><span class="status-dot"></span>${escapeHtml(localizeContent(item.status || 'New'))}</span>
+            <span class="practice-score">${escapeHtml(item.score || '—')}</span>
+            <button class="text-button" data-open-editor data-problem-id="${escapeHtml(item.problem_id || item.id || '')}">Review <span aria-hidden="true">→</span></button>
+        </div>`).join('') : `<div class="empty-state">${app.language === 'mn' ? 'Одоогоор дадлагын түүх алга.' : 'No practice history yet.'}</div>`;
     container.querySelectorAll('[data-open-editor]').forEach((button) => button.addEventListener('click', openEditor));
     applyLanguage();
 }
 
 async function renderLearningPath() {
-    const path = await app.dataAdapter.getLearningPath();
-    app.courses = path.courses?.length ? path.courses : mockData.courses;
-    renderCourseCards(app.courses);
-    renderSelectedCourse(app.courses.find((course) => course.id === app.selectedCourseId) || app.courses[0]);
+    const courseGrid = document.getElementById('course-grid');
+    const moduleList = document.getElementById('module-list');
+    if (courseGrid) renderDataState(courseGrid, 'loading');
+    if (moduleList) renderDataState(moduleList, 'loading');
+    try {
+        const path = await app.dataAdapter.getLearningPath();
+        app.courses = path.courses?.length ? path.courses : mockData.courses;
+        renderCourseCards(app.courses);
+        renderSelectedCourse(app.courses.find((course) => String(course.id) === String(app.selectedCourseId)) || app.courses[0]);
+    } catch (error) {
+        if (courseGrid) renderDataState(courseGrid, 'error', app.language === 'mn' ? 'Learning path ачаалж чадсангүй.' : 'Learning path could not be loaded.');
+        if (moduleList) renderDataState(moduleList, 'empty', app.language === 'mn' ? 'Module одоогоор алга.' : 'No modules are available yet.');
+        throw error;
+    }
 }
 
 function renderCourseCards(courses) {
@@ -212,12 +250,12 @@ function renderCourseCards(courses) {
     const selectedIsVisible = filtered.some((course) => course.id === app.selectedCourseId);
     if (!selectedIsVisible) app.selectedCourseId = filtered[0].id;
     container.innerHTML = filtered.map((course) => `
-        <article class="course-card ${course.id === app.selectedCourseId ? 'is-selected' : ''}">
-            <div class="course-card-top"><span class="course-icon">${course.icon}</span><span class="course-progress">${course.progress}%</span></div>
-            <h3>${localizeContent(course.title)}</h3><p>${localizeContent(course.description)}</p>
-            <div class="course-tags">${(course.tags || []).map((tag) => `<span class="tag-chip tag-chip-small">${tag}</span>`).join('')}</div>
-            <div class="course-card-meta"><span>${localizeContent(course.level)}</span><span>${localizeContent(course.duration)}</span></div>
-            <button class="text-button" data-select-course="${course.id}">${app.language === 'mn' ? 'Замыг харах' : 'View path'} <span aria-hidden="true">→</span></button>
+        <article class="course-card ${String(course.id) === String(app.selectedCourseId) ? 'is-selected' : ''}">
+            <div class="course-card-top"><span class="course-icon">${escapeHtml(course.icon || 'CO')}</span><span class="course-progress">${escapeHtml(course.progress ?? 0)}%</span></div>
+            <h3>${escapeHtml(localizeContent(course.title))}</h3><p>${escapeHtml(localizeContent(course.description))}</p>
+            <div class="course-tags">${(course.tags || []).map((tag) => `<span class="tag-chip tag-chip-small">${escapeHtml(tag)}</span>`).join('')}</div>
+            <div class="course-card-meta"><span>${escapeHtml(localizeContent(course.level))}</span><span>${escapeHtml(localizeContent(course.duration))}</span></div>
+            <button class="text-button" data-select-course="${escapeHtml(course.id)}">${app.language === 'mn' ? 'Замыг харах' : 'View path'} <span aria-hidden="true">→</span></button>
         </article>`).join('');
     container.querySelectorAll('[data-select-course]').forEach((button) => button.addEventListener('click', () => {
         app.selectedCourseId = button.dataset.selectCourse;
@@ -240,10 +278,10 @@ function renderSelectedCourse(course) {
     if (progressBar) progressBar.style.width = `${course.progress || 0}%`;
     if (!container) return;
     container.innerHTML = (course.modules || []).map((module, index) => `
-        <article class="module-card ${module.complete ? 'is-complete' : ''}" data-open-lesson="${index}" tabindex="0" role="button">
-            <span class="module-number">${module.complete ? '✓' : module.number}</span>
-            <div class="module-content"><strong>${localizeContent(module.title)}</strong><span>${localizeContent(module.meta)}</span></div>
-            <span class="module-status">${localizeContent(module.status)}</span>
+        <article class="module-card ${module.complete ? 'is-complete' : ''}" data-open-lesson="${index}" tabindex="0" role="button" aria-label="${escapeHtml(localizeContent(module.title))}">
+            <span class="module-number">${module.complete ? '✓' : escapeHtml(module.number || String(index + 1).padStart(2, '0'))}</span>
+            <div class="module-content"><strong>${escapeHtml(localizeContent(module.title))}</strong><span>${escapeHtml(localizeContent(module.meta))}</span></div>
+            <span class="module-status">${escapeHtml(localizeContent(module.status))}</span>
         </article>`).join('');
     container.querySelectorAll('[data-open-lesson]').forEach((moduleCard) => {
         const open = () => openLessonPreview(course, Number(moduleCard.dataset.openLesson));
@@ -262,7 +300,7 @@ function openLessonPreview(course, moduleIndex) {
     document.getElementById('lesson-preview-title').textContent = localizeContent(module.title);
     document.getElementById('lesson-preview-meta').textContent = localizeContent(module.meta);
     document.getElementById('lesson-preview-objective').textContent = localizeContent(course.description);
-    document.getElementById('lesson-preview-keywords').innerHTML = (course.keywords || []).slice(0, 5).map((keyword) => `<span class="tag-chip tag-chip-small">${keyword}</span>`).join('');
+    document.getElementById('lesson-preview-keywords').innerHTML = (course.keywords || []).slice(0, 5).map((keyword) => `<span class="tag-chip tag-chip-small">${escapeHtml(keyword)}</span>`).join('');
     preview.classList.remove('is-hidden');
     preview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -281,9 +319,16 @@ function completeLessonPreview() {
 }
 
 async function renderProblems() {
-    const result = await app.dataAdapter.getProblems();
-    app.problems = result.problems || [];
-    renderProblemCards(app.problems);
+    const container = document.getElementById('problem-grid');
+    if (container) renderDataState(container, 'loading');
+    try {
+        const result = await app.dataAdapter.getProblems();
+        app.problems = result.problems || [];
+        renderProblemCards(app.problems);
+    } catch (error) {
+        if (container) renderDataState(container, 'error', app.language === 'mn' ? 'Practice бодлогуудыг ачаалж чадсангүй.' : 'Practice problems could not be loaded.');
+        throw error;
+    }
 }
 
 async function refreshDataViews() {
@@ -298,42 +343,99 @@ async function refreshDataViews() {
     }
 }
 
+function renderDataState(container, state, message = '') {
+    if (!container) return;
+    const copy = {
+        loading: app.language === 'mn' ? 'Ачаалж байна…' : 'Loading…',
+        empty: app.language === 'mn' ? 'Одоогоор мэдээлэл алга.' : 'Nothing is available yet.',
+        error: message || (app.language === 'mn' ? 'Мэдээлэл ачаалж чадсангүй.' : 'Data could not be loaded.'),
+    };
+    container.innerHTML = `<div class="panel data-state data-state-${state}"><span class="data-state-indicator" aria-hidden="true"></span><strong>${escapeHtml(copy[state] || copy.empty)}</strong>${state === 'error' ? `<button class="text-button" data-retry-data>Retry <span aria-hidden="true">↻</span></button>` : ''}</div>`;
+    container.querySelector('[data-retry-data]')?.addEventListener('click', () => void refreshDataViews());
+}
+
 function renderProblemCards(problems) {
     const container = document.getElementById('problem-grid');
     if (!container) return;
     const filtered = app.activeFilter === 'all' ? problems : problems.filter((problem) => problem.difficulty === app.activeFilter);
     if (!filtered.length) {
-        container.innerHTML = '<div class="panel" style="grid-column:1/-1;padding:2rem;color:var(--color-text-secondary)">No problems match this filter yet.</div>';
+        container.innerHTML = `<div class="panel empty-state" style="grid-column:1/-1">${app.language === 'mn' ? 'Энэ шүүлтүүрт тохирох бодлого олдсонгүй.' : 'No problems match this filter yet.'}</div>`;
         return;
     }
     container.innerHTML = filtered.map((problem) => `
         <article class="problem-card">
-            <div class="problem-card-top"><span class="pill ${problem.progress === 'Solved' ? 'pill-teal' : 'pill-muted'}">${localizeContent(problem.progress)}</span><span class="practice-symbol">${problem.icon}</span></div>
-            <h3>${localizeContent(problem.title)}</h3><p>${localizeContent(problem.description)}</p>
-            <div class="problem-tags">${(problem.tags || []).map((tag) => `<span class="tag-chip tag-chip-small">${tag}</span>`).join('')}</div>
-            <div class="problem-card-footer"><span class="difficulty ${problem.difficulty}">${localizeContent(capitalize(problem.difficulty))} · ${localizeContent(problem.topic)}</span><button class="text-button" data-open-editor>${localizeContent('Solve')} <span aria-hidden="true">→</span></button></div>
+            <div class="problem-card-top"><span class="pill ${problem.progress === 'Solved' ? 'pill-teal' : 'pill-muted'}">${escapeHtml(localizeContent(problem.progress || 'New'))}</span><span class="practice-symbol">${escapeHtml(problem.icon || '01')}</span></div>
+            <h3>${escapeHtml(localizeContent(problem.title || 'Untitled problem'))}</h3><p>${escapeHtml(localizeContent(problem.description || ''))}</p>
+            <div class="problem-tags">${(problem.tags || []).map((tag) => `<span class="tag-chip tag-chip-small">${escapeHtml(tag)}</span>`).join('')}</div>
+            <div class="problem-card-footer"><span class="difficulty ${escapeHtml(problem.difficulty || 'easy')}">${escapeHtml(localizeContent(capitalize(problem.difficulty || 'easy')))} · ${escapeHtml(localizeContent(problem.topic || 'Practice'))}</span><button class="text-button" data-open-editor data-problem-id="${escapeHtml(problem.id || '')}">${localizeContent('Solve')} <span aria-hidden="true">→</span></button></div>
         </article>`).join('');
     container.querySelectorAll('[data-open-editor]').forEach((button) => button.addEventListener('click', openEditor));
     applyLanguage();
 }
 
-function capitalize(value) { return value.charAt(0).toUpperCase() + value.slice(1); }
+function capitalize(value) { return String(value || '').charAt(0).toUpperCase() + String(value || '').slice(1); }
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, (character) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[character]));
+}
+
+function getProblemById(problemId) {
+    const normalizedId = String(problemId || '');
+    return app.problems.find((problem) => String(problem.id) === normalizedId) || app.problems[0] || mockData.problems[0];
+}
+
+function renderEditorProblem(problem) {
+    const current = problem || getProblemById();
+    const title = document.getElementById('editor-title');
+    const badge = document.querySelector('#editor-modal .problem-brief .pill');
+    const problemTitle = document.querySelector('[data-editor-problem-title]');
+    const description = document.querySelector('[data-editor-problem-description]');
+    const editor = document.getElementById('code-editor');
+    const modal = document.getElementById('editor-modal');
+    if (!current || !modal) return;
+    modal.dataset.problemId = current.id || '';
+    if (title) title.textContent = localizeContent(current.title || 'Practice problem');
+    if (badge) badge.textContent = String(current.topic || 'CODE').toUpperCase();
+    if (problemTitle) problemTitle.textContent = localizeContent(current.title || 'Practice problem');
+    if (description) description.textContent = localizeContent(current.description || 'Write a solution for this problem.');
+    if (editor) editor.value = current.starter_code || `# ${localizeContent(current.title || 'Solve the problem')}\n\n# Write your solution here\n`;
+    const output = document.getElementById('code-output');
+    if (output) output.innerHTML = `<span class="output-label">${app.language === 'mn' ? 'ГАРАЛТ' : 'OUTPUT'}</span><code>${app.language === 'mn' ? 'Кодоо ажиллуулж үр дүнг энд харна.' : 'Run your code to see the output here.'}</code>`;
+}
+
 
 function localizeContent(value) {
     if (value && typeof value === 'object') return value[app.language] || value.en || Object.values(value)[0] || '';
     const source = String(value ?? '');
-    const dictionary = app.language === 'mn' ? plainMn : {};
-    return dictionary[source] || textTranslations[app.language]?.[source] || source;
+    const dictionary = app.language === 'mn' ? i18nPlainMn : {};
+    return dictionary[source] || i18nTextTranslations[app.language]?.[source] || source;
 }
 
-function openEditor() {
+async function openEditor(event) {
     const modal = document.getElementById('editor-modal');
     if (!modal) return;
     app.lastFocusedElement = document.activeElement;
+    const problem = getProblemById(event?.currentTarget?.dataset.problemId);
+    renderEditorProblem(problem);
     modal.classList.add('is-open');
     modal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
     window.setTimeout(() => document.getElementById('code-editor')?.focus(), 50);
+
+    setRuntimeStatus(backendEnabled ? 'connected' : 'ready');
+    if (backendEnabled && app.dataAdapter === window.codehavenApiAdapter && problem?.id && window.codehavenApiAdapter.getProblem) {
+        try {
+            const liveProblem = await window.codehavenApiAdapter.getProblem(problem.id);
+            if (modal.classList.contains('is-open') && String(modal.dataset.problemId) === String(problem.id)) {
+                renderEditorProblem(liveProblem);
+                document.getElementById('code-editor')?.focus();
+            }
+        } catch (error) {
+            showToast(app.language === 'mn' ? 'Problem-ийн дэлгэрэнгүй мэдээлэл ачаалж чадсангүй.' : 'Problem details could not be loaded.', 'error');
+        }
+    }
 }
 
 function closeEditor() {
@@ -345,19 +447,149 @@ function closeEditor() {
     app.lastFocusedElement?.focus?.();
 }
 
-function runCode() {
-    const output = document.getElementById('code-output');
-    if (!output) return;
-    const outputLabel = app.language === 'mn' ? 'ГАРАЛТ · 0.18с' : 'OUTPUT · 0.18s';
-    const outputStatus = app.language === 'mn' ? 'Процесс амжилттай дууслаа.' : 'Process finished with exit code 0.';
-    output.innerHTML = `<span class="output-label">${outputLabel}</span><code style="color:#75e6c5">[2, 4]<br><br>${outputStatus}</code>`;
-    showToast(app.language === 'mn' ? 'Код амжилттай ажиллалаа. Сайн байна.' : 'Code ran successfully. Nice work.', 'success');
+function setRuntimeStatus(state) {
+    const statusNode = document.getElementById('runtime-status');
+    const label = statusNode?.querySelector('[data-runtime-status]');
+    if (!statusNode || !label) return;
+    const key = {
+        ready: 'editor.runtime.ready',
+        queued: 'editor.runtime.queued',
+        running: 'editor.runtime.running',
+        connected: 'editor.runtime.connected',
+        offline: 'editor.runtime.offline',
+    }[state] || 'editor.runtime.ready';
+    statusNode.className = `runtime-status is-${state}`;
+    label.textContent = i18nTranslations[app.language]?.[key] || key;
 }
 
-function submitCode() {
+async function runCode() {
+    const output = document.getElementById('code-output');
+    const modal = document.getElementById('editor-modal');
+    const editor = document.getElementById('code-editor');
+    const problem = getProblemById(modal?.dataset.problemId);
+    if (!output) return;
+    const code = editor?.value?.trim();
+    if (!code) {
+        showToast(app.language === 'mn' ? 'Ажиллуулах кодоо оруулна уу.' : 'Enter code before running.', 'error');
+        editor?.focus();
+        return;
+    }
+
+    if (backendEnabled && app.dataAdapter === window.codehavenApiAdapter && problem?.id && window.codehavenApiAdapter.runCode) {
+        setRuntimeStatus('running');
+        output.innerHTML = `<span class="output-label">${app.language === 'mn' ? 'RUNTIME' : 'RUNTIME'}</span><code class="output-pending">${app.language === 'mn' ? 'Sandbox дээр тест ажиллаж байна…' : 'Running tests in the sandbox…'}</code>`;
+        try {
+            const result = await window.codehavenApiAdapter.runCode({ problem_id: problem.id, code, language: problem.language || 'python' });
+            const tests = result.test_results || [];
+            const passed = Number(result.passed_tests || 0);
+            const total = Number(result.total_tests || tests.length || 0);
+            const detail = tests.map((test) => {
+                const marker = test.passed ? '✓' : '×';
+                const text = test.passed ? (test.actual_output || 'Passed') : (test.error || test.message || 'Output mismatch');
+                return `${marker} Test ${test.test_number || ''}: ${escapeHtml(String(text))}`;
+            }).join('<br>');
+            output.innerHTML = `<span class="output-label">RUNTIME · ${passed}/${total}</span><code class="output-runtime">${detail || (app.language === 'mn' ? 'Тестийн үр дүн ирсэнгүй.' : 'No test output returned.')}</code>`;
+            setRuntimeStatus('connected');
+            showToast(app.language === 'mn' ? `${passed}/${total} тест амжилттай.` : `${passed}/${total} tests completed.`, passed === total ? 'success' : 'info');
+        } catch (error) {
+            setRuntimeStatus('offline');
+            output.innerHTML = `<span class="output-label">RUNTIME ERROR</span><code class="output-error">${escapeHtml(error.message || 'Runtime execution is unavailable.')}</code>`;
+            showToast(app.language === 'mn' ? 'Runtime одоогоор ажиллахгүй байна.' : 'Runtime execution is unavailable.', 'error');
+        }
+        return;
+    }
+
+    setRuntimeStatus('running');
+    const outputLabel = app.language === 'mn' ? 'DEMO ГАРАЛТ · 0.18с' : 'DEMO OUTPUT · 0.18s';
+    const outputStatus = app.language === 'mn' ? 'Demo runner амжилттай дууслаа.' : 'Demo runner finished with exit code 0.';
+    output.innerHTML = `<span class="output-label">${outputLabel}</span><code style="color:#75e6c5">[2, 4]<br><br>${outputStatus}</code>`;
+    setRuntimeStatus('ready');
+    showToast(app.language === 'mn' ? 'Demo код амжилттай ажиллалаа.' : 'Demo code ran successfully.', 'success');
+}
+
+async function submitCode() {
+    const modal = document.getElementById('editor-modal');
+    const editor = document.getElementById('code-editor');
+    const problem = getProblemById(modal?.dataset.problemId);
+    const code = editor?.value?.trim();
+    if (!code) {
+        showToast(app.language === 'mn' ? 'Илгээх кодоо оруулна уу.' : 'Enter code before submitting.', 'error');
+        editor?.focus();
+        return;
+    }
+    if (backendEnabled && app.dataAdapter === window.codehavenApiAdapter && problem?.id) {
+        try {
+            setRuntimeStatus('queued');
+            const result = await window.codehavenApiAdapter.submitCode({ problem_id: problem.id, code, language: problem.language || 'python' });
+            const submissionId = result.submission?.id;
+            showToast(app.language === 'mn' ? `Илгээлт хүлээгдэж байна (#${submissionId || ''}).` : `Submission queued (#${submissionId || 'pending'}).`, 'success');
+            closeEditor();
+            await refreshDataViews();
+            if (submissionId) void pollSubmissionStatus(submissionId);
+        } catch (error) {
+            showToast(app.language === 'mn' ? 'Илгээлтийг серверт хүргэж чадсангүй.' : (error.message || 'The submission could not be sent.'), 'error');
+        }
+        return;
+    }
     runCode();
-    showToast(app.language === 'mn' ? 'Шийдэл дадлагын түүхэнд хадгалагдлаа.' : 'Solution saved to your practice history.', 'success');
+    showToast(app.language === 'mn' ? 'Demo шийдэл хадгалагдлаа.' : 'Demo solution saved to your practice history.', 'success');
     window.setTimeout(closeEditor, 500);
+}
+
+function notifySubmissionStatus(payload) {
+    const submission = payload?.submission || payload || {};
+    const status = submission.status || 'pending';
+    if (status === 'pending') setRuntimeStatus('queued');
+    if (status === 'running') setRuntimeStatus('running');
+    if (status === 'accepted' || status === 'partial_accepted' || status === 'rejected') setRuntimeStatus('connected');
+    if (status === 'error') setRuntimeStatus('offline');
+    const score = submission.score == null ? '' : ` ${Number(submission.score).toFixed(0)}%`;
+    const labels = {
+        accepted: app.language === 'mn' ? `Зөв хариу${score}` : `Accepted${score}`,
+        partial_accepted: app.language === 'mn' ? `Хэсэгчлэн зөв${score}` : `Partially accepted${score}`,
+        rejected: app.language === 'mn' ? `Буруу хариу${score}` : `Rejected${score}`,
+        error: app.language === 'mn' ? 'Үнэлгээний алдаа гарлаа.' : 'Evaluation failed.',
+    };
+    if (!['pending', 'running'].includes(status)) {
+        showToast(labels[status] || (app.language === 'mn' ? `Илгээлтийн төлөв: ${status}` : `Submission status: ${status}`), status === 'accepted' ? 'success' : 'info');
+    }
+    return status;
+}
+
+async function pollSubmissionStatus(submissionId, maxAttempts = 12) {
+    const adapter = window.codehavenApiAdapter;
+    if (!adapter?.getSubmission) return null;
+
+    if (adapter.streamSubmission) {
+        try {
+            let latest = null;
+            let completed = false;
+            await adapter.streamSubmission(submissionId, (payload) => {
+                latest = payload;
+                completed = !['pending', 'running'].includes(notifySubmissionStatus(payload));
+            });
+            if (latest && completed) {
+                await refreshDataViews();
+                return latest;
+            }
+        } catch (error) {
+            // Fall back to short polling when an intermediary does not support SSE.
+        }
+    }
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, 1500));
+        try {
+            const payload = await adapter.getSubmission(submissionId);
+            const status = notifySubmissionStatus(payload);
+            if (['pending', 'running'].includes(status)) continue;
+            await refreshDataViews();
+            return payload;
+        } catch (error) {
+            if (attempt === maxAttempts - 1) showToast(app.language === 'mn' ? 'Үнэлгээний төлөвийг шалгаж чадсангүй.' : 'Could not refresh submission status.', 'error');
+        }
+    }
+    return null;
 }
 
 function toggleTheme() { setTheme(app.theme === 'light' ? 'dark' : 'light'); }
@@ -383,7 +615,7 @@ function showToast(message, type = 'info') {
 window.codehaven = { app, showView, openEditor, closeEditor, apiAdapterContract };
 
 
-const { translations, textTranslations, plainMn } = window.CodehavenI18n;
+const { translations: i18nTranslations, textTranslations: i18nTextTranslations, plainMn: i18nPlainMn } = window.CodehavenI18n;
 
 function bindAuthentication() {
     document.querySelectorAll('[data-auth-tab]').forEach((tab) => {
@@ -516,7 +748,7 @@ function setLanguage(language) {
 
 function applyLanguage() {
     translatePlainTextNodes();
-    const dictionary = translations[app.language];
+    const dictionary = i18nTranslations[app.language];
     document.querySelectorAll('[data-i18n]').forEach((node) => {
         const value = dictionary[node.dataset.i18n];
         if (value) node.textContent = value;
@@ -529,6 +761,8 @@ function applyLanguage() {
         const value = dictionary[node.dataset.i18nAria];
         if (value) node.setAttribute('aria-label', value);
     });
+    const editorModal = document.getElementById('editor-modal');
+    if (editorModal?.classList.contains('is-open')) renderEditorProblem(getProblemById(editorModal.dataset.problemId));
     document.querySelectorAll('[data-i18n] input, [data-i18n] textarea').forEach((node) => {
         const value = dictionary[node.dataset.i18n];
         if (value) node.placeholder = value;

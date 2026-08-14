@@ -1,7 +1,8 @@
 # Codehaven frontend design handoff
 
-**Status:** Frontend-first prototype complete; backend integration intentionally deferred.  
-**Branch:** `feat/frontend-redesign`
+**Status:** Frontend UI/UX baseline complete; live adapter boundary is available and backend evaluation remains asynchronous.
+**Working branch:** `fix/frontend-complete`
+**Repository policy:** Keep changes local until explicit approval; do not push automatically.
 
 ## Product direction
 
@@ -52,9 +53,26 @@ The responsive behavior is as follows:
 | Mobile, `≤820px` | Sidebar becomes off-canvas, mobile menu appears, content becomes one column |
 | Narrow mobile, `≤620px` | KPI cards become two columns, filters scroll horizontally, editor and profile content stack |
 
-## Backend adapter boundary
+## UI/UX implementation contract
 
-The current browser uses `mockAdapter` in `frontend/static/js/app.js`. Presentation code calls adapter methods rather than `fetch` directly. During the integration phase, replace the adapter implementation while preserving the method names and returned object shape.
+The frontend is organized around one clear primary action per screen. Dashboard prioritizes the next learning step before secondary analytics; Learning path prioritizes course selection and module progression; Practice prioritizes filtering and solving; the Editor prioritizes problem context, code focus, output feedback and submit state. Secondary actions use ghost or text-button treatments and must not visually compete with the primary action.
+
+Every data-bearing surface must support four explicit states: loading, populated, empty and error. Loading uses a compact skeleton or status message without layout shift; empty states explain what is missing and provide one next action; errors use human-readable copy, preserve the surrounding layout and provide retry when the action is recoverable; success is communicated through text or a live toast and never color alone. Disabled controls must retain their labels and expose a clear disabled state.
+
+| Component | Required behavior |
+|---|---|
+| Navigation | Native buttons, visible active state, keyboard focus, mobile off-canvas drawer, Escape and scrim close. |
+| Forms | Labels remain visible, validation is near the field, submit buttons disable while pending, and server errors do not erase user input. |
+| Search and filters | Search covers title, description, topic, tags and keywords; active filter is visually and semantically distinct; no-match state is explicit. |
+| Editor modal | Preserve the selected problem, restore focus on close, support Escape, distinguish demo Run from live Submit, and show pending/error feedback. |
+| Theme and language | Persist locally, update controls and dynamic content together, and keep code editor contrast stable in both themes. |
+| Responsive layout | No horizontal overflow at 320px; cards stack intentionally; touch targets remain usable; tables and filter groups may scroll only within their own region. |
+
+## Interaction and state contract
+
+The current browser selects `mockAdapter` for demo mode and `codehavenApiAdapter` when backend mode has a valid session token. Presentation code calls adapter methods rather than `fetch` directly. Authentication uses the live adapter in backend mode, while demo mode remains local. The Editor Run action is explicitly a demo runner because no `/run` endpoint exists; Submit sends `problem_id`, `code` and `language` to `POST /api/submissions` in a live session, then consumes `/api/submissions/<id>/stream` with a polling fallback when SSE is unavailable. The editor runtime badge exposes ready, queued, running, connected and offline states.
+
+Dynamic HTML rendering must escape user- or server-provided values before inserting them into markup. Adapter failures must fall back to a readable error state rather than silently replacing live data with mock data. The backend evaluator is implemented with an in-process thread queue for single-process local mode and a Redis-backed `backend.worker` process for the compose deployment. The UI refreshes or polls the pending submission until a final result is available. The evaluator is not considered production-ready until the Supabase project, Redis, sandbox healthcheck and migration/seed setup pass the readiness validator.
 
 | Frontend method | Future endpoint | Expected responsibility |
 |---|---|---|
@@ -72,7 +90,7 @@ FRONTEND_ONLY=true PYTHONPATH=. python -m flask --app 'app:create_app()' run --h
 
 The `FRONTEND_ONLY` switch prevents backend blueprints from loading when credentials are intentionally unavailable. It does not remove or alter the API blueprints used in the normal backend mode.
 
-For the expanded theme/i18n/auth preview, use the sidebar `Preview login / register` action, the topbar `EN/MN` selector and the theme toggle. The UI can be reviewed entirely without a Supabase connection.
+For the expanded theme/i18n/auth preview, use the sidebar `Preview login / register` action, the topbar `EN/MN` selector and the theme toggle. Demo continuation should move to the dashboard, while backend mode uses the live auth adapter. The UI can be reviewed without a Supabase connection, but live submission requires a valid backend session.
 
 ## Theme, localization and authentication
 
@@ -80,7 +98,7 @@ The semantic theme contract covers page surfaces, raised panels, subtle surfaces
 
 The frontend includes an English and Mongolian dictionary layer. The language selector is available in the topbar and Preferences, and the selected language is persisted in local storage. Static labels use `data-i18n`, placeholders use `data-i18n-placeholder`, and dynamic mock cards pass through the same translation layer. The language contract is intentionally frontend-only until the backend user profile can persist locale.
 
-The supplied Login/SignUp reference was used for the split-panel authentication direction, tabbed sign-in/create-account flow, social action row and responsive stacking pattern. The current auth preview adds accessible labels, password visibility control, remember-me and terms checkboxes, forgot-password affordance, demo continuation, EN/MN copy and dark mode support. The form submission remains mock-only and is ready to call the future auth adapter.
+The supplied Login/SignUp reference was used for the split-panel authentication direction, tabbed sign-in/create-account flow, social action row and responsive stacking pattern. The current auth preview adds accessible labels, password visibility control, remember-me and terms checkboxes, forgot-password affordance, demo continuation, EN/MN copy and dark mode support. In backend mode, login, registration, OTP and Google actions call the live adapter; in frontend-only mode they remain clearly labelled as preview/demo behavior.
 
 ## Accessibility checklist
 
@@ -98,6 +116,6 @@ The token hierarchy follows Figma's guidance on primitive, semantic and componen
 
 The final frontend pass covers dynamic localization rather than only static shell labels. Practice cards, Learning path modules, editor modal, Assessments cards, Profile metadata and Preferences controls now use the same EN/MN translation layer. Editor output and success feedback also follow the selected language.
 
-The browser verification sequence covered Dashboard, Practice, code editor Run flow, Login/Register, Learning path, Assessments, Profile and Preferences. A 390px mobile screenshot confirmed collapsed navigation, two-column KPI cards, full-width learning card and no horizontal clipping. HTML accessibility checks cover the main landmark, dialog state, language selector, auth inputs, code editor and live toast region.
+The browser verification sequence covered the authentication shell, dashboard, Practice, code editor Run flow, Learning path, Assessments, Profile and Preferences. A 390px mobile screenshot confirmed collapsed navigation, two-column KPI cards, full-width learning card and no horizontal clipping. HTML accessibility checks cover the main landmark, dialog state, language selector, auth inputs, code editor and live toast region.
 
-Final frontend acceptance status: 15 regression tests passed, JavaScript syntax passed, Python compile passed, HTML structure checks passed and frontend-only Flask preview returned HTTP 200.
+Final local acceptance status: 24 Python regression tests passed, JavaScript syntax passed, Flask frontend-only preview returned HTTP 200, static assets returned HTTP 200 and `git diff --check` passed. Five existing `datetime.utcnow()` deprecation warnings remain in the code executor tests. Live code evaluation is wired through the Redis worker and internal sandbox service in Docker Compose; actual Supabase credentials and migrations are still required for a real end-to-end run.

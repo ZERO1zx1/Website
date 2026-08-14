@@ -173,7 +173,8 @@ def request_email_otp():
             400,
         )
     try:
-        db.request_email_otp(email, redirect_to=os.getenv("OTP_REDIRECT_URL"))
+        otp_redirect = os.getenv("OTP_REDIRECT_URL") or f"{_frontend_url().rstrip('/')}/"
+        db.request_email_otp(email, redirect_to=otp_redirect)
         return {
             "message": "A one-time code was sent to your email.",
             "message_mn": "Нэг удаагийн нэвтрэх кодыг таны имэйл рүү илгээлээ.",

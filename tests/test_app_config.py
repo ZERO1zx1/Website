@@ -14,6 +14,30 @@ def test_frontend_only_mode_does_not_require_supabase(monkeypatch):
     assert app.test_client().get('/').status_code == 200
 
 
+def test_frontend_only_readiness_is_ready(monkeypatch):
+    monkeypatch.setenv('FRONTEND_ONLY', 'true')
+    app = create_app()
+
+    response = app.test_client().get('/api/ready')
+
+    assert response.status_code == 200
+    assert response.get_json()['mode'] == 'frontend-only'
+
+
+def test_normal_backend_readiness_reports_missing_configuration(monkeypatch):
+    monkeypatch.setenv('FRONTEND_ONLY', 'false')
+    monkeypatch.delenv('SUPABASE_URL', raising=False)
+    monkeypatch.delenv('SUPABASE_KEY', raising=False)
+    monkeypatch.setenv('SECRET_KEY', 'test-secret-that-is-long-enough-for-the-test')
+    monkeypatch.setenv('SUBMISSION_QUEUE_MODE', 'thread')
+    monkeypatch.delenv('SANDBOX_URL', raising=False)
+
+    response = create_app().test_client().get('/api/ready')
+
+    assert response.status_code == 503
+    assert 'SUPABASE_URL' in response.get_json()['missing']
+
+
 def test_normal_backend_mode_registers_user_loader(monkeypatch):
     monkeypatch.setenv('FRONTEND_ONLY', 'false')
     monkeypatch.setenv('SUPABASE_URL', 'https://example.supabase.co')
@@ -24,7 +48,10 @@ def test_normal_backend_mode_registers_user_loader(monkeypatch):
 
     assert app.config['FRONTEND_ONLY'] is False
     assert app.login_manager.user_callback is not None
-    assert app.test_client().get('/').status_code == 200
+    response = app.test_client().get('/')
+    assert response.status_code == 200
+    assert response.headers['X-Content-Type-Options'] == 'nosniff'
+    assert 'Content-Security-Policy' in response.headers
 
 
 def test_production_requires_explicit_secret(monkeypatch):
