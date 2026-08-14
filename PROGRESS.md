@@ -245,3 +245,12 @@ Building an elegant, polished, and fully-featured online coding education platfo
 - AI feedback is contextual and educational
 - Design system supports dark mode
 - Frontend is responsive and mobile-friendly
+
+
+## Verified production-hardening pass — August 2026
+
+The latest `main` branch was audited and hardened on branch `fix/production-hardening`. The current implementation includes split Compose networking, fail-closed sandbox token validation, Redis queue failure handling, hidden-test redaction, role-aware analytics authorization, live frontend request timeouts, duplicate-submission protection, and GitHub Actions CI. The regression suite contains 34 passing tests, Python compilation and JavaScript syntax checks pass, and the Compose contract check passes.
+
+Live Supabase end-to-end verification and Docker image/service verification remain external requirements because they require deployment credentials and Docker Engine. The student-facing frontend is integrated with live backend APIs in authenticated backend mode; the explicitly labelled frontend-only mode remains available for credential-free design review.
+
+See [`docs/production-hardening-report.md`](docs/production-hardening-report.md) for the verified command results, changed files, security fixes, and remaining limitations.
