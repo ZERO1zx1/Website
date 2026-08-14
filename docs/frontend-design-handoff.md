@@ -93,3 +93,11 @@ The token hierarchy follows Figma's guidance on primitive, semantic and componen
 [1]: https://help.figma.com/hc/en-us/articles/18490793776023-Update-1-Tokens-variables-and-styles "Figma Learn — Tokens, variables, and styles"
 [2]: https://www.w3.org/TR/WCAG22/ "W3C Web Content Accessibility Guidelines 2.2"
 [3]: https://www.pencilandpaper.io/articles/ux-pattern-analysis-data-dashboards "Pencil & Paper — Dashboard Design UX Patterns"
+
+## Final frontend verification addendum
+
+The final frontend pass covers dynamic localization rather than only static shell labels. Practice cards, Learning path modules, editor modal, Assessments cards, Profile metadata and Preferences controls now use the same EN/MN translation layer. Editor output and success feedback also follow the selected language.
+
+The browser verification sequence covered Dashboard, Practice, code editor Run flow, Login/Register, Learning path, Assessments, Profile and Preferences. A 390px mobile screenshot confirmed collapsed navigation, two-column KPI cards, full-width learning card and no horizontal clipping. HTML accessibility checks cover the main landmark, dialog state, language selector, auth inputs, code editor and live toast region.
+
+Final frontend acceptance status: 15 regression tests passed, JavaScript syntax passed, Python compile passed, HTML structure checks passed and frontend-only Flask preview returned HTTP 200.

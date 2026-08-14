@@ -168,8 +168,8 @@ async function renderLearningPath() {
     container.innerHTML = path.modules.map((module) => `
         <article class="module-card ${module.complete ? 'is-complete' : ''}">
             <span class="module-number">${module.complete ? '✓' : module.number}</span>
-            <div class="module-content"><strong>${module.title}</strong><span>${module.meta}</span></div>
-            <span class="module-status">${module.status}</span>
+            <div class="module-content"><strong>${localizeContent(module.title)}</strong><span>${localizeContent(module.meta)}</span></div>
+            <span class="module-status">${localizeContent(module.status)}</span>
         </article>`).join('');
 }
 
@@ -188,15 +188,22 @@ function renderProblemCards(problems) {
     }
     container.innerHTML = filtered.map((problem) => `
         <article class="problem-card">
-            <div class="problem-card-top"><span class="pill ${problem.progress === 'Solved' ? 'pill-teal' : 'pill-muted'}">${problem.progress}</span><span class="practice-symbol">${problem.icon}</span></div>
-            <h3>${problem.title}</h3><p>${problem.description}</p>
-            <div class="problem-card-footer"><span class="difficulty ${problem.difficulty}">${capitalize(problem.difficulty)} · ${problem.topic}</span><button class="text-button" data-open-editor>Solve <span aria-hidden="true">→</span></button></div>
+            <div class="problem-card-top"><span class="pill ${problem.progress === 'Solved' ? 'pill-teal' : 'pill-muted'}">${localizeContent(problem.progress)}</span><span class="practice-symbol">${problem.icon}</span></div>
+            <h3>${localizeContent(problem.title)}</h3><p>${localizeContent(problem.description)}</p>
+            <div class="problem-card-footer"><span class="difficulty ${problem.difficulty}">${localizeContent(capitalize(problem.difficulty))} · ${localizeContent(problem.topic)}</span><button class="text-button" data-open-editor>${localizeContent('Solve')} <span aria-hidden="true">→</span></button></div>
         </article>`).join('');
     container.querySelectorAll('[data-open-editor]').forEach((button) => button.addEventListener('click', openEditor));
     applyLanguage();
 }
 
 function capitalize(value) { return value.charAt(0).toUpperCase() + value.slice(1); }
+
+function localizeContent(value) {
+    if (value && typeof value === 'object') return value[app.language] || value.en || Object.values(value)[0] || '';
+    const source = String(value ?? '');
+    const dictionary = app.language === 'mn' ? plainMn : {};
+    return dictionary[source] || textTranslations[app.language]?.[source] || source;
+}
 
 function openEditor() {
     const modal = document.getElementById('editor-modal');
@@ -220,13 +227,15 @@ function closeEditor() {
 function runCode() {
     const output = document.getElementById('code-output');
     if (!output) return;
-    output.innerHTML = '<span class="output-label">OUTPUT · 0.18s</span><code style="color:#75e6c5">[2, 4]\n\nProcess finished with exit code 0.</code>';
-    showToast('Code ran successfully. Nice work.', 'success');
+    const outputLabel = app.language === 'mn' ? 'ГАРАЛТ · 0.18с' : 'OUTPUT · 0.18s';
+    const outputStatus = app.language === 'mn' ? 'Процесс амжилттай дууслаа.' : 'Process finished with exit code 0.';
+    output.innerHTML = `<span class="output-label">${outputLabel}</span><code style="color:#75e6c5">[2, 4]<br><br>${outputStatus}</code>`;
+    showToast(app.language === 'mn' ? 'Код амжилттай ажиллалаа. Сайн байна.' : 'Code ran successfully. Nice work.', 'success');
 }
 
 function submitCode() {
     runCode();
-    showToast('Solution saved to your practice history.', 'success');
+    showToast(app.language === 'mn' ? 'Шийдэл дадлагын түүхэнд хадгалагдлаа.' : 'Solution saved to your practice history.', 'success');
     window.setTimeout(closeEditor, 500);
 }
 
@@ -281,7 +290,22 @@ const translations = {
         'auth.terms': 'I agree to the Terms of Service and Privacy Policy.',
         'auth.or': 'or continue with',
         'auth.demo': 'Frontend preview only.',
-        'auth.demo.continue': 'Continue as demo learner'
+        'auth.demo.continue': 'Continue as demo learner',
+        'editor.workspace': 'Practice workspace',
+        'editor.title': 'List comprehensions',
+        'editor.problem.title': 'Transform a list of values',
+        'editor.problem.description': 'Write a function that returns only the even numbers from a list. Keep the original order.',
+        'editor.example': 'Example',
+        'editor.hint': 'Need a hint?',
+        'editor.reveal': 'Reveal step 1 →',
+        'editor.autosaved': 'Autosaved',
+        'editor.output': 'OUTPUT',
+        'editor.emptyOutput': 'Run your code to see the output here.',
+        'editor.toRun': 'to run',
+        'editor.save': 'Save for later',
+        'editor.run': 'Run code',
+        'editor.submit': 'Submit solution',
+        'editor.close': 'Close editor'
     },
     mn: {
         'auth.preview': 'Нэвтрэх / бүртгүүлэх харах',
@@ -310,7 +334,22 @@ const translations = {
         'auth.terms': 'Үйлчилгээний нөхцөл болон Нууцлалын бодлогыг зөвшөөрч байна.',
         'auth.or': 'эсвэл дараахаар үргэлжлүүлэх',
         'auth.demo': 'Зөвхөн frontend preview.',
-        'auth.demo.continue': 'Demo хэрэглэгчээр үргэлжлүүлэх'
+        'auth.demo.continue': 'Demo хэрэглэгчээр үргэлжлүүлэх',
+        'editor.workspace': 'Дадлагын орчин',
+        'editor.title': 'List comprehension',
+        'editor.problem.title': 'Жагсаалтын утгуудыг хувиргах',
+        'editor.problem.description': 'Жагсаалтаас зөвхөн тэгш тоонуудыг буцаах function бичнэ үү. Анхны дарааллыг хадгална.',
+        'editor.example': 'Жишээ',
+        'editor.hint': 'Санамж хэрэгтэй юу?',
+        'editor.reveal': '1-р алхмыг харах →',
+        'editor.autosaved': 'Автоматаар хадгалсан',
+        'editor.output': 'ГАРАЛТ',
+        'editor.emptyOutput': 'Кодоо ажиллуулбал үр дүн энд харагдана.',
+        'editor.toRun': 'ажиллуулах',
+        'editor.save': 'Дараа хийхээр хадгалах',
+        'editor.run': 'Код ажиллуулах',
+        'editor.submit': 'Шийдэл илгээх',
+        'editor.close': 'Editor хаах'
     }
 };
 
@@ -396,6 +435,10 @@ function applyLanguage() {
         const value = dictionary[node.dataset.i18nPlaceholder];
         if (value) node.placeholder = value;
     });
+    document.querySelectorAll('[data-i18n-aria]').forEach((node) => {
+        const value = dictionary[node.dataset.i18nAria];
+        if (value) node.setAttribute('aria-label', value);
+    });
     document.querySelectorAll('[data-i18n] input, [data-i18n] textarea').forEach((node) => {
         const value = dictionary[node.dataset.i18n];
         if (value) node.placeholder = value;
@@ -480,8 +523,18 @@ Object.assign(plainMn, {
     'View path': 'Замыг харах', 'Student': 'Суралцагч', '5 days': '5 өдөр', 'days': 'өдөр', 'h': 'ц', 'm': 'м', '12h 40m': '12ц 40м', '6h 25m': '6ц 25м',
     '68% complete': '68% дууссан', '82%': '82%', '68%': '68%', '55%': '55%', '38%': '38%',
     'Function scope': 'Function scope', 'Flatten a nested list': 'Давхар list-ийг задлах', 'Dictionary frequency counter': 'Dictionary-ийн давтамжийн тоолуур',
-    'Python': 'Python', 'Problem solving': 'Бодлого бодолт', 'Data structures': 'Өгөгдлийн бүтэц', 'Web fundamentals': 'Web-ийн суурь',
-    'Completed': 'Дууссан', 'In progress': 'Үргэлжилж байна', 'Next:': 'Дараагийнх:', 'List comprehension': 'List comprehension',
+    'Even number filter': 'Тэгш тоо шүүх', 'Python': 'Python', 'Problem solving': 'Бодлого бодолт', 'Data structures': 'Өгөгдлийн бүтэц', 'Algorithms': 'Алгоритм', 'Strings': 'Тэмдэгт мөр', 'Stacks': 'Стек', 'Graphs': 'Граф', 'Web fundamentals': 'Web-ийн суурь',
+    'Completed': 'Дууссан', 'In progress': 'Үргэлжилж байна', 'Next:': 'Дараагийнх:', 'List comprehension': 'List comprehension', 'Easy': 'Хялбар', 'Medium': 'Дунд', 'Hard': 'Хүнд', 'Solved': 'Бодсон', 'New': 'Шинэ', 'Solve': 'Бодох',
     '6 lessons · 42 min': '6 хичээл · 42 минут', '3 of 8 modules complete · 19 hours remaining': '8 модулиас 3 дууссан · 19 цаг үлдсэн',
-    'Mon': 'Дав', 'Tue': 'Мяг', 'Wed': 'Лха', 'Thu': 'Пүр', 'Fri': 'Баа', 'Sat': 'Бям', 'Sun': 'Ням'
+    'Mon': 'Дав', 'Tue': 'Мяг', 'Wed': 'Лха', 'Thu': 'Пүр', 'Fri': 'Баа', 'Sat': 'Бям', 'Sun': 'Ням',
+    'IN PROGRESS': 'ҮРГЭЛЖИЛЖ БАЙНА',
+    'Python essentials': 'Python-ийн суурь', 'Variables, types and control flow · 6 lessons': 'Хувьсагч, төрөл болон удирдлагын урсгал · 6 хичээл',
+    'Functions and clean code': 'Function болон цэвэр код', 'Scope, arguments and reusable patterns · 7 lessons': 'Хамрах хүрээ, аргумент болон дахин ашиглах хэв маяг · 7 хичээл',
+    'Collections and comprehensions': 'Цуглуулга ба comprehension-ууд', 'Lists, dictionaries and expressive iteration · 8 lessons': 'Жагсаалт, dictionary болон илэрхий давталт · 8 хичээл',
+    'Object-oriented thinking': 'Объектод чиглэсэн сэтгэлгээ', 'Classes, composition and maintainable systems · 9 lessons': 'Класс, зохиомж болон арчлахад хялбар систем · 9 хичээл',
+    'Working with APIs': 'API-тай ажиллах', 'HTTP, JSON and your first useful integration · 6 lessons': 'HTTP, JSON болон анхны хэрэгтэй integration · 6 хичээл',
+    'READY TO START': 'ЭХЛЭХЭД БЭЛЭН', 'Python foundations checkpoint': 'Python суурийн шалгах тест', 'Best score:': 'Хамгийн сайн оноо:', 'Begin checkpoint': 'Шалгах тест эхлүүлэх',
+    'LOCKED': 'ТҮГЖЭЭТЭЙ', 'Data structures checkpoint': 'Өгөгдлийн бүтцийн шалгах тест', 'Complete the current module to unlock.': 'Одоогийн модулийг дуусгаснаар нээгдэнэ.', '68% of prerequisites complete': 'Шаардлагатай агуулгын 68% дууссан',
+    'UPCOMING': 'УДАХГҮЙ', 'Web fundamentals project': 'Web-ийн суурийн төсөл', 'Build and ship a responsive profile page.': 'Responsive profile page бүтээж нийтэлнэ.', 'Unlocks in module 5': '5-р модульд нээгдэнэ',
+    'Learning since June 2026': '2026 оны 6-р сараас суралцаж байна', 'PYTHON PATH': 'PYTHON-ИЙН ЗАМ', 'Light': 'Цайвар', 'Dark': 'Бараан', 'Set a comfortable reading size for code.': 'Код уншихад эвтэйхэн хэмжээ сонго.'
 });
