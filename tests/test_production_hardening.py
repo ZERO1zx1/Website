@@ -298,3 +298,19 @@ def test_dashboard_returns_authenticated_user_profile(monkeypatch, tmp_path):
     assert response.status_code == 200
     assert response.get_json()["user"]["name"] == "Dashboard User"
     assert response.get_json()["user"]["role"] == "student"
+
+
+
+def test_dashboard_workspace_uses_live_discovery_markers(monkeypatch):
+    monkeypatch.setenv("FLASK_ENV", "development")
+    monkeypatch.setenv("FRONTEND_ONLY", "false")
+    monkeypatch.setenv("LOCAL_DB", "true")
+    monkeypatch.setenv("SECRET_KEY", "local-development-secret-that-is-long-enough")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+    from backend.db import db
+    db._client = None
+    html = create_app().test_client().get("/").data
+    assert b"dashboard-course-grid" in html
+    assert b"sidebar-up-next-title" in html
+    assert b"Build your first API" not in html

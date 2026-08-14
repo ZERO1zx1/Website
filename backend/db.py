@@ -208,7 +208,7 @@ class SupabaseDB:
         course = self.get_course(course_id)
         if not course:
             return None
-        progress_response = self.client.table('lesson_progress').select('lesson_id,completed_at').eq('user_id', user_id).execute()
+        progress_response = self.client.table('lesson_progress').select('lesson_id,status,started_at,completed_at').eq('user_id', user_id).execute()
         completed = {row['lesson_id']: row for row in (progress_response.data or [])}
         total_lessons = 0
         completed_lessons = 0

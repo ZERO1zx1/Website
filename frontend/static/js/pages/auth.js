@@ -155,6 +155,18 @@
         }
         if (hasToken) form.querySelector('[name="token"]').value = token;
     }
+    function renderDashboardCourses(courses) {
+        const grid = document.querySelector('[data-dashboard-courses]');
+        if (!grid) return;
+        if (!courses.length) { grid.innerHTML = '<p class="muted">Learning paths will appear here when they are available.</p>'; return; }
+        grid.innerHTML = courses.slice(0, 3).map((course) => {
+            const progress = Number(course.progress || 0);
+            const lessons = (course.modules || []).flatMap((module) => module.lessons || []);
+            const next = lessons.find((lesson) => lesson.status !== 'completed');
+            const status = progress >= 100 ? 'Completed' : progress > 0 ? 'In progress' : 'Not started';
+            return `<article class="dashboard-page-course"><div class="dashboard-page-course-top"><span class="course-icon">${escapeHtml(course.icon || 'CO')}</span><span>${status}</span></div><h3>${escapeHtml(course.title || 'Learning path')}</h3><p>${escapeHtml(course.description || 'A practical path for your next skill.')}</p><div class="dashboard-course-progress"><span style="width:${Math.min(100, Math.max(0, progress))}%"></span></div><small>${progress}% complete · ${escapeHtml(next?.title || 'Ready for review')}</small></article>`;
+        }).join('');
+    }
     function wireDashboard() {
         const dashboard = document.querySelector('[data-stat="mastery"]');
         if (!dashboard) return;
@@ -183,6 +195,7 @@
                 document.querySelector('[data-stat="study"]').textContent = minutes >= 60 ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : `${minutes}m`;
                 document.querySelector('[data-stat="streak"]').textContent = `${Number(stats.current_streak || 0)} days`;
                 const courses = coursesPayload.courses || [];
+                renderDashboardCourses(courses);
                 const course = courses.find((item) => Number(item.progress || 0) < 100) || courses[0];
                 const lessons = (course?.modules || []).flatMap((module) => (module.lessons || []).map((lesson) => ({...lesson, moduleTitle: module.title})));
                 const next = lessons.find((lesson) => lesson.status !== 'completed');

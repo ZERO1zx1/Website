@@ -270,6 +270,7 @@ async function renderDashboard() {
     const continueCourse = livePath?.courses?.find((course) => Number(course.progress || 0) < 100) || livePath?.courses?.[0];
     const continueLesson = continueCourse?.modules?.flatMap((module) => module.lessons || []).find((lesson) => lesson.status !== 'completed');
     renderDashboardFocus(livePath);
+    renderDashboardCourseDiscovery(livePath);
     const continueTitle = document.getElementById('continue-course-title');
     const continueDescription = document.getElementById('continue-course-description');
     const continueProgress = document.getElementById('continue-course-progress');
@@ -280,6 +281,10 @@ async function renderDashboard() {
     if (continueProgress) continueProgress.textContent = `${continueCourse?.progress || 0}% complete`;
     if (continueProgressBar) continueProgressBar.style.width = `${continueCourse?.progress || 0}%`;
     if (continueNext) continueNext.textContent = localizeContent(continueLesson?.title || 'Start a lesson');
+    const sidebarNext = document.getElementById('sidebar-up-next-title');
+    const sidebarMeta = document.getElementById('sidebar-up-next-meta');
+    if (sidebarNext) sidebarNext.textContent = localizeContent(continueLesson?.title || continueCourse?.title || 'Choose a learning path');
+    if (sidebarMeta) sidebarMeta.textContent = continueCourse ? `${localizeContent(continueCourse.title)} · ${Number(continueCourse.progress || 0)}% complete` : 'Your path will appear here.';
     const titleNode = document.getElementById('dashboard-title');
     const dateNode = document.getElementById('dashboard-date');
     if (titleNode) titleNode.textContent = app.user?.name ? `Keep your momentum, ${app.user.name}.` : 'Keep your momentum.';
@@ -302,6 +307,28 @@ async function renderDashboard() {
         </div>`).join('') : `<div class="empty-state">${app.language === 'mn' ? 'Одоогоор дадлагын түүх алга.' : 'No practice history yet.'}</div>`;
     container.querySelectorAll('[data-open-editor]').forEach((button) => button.addEventListener('click', openEditor));
     applyLanguage();
+}
+
+function renderDashboardCourseDiscovery(livePath) {
+    const container = document.getElementById('dashboard-course-grid');
+    if (!container) return;
+    const courses = Array.isArray(livePath?.courses) ? livePath.courses : [];
+    if (!courses.length) {
+        container.innerHTML = `<div class="panel empty-state">${app.language === 'mn' ? 'Одоогоор суралцах зам бэлэн болоогүй байна.' : 'Learning paths will appear here when they are available.'}</div>`;
+        return;
+    }
+    container.innerHTML = courses.slice(0, 3).map((course) => {
+        const lessons = (course.modules || []).flatMap((module) => module.lessons || []);
+        const next = lessons.find((lesson) => lesson.status !== 'completed');
+        const progress = Number(course.progress || 0);
+        const status = progress >= 100 ? (app.language === 'mn' ? 'Дууссан' : 'Completed') : progress > 0 ? (app.language === 'mn' ? 'Үргэлжилж байна' : 'In progress') : (app.language === 'mn' ? 'Эхлээгүй' : 'Not started');
+        return `<article class="dashboard-course-card panel"><div class="dashboard-course-top"><span class="course-icon">${escapeHtml(course.icon || 'CO')}</span><span class="dashboard-course-status">${escapeHtml(status)}</span></div><h3>${escapeHtml(localizeContent(course.title || 'Learning path'))}</h3><p>${escapeHtml(localizeContent(course.description || 'A practical path for your next skill.'))}</p><div class="dashboard-course-progress"><span style="width:${Math.min(100, Math.max(0, progress))}%"></span></div><div class="dashboard-course-footer"><small>${progress}% complete · ${escapeHtml(localizeContent(next?.title || 'Ready for review'))}</small><button class="text-button" type="button" data-dashboard-course="${escapeHtml(course.id)}">Open path <span aria-hidden="true">→</span></button></div></article>`;
+    }).join('');
+    container.querySelectorAll('[data-dashboard-course]').forEach((button) => button.addEventListener('click', () => {
+        app.selectedCourseId = button.dataset.dashboardCourse;
+        showView('learn');
+        void renderLearningPath();
+    }));
 }
 
 function renderDashboardFocus(livePath) {
