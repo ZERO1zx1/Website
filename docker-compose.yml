@@ -10,10 +10,51 @@ services:
       PORT: 5000
       FLASK_ENV: production
       FRONTEND_ONLY: "false"
+      SANDBOX_URL: http://sandbox:8080
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-change-this-in-production}
+      SUBMISSION_QUEUE_MODE: redis
+      REDIS_URL: redis://redis:6379/0
     ports:
       - "5000:5000"
     depends_on:
-      - sandbox
+      redis:
+        condition: service_started
+      sandbox:
+        condition: service_healthy
+    networks:
+      - sandbox_internal
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      FLASK_ENV: production
+      FRONTEND_ONLY: "false"
+      SANDBOX_URL: http://sandbox:8080
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-change-this-in-production}
+      SUBMISSION_QUEUE_MODE: redis
+      REDIS_URL: redis://redis:6379/0
+    command: ["python", "-m", "backend.worker"]
+    depends_on:
+      redis:
+        condition: service_started
+      sandbox:
+        condition: service_healthy
+    networks:
+      - sandbox_internal
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - sandbox_internal
     restart: unless-stopped
 
   sandbox:
@@ -21,8 +62,20 @@ services:
       context: ./sandbox
       dockerfile: Dockerfile
     image: codehaven-sandbox:local
-    command: ["sleep", "infinity"]
+    environment:
+      SANDBOX_PORT: 8080
+      SANDBOX_TOKEN: ${SANDBOX_TOKEN:-change-this-in-production}
     read_only: true
+    mem_limit: 256m
+    cpus: 0.50
+    pids_limit: 64
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
     cap_drop:
       - ALL
     security_opt:
@@ -30,6 +83,9 @@ services:
     networks:
       - sandbox_internal
     restart: unless-stopped
+
+volumes:
+  redis_data:
 
 networks:
   sandbox_internal:

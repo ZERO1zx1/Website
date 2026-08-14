@@ -1,7 +1,7 @@
 # Website backend implementation report
 
 **Repository:** `ZERO1zx1/Website`
-**Branch:** `feat/frontend-redesign`
+**Working branch:** `fix/frontend-complete`
 **Execution style:** AgentCore-style incremental checkpoints
 
 ## Хэрэгжсэн хүрээ
@@ -17,8 +17,8 @@ Backend-ийн folder structure, Python Flask API, Supabase gateway, Docker, YAM
 | Database | `backend/db.py` | Lazy Supabase client болон domain queries |
 | RBAC | `backend/rbac.py` | YAML policy loader, role label, permission guard, bilingual errors |
 | Configuration | `config/app.yml`, `config/roles.yml` | Runtime болон role policy-ийн source |
-| Container | `Dockerfile`, `docker-compose.yml`, `.dockerignore` | Web API болон isolated sandbox orchestration |
-| Migration | `backend/db/migrations/001_auth_roles.sql` | Password hash, owner role, teacher approval schema |
+| Container | `Dockerfile`, `docker-compose.yml`, `.dockerignore` | Web API, Redis worker болон internal isolated sandbox orchestration |
+| Migration | `backend/db/migrations/001_auth_roles.sql`–`003_external_auth_identities.sql` | Auth, learning platform болон external identity schema; `backend/db/seed/001_demo_content.sql` starter content |
 | Documentation | `docs/*.md` | Structure, integration, glossary, checkpoint болон runbook |
 
 ## Role and permission model
@@ -54,17 +54,17 @@ API error нь тогтвортой code, English message болон Mongolian m
 | RBAC tests | Passed |
 | Frontend shell tests | Passed |
 | Executor tests | Passed |
-| Нийт regression test | **15 passed** |
+| Нийт regression test | **24 passed** |
 | Python compile | Passed |
 | JavaScript syntax | Passed |
 | YAML parse: roles, app, compose | Passed |
 | Normal backend route registration | Passed |
 | Docker Compose runtime validation | Skipped; sandbox-д Docker CLI байхгүй |
 
-Тестийн үлдсэн warning нь `backend/services/code_executor.py` доторх existing `datetime.utcnow()` deprecation warning бөгөөд test failure биш. Үүнийг дараагийн жижиг technical-debt task-аар timezone-aware datetime болгон шинэчилж болно.
+Өмнө байсан `datetime.utcnow()` deprecation warning-уудыг timezone-aware UTC timestamp болгон зассан. Docker Compose runtime validation нь энэ sandbox-д Docker CLI байхгүй тул YAML validator болон internal sandbox HTTP smoke test-ээр орлуулж баталгаажуулсан.
 
 ## Дараагийн хэрэгжүүлэх дараалал
 
-Database migration-г Supabase дээр ажиллуулсны дараа бодит auth login/register-ийг frontend API adapter-тэй холбоно. Дараа нь current user, student dashboard, learning path, practice problems, teacher panel болон submissions-ийг нэг нэгээр нь холбоно. Endpoint бүр дээр loading, empty, error, unauthorized болон Mongolian/English response state-ийг тусад нь баталгаажуулна.
+Supabase migration болон starter seed-ийг ажиллуулсны дараа бодит auth login/register, current user, student dashboard, learning path, practice problems болон submissions-ийн live flow-г ашиглана. Submission нь Redis-backed `backend.worker`-ээр internal sandbox service рүү орж, frontend pending/result polling хийдэг. Endpoint бүр дээр loading, empty, error, unauthorized болон Mongolian/English response state тусдаа баталгаажсан.
 
 Дараагийн integration эхлэхээс өмнө `.env.example`-ийг хуулж `.env` үүсгэнэ. Production secret, Supabase key болон populated `.env` файлыг repository-д commit хийхгүй.

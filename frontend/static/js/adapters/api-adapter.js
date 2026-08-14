@@ -97,15 +97,50 @@
             const course = courseId
                 ? (payload.course || courses.find((item) => String(item.id) === String(courseId)))
                 : (courses[0] || payload);
-            return { ...course, courses, modules: course?.modules || [] };
+            if (!courseId && course?.id && !(course.modules || []).length) return this.getLearningPath(course.id);
+            const normalizedCourse = normalizeCourse(course || {});
+            return { ...normalizedCourse, courses: courses.length ? courses.map(normalizeCourse) : [normalizedCourse], modules: normalizedCourse.modules || [] };
         },
         async getProblems(query = {}) {
             const params = new URLSearchParams(query);
             const payload = await request(`/api/problems${params.toString() ? `?${params}` : ''}`);
-            return { problems: payload.problems || payload.data || [] };
+            return { problems: (payload.problems || payload.data || []).map(normalizeProblem) };
+        },
+        async getProblem(problemId) {
+            const payload = await request(`/api/problems/${problemId}`);
+            return normalizeProblem(payload.problem || payload);
+        },
+        async runCode(input) {
+            return request('/api/submissions/run', { method: 'POST', body: JSON.stringify(input) });
         },
         async submitCode(input) {
             return request('/api/submissions', { method: 'POST', body: JSON.stringify(input) });
+        },
+        async getSubmission(submissionId) {
+            return request(`/api/submissions/${submissionId}`);
+        },
+        async streamSubmission(submissionId, onUpdate) {
+            const token = getToken();
+            const response = await fetch(`/api/submissions/${submissionId}/stream`, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                credentials: 'include',
+            });
+            if (!response.ok || !response.body) throw new Error(`Submission stream failed: ${response.status}`);
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const chunks = buffer.split(/\n\n/);
+                buffer = chunks.pop() || '';
+                chunks.forEach((chunk) => {
+                    const line = chunk.split(/\n/).find((item) => item.startsWith('data:'));
+                    if (!line) return;
+                    try { onUpdate(JSON.parse(line.slice(5).trim())); } catch (error) { /* ignore malformed event */ }
+                });
+            }
         }
     };
 
@@ -115,6 +150,33 @@
             recentPractice: payload.recentPractice || payload.recent_practice || [],
             activity: payload.activity || [],
             skills: payload.skills || payload.mastery || []
+        };
+    }
+
+    function normalizeProblem(problem) {
+        return {
+            ...problem,
+            progress: problem.progress || 'New',
+            icon: problem.icon || String(problem.id || 0).padStart(2, '0'),
+            topic: problem.topic || problem.language || 'Practice',
+            tags: problem.tags || [],
+            keywords: problem.keywords || [],
+        };
+    }
+
+    function normalizeCourse(course) {
+        return {
+            ...course,
+            progress: Number(course.progress || 0),
+            tags: course.tags || [],
+            keywords: course.keywords || [],
+            modules: (course.modules || []).map((module, index) => ({
+                ...module,
+                number: module.number || String(index + 1).padStart(2, '0'),
+                meta: module.meta || module.description || '',
+                status: module.status || (module.complete ? 'Complete' : index === 0 ? 'Start here' : 'Locked'),
+                complete: Boolean(module.complete),
+            })),
         };
     }
 })();

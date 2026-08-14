@@ -1,8 +1,8 @@
 # Website frontend UI/UX final report
 
-**Project:** `ZERO1zx1/Website`  
-**Branch:** `feat/frontend-redesign`  
-**Scope:** Frontend only; backend integration intentionally deferred
+**Project:** `ZERO1zx1/Website`
+**Working branch:** `fix/frontend-complete`
+**Scope:** Frontend UI/UX, local interaction logic and adapter boundary; GitHub push is not performed automatically
 
 ## Хураангуй
 
@@ -19,7 +19,7 @@ Website-ийн frontend-ийг production-д ойр prototype түвшинд ш�
 | Authentication UI | Sign in / Create account tab, email, password, show/hide password, remember me, forgot password, terms checkbox, social buttons, demo continuation |
 | Reference ZIP | Split-panel auth composition болон responsive vertical stacking санааг ашигласан; branding, copy болон interaction-ийг Codehaven-д тохируулсан |
 | Mobile | 390px screenshot-оор баталгаажуулсан; sidebar off-canvas, topbar compact, KPI 2-column, content single-column, auth card stacked |
-| Backend boundary | `mockAdapter` хэвээр; дараагийн шатанд `/api/auth/me`, `/api/courses`, `/api/problems`, `/api/submissions` endpoint-үүдээр солино |
+| Backend boundary | Demo mode-д `mockAdapter`, backend session үед live `codehavenApiAdapter`; auth actions live adapter ашиглаж, editor Submit нь `/api/submissions` рүү pending хүсэлт илгээнэ |
 
 ## Шалгалтын үр дүн
 
@@ -27,7 +27,7 @@ Website-ийн frontend-ийг production-д ойр prototype түвшинд ш�
 |---|---:|
 | Frontend shell болон auth HTML smoke tests | Passed |
 | Executor regression tests | Passed |
-| Нийт Python tests | **7 passed** |
+| Нийт Python tests | **24 passed** |
 | JavaScript syntax (`node --check`) | Passed |
 | Python compile | Passed |
 | Git diff whitespace check | Passed |
@@ -58,9 +58,22 @@ Frontend screen болон interaction contract батлагдсаны дара�
 | `getLearningPath()` | `GET /api/courses/:courseId` | Course/module/lesson progress холбоно |
 | `getProblems()` | `GET /api/problems` | Problem filter, difficulty, status-ийг холбоно |
 | Auth submit | `POST /api/auth/login`, `POST /api/auth/register` | Validation, error, token state холбоно |
-| Code submit | `POST /api/submissions` | Sandbox evaluation болон result polling холбоно |
+| Code run | `POST /api/submissions/run` | Visible test case дээр бодит sandbox runtime ажиллуулна |
+| Code submit | `POST /api/submissions` | Redis/thread queue, sandbox evaluation болон SSE/polling result холбоно |
 
-Одоогоор frontend нь backend рүү шууд хүсэлт илгээхгүй. Энэ нь таны хүссэн дараалалтай нийцэж байгаа: **эхлээд UI/UX болон frontend-ийг бүрэн батлах, дараа нь backend integration хийх**.
+Frontend-only demo mode нь backend рүү хүсэлт илгээхгүй. Backend mode болон valid session үед auth болон code submission adapter-ээр дамжин API-д хүсэлт илгээнэ. Live Run нь backend mode-д бодит `/api/submissions/run` endpoint-ээр visible test case-уудыг sandbox дээр ажиллуулна. Live submission нь local single-process thread queue эсвэл Docker Compose-ийн Redis-backed evaluator worker рүү орж, internal sandbox service-ээр үнэлэгдэнэ. Үр дүн нь `/api/submissions/<id>/stream` SSE-ээр ирж, SSE боломжгүй үед polling fallback ашиглана. Бодит end-to-end ажиллагаанд Supabase credentials, migrations, seed болон readiness validator-ийн бүх шалгалт амжилттай байх шаардлагатай. UI/UX баримтжуулалтыг `docs/frontend-design-handoff.md` файлд canonical байдлаар хадгална.
+
+## UI/UX заавал байх acceptance contract
+
+| Талбар | Заавал хангах шаардлага |
+|---|---|
+| Primary action | Screen бүр нэг гол үйлдлийг эхэнд ойлгогдохоор харуулна; secondary action нь ghost/text treatment ашиглана. |
+| Data states | Loading, populated, empty, error, success төлөв тус бүр тусдаа харагдах ба layout shift үүсгэхгүй. |
+| Form behavior | Visible label, ойролцоох validation, pending үед disabled submit, алдаанд input утгыг хадгална. |
+| Navigation | Active state, keyboard focus, mobile drawer, Escape/scrim close, focus restoration. |
+| Editor | Problem context хадгална; Run нь demo гэдгийг ялгана; Submit нь live mode-д pending feedback өгнө. |
+| Responsive | 320px дээр horizontal overflow үүсгэхгүй; 390px дээр dashboard болон auth layout эвдрэхгүй; touch target ашиглахад тохиромжтой байна. |
+| Accessibility | Color-оор дангаар status илэрхийлэхгүй; focus-visible, aria label, dialog semantics, reduced motion болон live toast ашиглана. |
 
 ## Судалгааны үндэслэл
 

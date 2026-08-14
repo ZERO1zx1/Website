@@ -25,6 +25,7 @@ def get_student_dashboard(current_user):
             score = submission.get('score')
             recent_practice.append({
                 'id': submission.get('id'),
+                'problem_id': submission.get('problem_id'),
                 'title': problem.get('title') or f"Problem #{submission.get('problem_id')}",
                 'category': problem.get('difficulty', 'Practice').title(),
                 'status': submission.get('status', 'pending').replace('_', ' ').title(),

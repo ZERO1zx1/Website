@@ -5,11 +5,21 @@ Evaluates code submissions and manages results
 
 import logging
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from backend.services.code_executor import get_executor, SubmissionEvaluator
 from backend.db import db
 
 logger = logging.getLogger(__name__)
+
+_DATABASE_STATUS = {
+    'accepted': 'accepted',
+    'partial_accepted': 'partial_accepted',
+    'wrong_answer': 'rejected',
+    'rejected': 'rejected',
+    'error': 'error',
+    'pending': 'pending',
+    'running': 'running',
+}
 
 class SubmissionProcessor:
     """Process and evaluate code submissions"""
@@ -38,26 +48,22 @@ class SubmissionProcessor:
             # Get problem and test cases
             problem = db.get_problem(problem_id)
             if not problem:
-                return {
-                    'submission_id': submission_id,
-                    'status': 'error',
-                    'message': 'Problem not found'
-                }
+                results = {'submission_id': submission_id, 'status': 'error', 'message': 'Problem not found'}
+                self.store_results(submission_id, results)
+                return results
             
             # Get test cases
             test_cases = db.get_test_cases(problem_id, include_hidden=True)
             if not test_cases:
-                return {
-                    'submission_id': submission_id,
-                    'status': 'error',
-                    'message': 'No test cases found'
-                }
+                results = {'submission_id': submission_id, 'status': 'error', 'message': 'No test cases found'}
+                self.store_results(submission_id, results)
+                return results
             
-            # Evaluate submission
+            # Evaluate submission using the problem's language unless explicitly supplied.
             results = self.evaluator.evaluate_submission(
                 submission_id=submission_id,
                 code=code,
-                language=language,
+                language=language or problem.get('language', 'python'),
                 test_cases=test_cases
             )
             
@@ -72,21 +78,24 @@ class SubmissionProcessor:
             return results
         
         except Exception as e:
-            logger.error(f"Failed to process submission {submission_id}: {str(e)}")
-            return {
+            logger.exception("Failed to process submission %s", submission_id)
+            results = {
                 'submission_id': submission_id,
                 'status': 'error',
-                'message': str(e)
+                'message': 'Submission evaluation failed'
             }
+            self.store_results(submission_id, results)
+            return results
     
     def store_results(self, submission_id: int, results: Dict):
         """Store evaluation results in database"""
         try:
-            # Store overall submission result
+            # Store overall submission result using the database constraint vocabulary.
+            status = _DATABASE_STATUS.get(results.get('status'), 'error')
             db.client.table('submissions').update({
-                'status': results.get('status'),
-                'score': results.get('score', 0),
-                'evaluated_at': datetime.utcnow().isoformat()
+                'status': status,
+                'score': max(0, min(100, float(results.get('score', 0) or 0))),
+                'evaluated_at': datetime.now(timezone.utc).isoformat()
             }).eq('id', submission_id).execute()
             
             # Store individual test results
@@ -151,7 +160,7 @@ class SubmissionProcessor:
                     'user_id': user_id,
                     'skill_id': skill_id,
                     'mastery_score': new_score,
-                    'updated_at': datetime.utcnow().isoformat()
+                    'updated_at': datetime.now(timezone.utc).isoformat()
                 }).execute()
                 
                 logger.info(f"Updated mastery for user {user_id}, skill {skill_id}: {new_score}")

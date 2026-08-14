@@ -1,6 +1,7 @@
 import json
 
 from backend.services.code_executor import CodeExecutor
+import backend.services.code_executor as code_executor_module
 
 
 class FakeContainers:
@@ -64,3 +65,32 @@ def test_rejects_more_than_maximum_test_cases():
 
     assert result['status'] == 'error'
     assert 'Test case count exceeds' in result['error']
+
+
+def test_remote_sandbox_path_uses_internal_http_service(monkeypatch):
+    executor = executor_with_fake_client()
+    calls = {}
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {'status': 'completed', 'passed': True}
+
+    def fake_post(url, **kwargs):
+        calls['url'] = url
+        calls['kwargs'] = kwargs
+        return FakeResponse()
+
+    monkeypatch.setenv('SANDBOX_URL', 'http://sandbox:8080')
+    monkeypatch.setenv('SANDBOX_TOKEN', 'sandbox-secret')
+    monkeypatch.setattr(code_executor_module.requests, 'post', fake_post)
+
+    result = executor.execute_code('print(1)', 'python', expected_output='1')
+
+    assert result['passed'] is True
+    assert calls['url'] == 'http://sandbox:8080/execute'
+    assert calls['kwargs']['headers']['X-Sandbox-Token'] == 'sandbox-secret'
+    assert calls['kwargs']['json']['expected_output'] == '1'
+    assert executor.client.containers.kwargs is None

@@ -155,9 +155,30 @@ class SupabaseDB:
         return response.data
     
     def get_course(self, course_id: int):
-        """Get course by ID"""
+        """Get a course with ordered modules and lessons for the learning path UI."""
         response = self.client.table('courses').select('*').eq('id', course_id).execute()
-        return response.data[0] if response.data else None
+        if not response.data:
+            return None
+        course = response.data[0]
+        modules_response = (
+            self.client.table('modules')
+            .select('*')
+            .eq('course_id', course_id)
+            .order('position')
+            .execute()
+        )
+        modules = modules_response.data or []
+        for module in modules:
+            lessons_response = (
+                self.client.table('lessons')
+                .select('*')
+                .eq('module_id', module['id'])
+                .order('position')
+                .execute()
+            )
+            module['lessons'] = lessons_response.data or []
+        course['modules'] = modules
+        return course
     
     # ============ CLASS OPERATIONS ============
     

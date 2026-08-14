@@ -352,3 +352,30 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     .sidebar-scrim { transition: none; }
 }
 [data-theme="dark"] .sidebar-scrim { background: rgba(0, 0, 0, .62); }
+
+
+.data-state { display: flex; align-items: center; justify-content: center; gap: .65rem; min-height: 120px; padding: 1.25rem; color: var(--color-text-secondary); text-align: center; }
+.data-state strong { font-family: var(--font-body); font-size: .82rem; font-weight: 600; }
+.data-state .text-button { margin-left: .35rem; }
+.data-state-indicator { display: inline-block; width: .55rem; height: .55rem; border-radius: 50%; background: var(--color-action-primary); }
+.data-state-loading .data-state-indicator { animation: dataPulse 900ms ease-in-out infinite alternate; }
+.data-state-error { border-color: rgba(237, 106, 90, .42); }
+.data-state-error .data-state-indicator { background: var(--color-danger); }
+.data-state-empty .data-state-indicator { background: var(--color-text-muted); }
+@keyframes dataPulse { from { opacity: .35; transform: scale(.85); } to { opacity: 1; transform: scale(1.1); } }
+@media (prefers-reduced-motion: reduce) { .data-state-loading .data-state-indicator { animation: none; } }
+
+
+.runtime-toolbar-meta { display: inline-flex; align-items: center; gap: .45rem; }
+.runtime-status { display: inline-flex; align-items: center; gap: .35rem; color: rgba(255,255,255,.66); font-size: .68rem; white-space: nowrap; }
+.runtime-status-dot { width: .38rem; height: .38rem; border-radius: 50%; background: #7ce8c8; box-shadow: 0 0 0 3px rgba(124,232,200,.12); }
+.runtime-status.is-connected .runtime-status-dot { background: #7ce8c8; }
+.runtime-status.is-running .runtime-status-dot { background: #8b7cff; animation: dataPulse 850ms ease-in-out infinite alternate; }
+.runtime-status.is-queued .runtime-status-dot { background: #f4c86a; }
+.runtime-status.is-offline .runtime-status-dot { background: #ef7d6b; }
+@media (max-width: 680px) { .runtime-toolbar-meta { gap: .3rem; font-size: .62rem; } .runtime-toolbar-meta > span:not(.runtime-status) { display: none; } }
+
+
+.output-pending { color: #f4c86a; }
+.output-runtime { color: #8de8c9; line-height: 1.65; }
+.output-error { color: #ff9c8e; line-height: 1.65; }

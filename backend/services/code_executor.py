@@ -5,9 +5,11 @@ Manages Docker containers for secure code execution
 
 import docker
 import json
+import os
+import requests
 import logging
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +26,7 @@ def _error_result(message: str) -> Dict:
     return {
         'status': 'error',
         'error': message,
-        'timestamp': datetime.utcnow().isoformat(),
+        'timestamp': datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -106,10 +108,27 @@ class CodeExecutor:
                 'code': code,
                 'language': language,
                 'input': test_input,
-                'expected_output': expected_output,
+                'expected_output': expected_output or '',
                 'timeout': timeout,
                 'memory_limit_mb': memory_limit_mb
             }
+
+            sandbox_url = os.getenv('SANDBOX_URL')
+            if sandbox_url:
+                headers = {'Content-Type': 'application/json'}
+                sandbox_token = os.getenv('SANDBOX_TOKEN')
+                if sandbox_token:
+                    headers['X-Sandbox-Token'] = sandbox_token
+                response = requests.post(
+                    f"{sandbox_url.rstrip('/')}/execute",
+                    json=input_data,
+                    headers=headers,
+                    timeout=timeout + 5,
+                )
+                response.raise_for_status()
+                result = response.json()
+                result['timestamp'] = datetime.now(timezone.utc).isoformat()
+                return result
             
             # Run container
             container = self.client.containers.run(
@@ -131,7 +150,7 @@ class CodeExecutor:
             
             # Parse output
             result = json.loads(container)
-            result['timestamp'] = datetime.utcnow().isoformat()
+            result['timestamp'] = datetime.now(timezone.utc).isoformat()
             
             return result
         
@@ -144,7 +163,7 @@ class CodeExecutor:
             return {
                 'status': 'error',
                 'error': str(e),
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(timezone.utc).isoformat()
             }
     
     def execute_test_cases(self, code: str, language: str, test_cases: List[Dict],
@@ -172,7 +191,7 @@ class CodeExecutor:
             'passed_tests': 0,
             'failed_tests': 0,
             'test_results': [],
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
         
         for i, test_case in enumerate(test_cases):

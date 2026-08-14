@@ -4,7 +4,7 @@ Flask Application Factory
 """
 
 import os
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from flask_cors import CORS
 from flask_login import LoginManager
 from dotenv import load_dotenv
@@ -55,6 +55,7 @@ def create_app(config_name='development'):
     app.config['SECRET_KEY'] = secret_key or 'dev-secret-key-change-in-production'
     app.config['JSON_SORT_KEYS'] = False
     app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+    app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('MAX_CONTENT_LENGTH', 256 * 1024))
     frontend_only = os.getenv('FRONTEND_ONLY', 'false').lower() == 'true'
     app.config['FRONTEND_ONLY'] = frontend_only
     
@@ -104,8 +105,8 @@ def create_app(config_name='development'):
         app.register_blueprint(teacher_bp, url_prefix='/api/teacher')
         app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
     
-    # Frontend shell. It intentionally renders without calling backend data APIs;
-    # the browser adapter uses mock data until the integration phase.
+    # Frontend shell. Data loading is performed by the browser adapter so the
+    # same shell can run in demo mode or with authenticated backend APIs.
     @app.route('/', methods=['GET'])
     def frontend_shell():
         return render_template('index.html', backend_enabled=not frontend_only)
@@ -114,7 +115,33 @@ def create_app(config_name='development'):
     @app.route('/api/health', methods=['GET'])
     def health_check():
         return {'status': 'healthy', 'version': '1.0.0'}, 200
+
+    @app.route('/api/ready', methods=['GET'])
+    def readiness_check():
+        if frontend_only:
+            return {'status': 'ready', 'mode': 'frontend-only'}, 200
+        required = ['SECRET_KEY', 'SUPABASE_URL', 'SUPABASE_KEY']
+        queue_mode = os.getenv('SUBMISSION_QUEUE_MODE', 'thread').lower()
+        if queue_mode == 'redis':
+            required.append('REDIS_URL')
+        if os.getenv('SANDBOX_URL'):
+            required.append('SANDBOX_TOKEN')
+        missing = [name for name in required if not os.getenv(name)]
+        if missing:
+            return {'status': 'not_ready', 'missing': missing}, 503
+        return {'status': 'ready', 'mode': 'backend'}, 200
     
+    @app.after_request
+    def add_security_headers(response):
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+        response.headers.setdefault('Content-Security-Policy', "default-src 'self'; connect-src 'self' https://*.supabase.co; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'")
+        if request.is_secure:
+            response.headers.setdefault('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+        return response
+
     # Error handlers
     @app.errorhandler(404)
     def not_found(error):
