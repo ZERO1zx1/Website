@@ -26,7 +26,7 @@ def list_courses(current_user):
         limit = request.args.get('limit', 100, type=int)
         offset = request.args.get('offset', 0, type=int)
         
-        courses = db.get_courses(limit=limit, offset=offset)
+        courses = db.get_courses_for_user(current_user['id'], limit=limit, offset=offset)
         
         return {
             'courses': courses,
@@ -65,7 +65,7 @@ def create_course(current_user):
 def get_course(current_user, course_id):
     """Get course details"""
     try:
-        course = db.get_course(course_id)
+        course = db.get_course_for_user(course_id, current_user['id'])
         
         if not course:
             return {'error': 'Course not found'}, 404
@@ -128,6 +128,21 @@ def delete_course(current_user, course_id):
     except Exception as e:
         return {'error': str(e)}, 500
 
+@courses_bp.route('/lessons/<int:lesson_id>/start', methods=['POST'])
+@token_required
+def start_lesson(current_user, lesson_id):
+    """Record that the authenticated learner opened a lesson."""
+    if current_user.get('role') != 'student':
+        return {'error': 'Only students can start lessons'}, 403
+    try:
+        lesson = db.client.table('lessons').select('id,module_id,title').eq('id', lesson_id).execute()
+        if not lesson.data:
+            return {'error': 'Lesson not found'}, 404
+        progress = db.start_lesson(current_user['id'], lesson_id)
+        return {'message': 'Lesson started.', 'lesson_id': lesson_id, 'status': 'in_progress', 'progress': progress}, 200
+    except Exception:
+        return {'error': 'Lesson could not be opened.'}, 503
+
 @courses_bp.route('/lessons/<int:lesson_id>/complete', methods=['POST'])
 @token_required
 def complete_lesson(current_user, lesson_id):
@@ -138,11 +153,8 @@ def complete_lesson(current_user, lesson_id):
         lesson = db.client.table('lessons').select('id,module_id,title').eq('id', lesson_id).execute()
         if not lesson.data:
             return {'error': 'Lesson not found'}, 404
-        progress = db.client.table('lesson_progress').upsert({
-            'user_id': current_user['id'],
-            'lesson_id': lesson_id,
-        }).execute()
-        return {'message': 'Lesson completion saved.', 'progress': progress.data[0] if progress.data else None}, 201
+        progress = db.complete_lesson(current_user['id'], lesson_id)
+        return {'message': 'Lesson completion saved.', 'progress': progress}, 201
     except Exception:
         return {'error': 'Lesson progress could not be saved.'}, 503
 

@@ -46,7 +46,8 @@ const app = {
     lastFocusedElement: null,
     theme: localStorage.getItem('codehaven-theme') || 'light',
     language: localStorage.getItem('codehaven-language') || 'en',
-    authMode: 'login'
+    authMode: 'login',
+    realtimeTimer: null
 };
 
 const viewLabels = {
@@ -82,7 +83,10 @@ async function initializeApp() {
     hydrateUser(app.user || { name: app.language === 'mn' ? 'Зочин' : 'Guest' });
     bindAuthentication();
     applyLanguage();
-    if (app.user) await refreshDataViews();
+    if (app.user) {
+        await refreshDataViews();
+        startRealtimeRefresh();
+    }
     applyLanguage();
     showView(app.user ? 'dashboard' : 'home');
 }
@@ -186,6 +190,8 @@ function initials(value) {
 
 function logoutUser() {
     window.codehavenApiAdapter?.logout?.();
+    if (app.realtimeTimer) window.clearInterval(app.realtimeTimer);
+    app.realtimeTimer = null;
     app.user = null;
     app.dataAdapter = window.codehavenApiAdapter || mockAdapter;
     setAuthMode('login');
@@ -221,6 +227,19 @@ function showView(viewName) {
     applyLanguage();
 }
 
+async function startRealtimeRefresh() {
+    if (app.realtimeTimer) window.clearInterval(app.realtimeTimer);
+    app.realtimeTimer = window.setInterval(async () => {
+        if (!app.user || document.hidden) return;
+        try {
+            await renderDashboard();
+            if (app.currentView === 'learn') await renderLearningPath();
+        } catch (error) {
+            // Keep the current user view stable; the next interval retries live data.
+        }
+    }, 15000);
+}
+
 async function renderDashboard() {
     const container = document.getElementById('recent-practice-list');
     if (!container) return;
@@ -234,6 +253,8 @@ async function renderDashboard() {
     }
     const recentPractice = Array.isArray(dashboard?.recentPractice) ? dashboard.recentPractice : [];
     const stats = dashboard?.stats || {};
+    let livePath = null;
+    try { livePath = await app.dataAdapter.getLearningPath(); } catch (error) { livePath = null; }
     const mastery = Number(stats.overall_mastery || 0);
     const solved = Number(stats.solved_problems || 0);
     const studyMinutes = Number(stats.study_minutes || 0);
@@ -246,6 +267,18 @@ async function renderDashboard() {
     if (solvedNode) solvedNode.textContent = String(solved);
     if (studyNode) studyNode.innerHTML = studyMinutes >= 60 ? `${Math.floor(studyMinutes / 60)}<span>h</span> ${studyMinutes % 60}<span>m</span>` : `${studyMinutes}<span>m</span>`;
     if (streakNode) streakNode.innerHTML = `${streak}<span> ${streak === 1 ? 'day' : 'days'}</span>`;
+    const continueCourse = livePath?.courses?.find((course) => Number(course.progress || 0) < 100) || livePath?.courses?.[0];
+    const continueLesson = continueCourse?.modules?.flatMap((module) => module.lessons || []).find((lesson) => lesson.status !== 'completed');
+    const continueTitle = document.getElementById('continue-course-title');
+    const continueDescription = document.getElementById('continue-course-description');
+    const continueProgress = document.getElementById('continue-course-progress');
+    const continueProgressBar = document.getElementById('continue-course-progress-bar');
+    const continueNext = document.getElementById('continue-course-next');
+    if (continueTitle) continueTitle.textContent = localizeContent(continueCourse?.title || 'Your learning path');
+    if (continueDescription) continueDescription.textContent = localizeContent(continueCourse?.description || 'Your next lesson will appear here from your learning path.');
+    if (continueProgress) continueProgress.textContent = `${continueCourse?.progress || 0}% complete`;
+    if (continueProgressBar) continueProgressBar.style.width = `${continueCourse?.progress || 0}%`;
+    if (continueNext) continueNext.textContent = localizeContent(continueLesson?.title || 'Start a lesson');
     const titleNode = document.getElementById('dashboard-title');
     const dateNode = document.getElementById('dashboard-date');
     if (titleNode) titleNode.textContent = app.user?.name ? `Keep your momentum, ${app.user.name}.` : 'Keep your momentum.';
@@ -337,32 +370,63 @@ function renderSelectedCourse(course) {
             <span class="module-status">${escapeHtml(localizeContent(module.status))}</span>
         </article>`).join('');
     container.querySelectorAll('[data-open-lesson]').forEach((moduleCard) => {
-        const open = () => openLessonPreview(course, Number(moduleCard.dataset.openLesson));
+        const open = () => void openLessonPreview(course, Number(moduleCard.dataset.openLesson));
         moduleCard.addEventListener('click', open);
         moduleCard.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); } });
     });
 }
 
-function openLessonPreview(course, moduleIndex) {
+async function openLessonPreview(course, moduleIndex) {
     const module = course?.modules?.[moduleIndex];
-    if (!module) return;
+    const lesson = module?.lessons?.find((item) => item.status !== 'completed') || module?.lessons?.[0];
+    if (!module || !lesson) {
+        showToast(app.language === 'mn' ? 'Энэ модульд одоогоор хичээл алга.' : 'This module has no lesson yet.', 'error');
+        return;
+    }
     const preview = document.getElementById('lesson-preview');
     if (!preview) return;
-    preview.dataset.courseId = course.id;
+    preview.dataset.courseId = String(course.id);
     preview.dataset.moduleIndex = String(moduleIndex);
-    document.getElementById('lesson-preview-title').textContent = localizeContent(module.title);
-    document.getElementById('lesson-preview-meta').textContent = localizeContent(module.meta);
-    document.getElementById('lesson-preview-objective').textContent = localizeContent(course.description);
+    preview.dataset.lessonId = String(lesson.id);
+    document.getElementById('lesson-preview-title').textContent = localizeContent(lesson.title || module.title);
+    document.getElementById('lesson-preview-meta').textContent = `${localizeContent(module.title)} · ${lesson.estimated_minutes || 20} min`;
+    document.getElementById('lesson-preview-objective').textContent = localizeContent(lesson.content || course.description);
+    document.getElementById('lesson-preview-content').innerHTML = `<p>${escapeHtml(localizeContent(lesson.content || 'Work through this lesson at your own pace.')).replace(/\\n/g, '<br>')}</p>`;
+    document.getElementById('lesson-preview-status').textContent = formatLessonStatus(lesson.status);
     document.getElementById('lesson-preview-keywords').innerHTML = (course.keywords || []).slice(0, 5).map((keyword) => `<span class="tag-chip tag-chip-small">${escapeHtml(keyword)}</span>`).join('');
+    const completeButton = document.getElementById('complete-lesson');
+    if (completeButton) {
+        completeButton.disabled = lesson.status === 'completed';
+        completeButton.textContent = lesson.status === 'completed' ? (app.language === 'mn' ? 'Дууссан' : 'Completed') : (app.language === 'mn' ? 'Дууссан гэж тэмдэглэх' : 'Mark lesson complete');
+    }
     preview.classList.remove('is-hidden');
     preview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (lesson.status !== 'completed' && backendEnabled && app.dataAdapter.startLesson) {
+        try {
+            await app.dataAdapter.startLesson(lesson.id);
+            lesson.status = 'in_progress';
+            document.getElementById('lesson-preview-status').textContent = formatLessonStatus('in_progress');
+            renderSelectedCourse(course);
+        } catch (error) {
+            showToast(error.message || (app.language === 'mn' ? 'Хичээл нээж чадсангүй.' : 'Lesson could not be opened.'), 'error');
+        }
+    }
+}
+
+function formatLessonStatus(status) {
+    const labels = {
+        completed: app.language === 'mn' ? 'Дууссан' : 'Completed',
+        in_progress: app.language === 'mn' ? 'Үзэж байна' : 'In progress',
+        not_started: app.language === 'mn' ? 'Эхлээгүй' : 'Not started',
+    };
+    return labels[status] || labels.not_started;
 }
 
 async function completeLessonPreview() {
     const preview = document.getElementById('lesson-preview');
     const course = app.courses.find((item) => String(item.id) === String(preview?.dataset.courseId));
     const module = course?.modules?.[Number(preview?.dataset.moduleIndex)];
-    const lesson = module?.lessons?.[0];
+    const lesson = module?.lessons?.find((item) => String(item.id) === String(preview?.dataset.lessonId)) || module?.lessons?.[0];
     if (!module || !lesson) {
         showToast(app.language === 'mn' ? 'Энэ модульд хадгалах хичээл алга.' : 'This module has no lesson to complete yet.', 'error');
         return;
@@ -370,11 +434,10 @@ async function completeLessonPreview() {
     if (backendEnabled && app.dataAdapter.completeLesson) {
         try {
             await app.dataAdapter.completeLesson(lesson.id);
-            module.complete = true;
-            module.status = { en: 'Complete', mn: 'Дууссан' };
-            renderCourseCards(app.courses);
-            renderSelectedCourse(course);
+            lesson.status = 'completed';
+            lesson.complete = true;
             preview.classList.add('is-hidden');
+            await renderLearningPath();
             await renderDashboard();
             showToast(app.language === 'mn' ? 'Хичээл дууслаа. Ахиц хадгалагдлаа.' : 'Lesson complete. Progress saved.', 'success');
         } catch (error) {

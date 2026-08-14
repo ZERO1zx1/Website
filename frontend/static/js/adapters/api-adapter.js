@@ -137,6 +137,9 @@
             const normalizedCourses = courses.map((item) => String(item.id) === String(normalizedCourse?.id) ? normalizedCourse : normalizeCourse(item));
             return { ...normalizedCourse, courses: normalizedCourses, modules: normalizedCourse?.modules || [] };
         },
+        async startLesson(lessonId) {
+            return request(`/api/courses/lessons/${lessonId}/start`, { method: 'POST' });
+        },
         async completeLesson(lessonId) {
             return request(`/api/courses/lessons/${lessonId}/complete`, { method: 'POST' });
         },
@@ -213,8 +216,13 @@
                 ...module,
                 number: module.number || String(index + 1).padStart(2, '0'),
                 meta: module.meta || module.description || '',
-                status: module.status || (module.complete ? 'Complete' : index === 0 ? 'Start here' : 'Locked'),
+                status: module.status || 'not_started',
                 complete: Boolean(module.complete),
+                lessons: (module.lessons || []).map((lesson) => ({
+                    ...lesson,
+                    status: lesson.status || 'not_started',
+                    complete: Boolean(lesson.complete || lesson.status === 'completed'),
+                })),
             })),
         };
     }

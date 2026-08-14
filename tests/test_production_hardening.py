@@ -175,3 +175,43 @@ def test_local_lesson_completion_updates_dashboard(monkeypatch, tmp_path):
     assert dashboard.status_code == 200
     assert dashboard.get_json()["stats"]["study_minutes"] == 20
     assert dashboard.get_json()["stats"]["current_streak"] == 1
+
+
+def test_course_status_is_user_owned_and_realtime(monkeypatch, tmp_path):
+    from backend.db import db
+
+    monkeypatch.setenv("FLASK_ENV", "development")
+    monkeypatch.setenv("FRONTEND_ONLY", "false")
+    monkeypatch.setenv("LOCAL_DB", "true")
+    monkeypatch.setenv("LOCAL_DB_PATH", str(tmp_path / "status.sqlite3"))
+    monkeypatch.setenv("SECRET_KEY", "local-development-secret-that-is-long-enough")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+    db._client = None
+
+    client = create_app().test_client()
+    first = client.post("/api/auth/register", json={"name": "First Learner", "email": "first@example.com", "password": "password123"})
+    second = client.post("/api/auth/register", json={"name": "Second Learner", "email": "second@example.com", "password": "password123"})
+    first_headers = {"Authorization": f"Bearer {first.get_json()['token']}"}
+    second_headers = {"Authorization": f"Bearer {second.get_json()['token']}"}
+
+    first_course = client.get("/api/courses/1", headers=first_headers).get_json()["course"]
+    second_course = client.get("/api/courses/1", headers=second_headers).get_json()["course"]
+    lesson_id = first_course["modules"][0]["lessons"][0]["id"]
+    assert first_course["progress"] == 0
+    assert second_course["progress"] == 0
+    assert first_course["modules"][0]["lessons"][0]["status"] == "not_started"
+    assert second_course["modules"][0]["lessons"][0]["status"] == "not_started"
+
+    started = client.post(f"/api/courses/lessons/{lesson_id}/start", headers=first_headers)
+    assert started.status_code == 200
+    completed = client.post(f"/api/courses/lessons/{lesson_id}/complete", headers=first_headers)
+    assert completed.status_code == 201
+
+    first_after = client.get("/api/courses/1", headers=first_headers).get_json()["course"]
+    second_after = client.get("/api/courses/1", headers=second_headers).get_json()["course"]
+    assert first_after["progress"] == 50
+    assert first_after["modules"][0]["status"] == "completed"
+    assert first_after["modules"][0]["lessons"][0]["status"] == "completed"
+    assert second_after["progress"] == 0
+    assert second_after["modules"][0]["lessons"][0]["status"] == "not_started"

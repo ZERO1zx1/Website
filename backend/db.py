@@ -184,6 +184,62 @@ class SupabaseDB:
         course['modules'] = modules
         return course
     
+    def get_course_for_user(self, course_id: int, user_id: int):
+        """Return a course decorated with user-owned realtime lesson status."""
+        course = self.get_course(course_id)
+        if not course:
+            return None
+        progress_response = self.client.table('lesson_progress').select('lesson_id,completed_at').eq('user_id', user_id).execute()
+        completed = {row['lesson_id']: row for row in (progress_response.data or [])}
+        total_lessons = 0
+        completed_lessons = 0
+        for module in course.get('modules', []):
+            lessons = module.get('lessons', [])
+            module_completed = 0
+            for lesson in lessons:
+                total_lessons += 1
+                record = completed.get(lesson['id'])
+                status = (record or {}).get('status') or ('completed' if (record or {}).get('completed_at') else 'not_started')
+                lesson['status'] = status
+                lesson['complete'] = status == 'completed'
+                lesson['started_at'] = (record or {}).get('started_at')
+                lesson['completed_at'] = (record or {}).get('completed_at')
+                if status == 'completed':
+                    completed_lessons += 1
+                    module_completed += 1
+            module['completed_lessons'] = module_completed
+            module['lesson_count'] = len(lessons)
+            module['status'] = 'completed' if lessons and module_completed == len(lessons) else ('in_progress' if module_completed else 'not_started')
+            module['complete'] = bool(lessons) and module_completed == len(lessons)
+        course['completed_lessons'] = completed_lessons
+        course['lesson_count'] = total_lessons
+        course['progress'] = round((completed_lessons / total_lessons) * 100) if total_lessons else 0
+        return course
+
+    def get_courses_for_user(self, user_id: int, limit: int = 100, offset: int = 0):
+        """Return all published courses with per-user progress."""
+        courses = self.get_courses(limit=limit, offset=offset)
+        return [self.get_course_for_user(course['id'], user_id) for course in courses]
+
+    def start_lesson(self, user_id: int, lesson_id: int):
+        """Persist a learner's in-progress lesson state."""
+        response = self.client.table('lesson_progress').upsert({
+            'user_id': user_id,
+            'lesson_id': lesson_id,
+            'status': 'in_progress',
+        }).execute()
+        return response.data[0] if response.data else None
+
+    def complete_lesson(self, user_id: int, lesson_id: int):
+        """Persist a learner's completed lesson state."""
+        response = self.client.table('lesson_progress').upsert({
+            'user_id': user_id,
+            'lesson_id': lesson_id,
+            'status': 'completed',
+            'completed_at': 'now()',
+        }).execute()
+        return response.data[0] if response.data else None
+
     # ============ CLASS OPERATIONS ============
     
     def create_class(self, course_id: int, teacher_id: int, name: str, enrollment_code: str):

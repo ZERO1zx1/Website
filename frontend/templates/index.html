@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='20260814-student-live') }}">
 </head>
 <body class="public-view">
     <div class="app-shell">
@@ -111,10 +111,10 @@
                         <article class="continue-card panel">
                             <div class="continue-copy">
                                 <div class="section-meta"><span class="status-dot"></span><span>Continue learning</span><span class="meta-divider">·</span><span id="continue-course-progress">0% complete</span></div>
-                                <h2 id="continue-course-title">Your learning path</h2>
-                                <p id="continue-course-description">Your next course will appear here after you begin learning.</p>
+<h2 id="continue-course-title">Your learning path</h2>
+                                 <p id="continue-course-description">Your next lesson will appear here from your learning path.</p>
                                 <div class="progress-track progress-track-wide"><span id="continue-course-progress-bar" style="width:0%"></span></div>
-                                <div class="continue-footer"><span>Next: <strong id="continue-course-next">Start a lesson</strong></span><button class="button button-light" data-open-editor data-problem-id="1">Resume lesson <span aria-hidden="true">→</span></button></div>
+                                <div class="continue-footer"><span>Next: <strong id="continue-course-next">Start a lesson</strong></span><button class="button button-light" id="continue-learning-action" data-view="learn">Resume lesson <span aria-hidden="true">→</span></button></div>
                             </div>
                             <div class="code-art" aria-hidden="true"><span class="code-line short"></span><span class="code-line long"></span><span class="code-line medium"></span><span class="code-line indent"></span><span class="code-line short"></span><span class="code-cursor"></span></div>
                         </article>
@@ -152,7 +152,7 @@
                     <div class="course-grid" id="course-grid"></div>
                     <div class="path-hero panel"><div><span class="pill pill-purple" data-i18n="curriculum.selected">SELECTED PATH</span><h2 id="curriculum-course-title">Python foundations</h2><p id="curriculum-course-meta">3 of 8 modules complete · 19 hours remaining</p></div><div class="path-progress"><strong id="curriculum-course-progress">38%</strong><div class="progress-track"><span id="curriculum-progress-bar" style="width:38%"></span></div></div></div>
                     <div class="module-list" id="module-list"></div>
-                    <article class="lesson-preview panel is-hidden" id="lesson-preview" aria-live="polite"><div class="lesson-preview-top"><div><p class="eyebrow" data-i18n="lesson.previewKicker">LESSON PREVIEW</p><h2 id="lesson-preview-title">Select a module</h2><p id="lesson-preview-meta" class="heading-copy">Choose a module to see its learning focus.</p></div><button class="icon-button" id="close-lesson-preview" aria-label="Close lesson preview">×</button></div><div class="lesson-preview-body"><div><h3 data-i18n="lesson.objective">What you will learn</h3><p id="lesson-preview-objective">Build practical understanding through a focused lesson and a small challenge.</p></div><div><h3 data-i18n="lesson.keywords">Keywords</h3><div class="lesson-keywords" id="lesson-preview-keywords"></div></div></div><button class="button button-primary" id="complete-lesson" data-i18n="lesson.markComplete">Mark lesson complete</button></article>
+                    <article class="lesson-preview panel is-hidden" id="lesson-preview" aria-live="polite"><div class="lesson-preview-top"><div><p class="eyebrow" data-i18n="lesson.previewKicker">LESSON</p><h2 id="lesson-preview-title">Select a lesson</h2><p id="lesson-preview-meta" class="heading-copy">Choose a lesson to begin learning.</p></div><button class="icon-button" id="close-lesson-preview" aria-label="Close lesson preview">×</button></div><div class="lesson-preview-body"><div><h3 data-i18n="lesson.objective">What you will learn</h3><p id="lesson-preview-objective">Build practical understanding through a focused lesson and a small challenge.</p><div class="lesson-content" id="lesson-preview-content"></div></div><div><h3 data-i18n="lesson.status">Your status</h3><p class="lesson-status-badge" id="lesson-preview-status">Not started</p><h3 data-i18n="lesson.keywords">Keywords</h3><div class="lesson-keywords" id="lesson-preview-keywords"></div></div></div><button class="button button-primary" id="complete-lesson" data-i18n="lesson.markComplete">Mark lesson complete</button></article>
                 </section>
 
                 <section class="view" id="practice-view" data-page="practice">

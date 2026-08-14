@@ -166,6 +166,7 @@ class LocalQuery:
         conflict_columns = {
             "mastery_snapshots": ("user_id", "skill_id"),
             "problem_skills": ("problem_id", "skill_id"),
+            "lesson_progress": ("user_id", "lesson_id"),
         }.get(self.table_name)
         connection = self.database.connection()
         if conflict_columns and all(column in record for column in conflict_columns):
@@ -365,7 +366,9 @@ class LocalDB:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 lesson_id INTEGER NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
-                completed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                status TEXT NOT NULL DEFAULT 'in_progress',
+                started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                completed_at TEXT,
                 UNIQUE(user_id, lesson_id)
             );
             CREATE TABLE IF NOT EXISTS teacher_feedback (
@@ -377,6 +380,12 @@ class LocalDB:
             );
             """
         )
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(lesson_progress)").fetchall()}
+        if 'status' not in columns:
+            connection.execute("ALTER TABLE lesson_progress ADD COLUMN status TEXT NOT NULL DEFAULT 'completed'")
+        if 'started_at' not in columns:
+            connection.execute("ALTER TABLE lesson_progress ADD COLUMN started_at TEXT")
+            connection.execute("UPDATE lesson_progress SET started_at = COALESCE(completed_at, CURRENT_TIMESTAMP)")
         connection.commit()
         self._seed(connection)
         connection.close()
@@ -488,7 +497,8 @@ LocalDB.get_test_cases = lambda self, problem_id, include_hidden=False: (self.cl
 LocalDB.create_skill = lambda self, name, description, category=None: next(iter(self.client.table("skills").insert({"name": name, "description": description, "category": category}).execute().data), None)
 LocalDB.get_skills = lambda self: self.client.table("skills").select("*").execute().data
 LocalDB.get_user_mastery = lambda self, user_id, skill_id=None: (self.client.table("mastery_snapshots").select("*").eq("user_id", user_id).eq("skill_id", skill_id).execute().data if skill_id else self.client.table("mastery_snapshots").select("*").eq("user_id", user_id).execute().data)
-LocalDB.complete_lesson = lambda self, user_id, lesson_id: next(iter(self.client.table("lesson_progress").upsert({"user_id": user_id, "lesson_id": lesson_id}).execute().data), None)
+LocalDB.start_lesson = lambda self, user_id, lesson_id: next(iter(self.client.table("lesson_progress").upsert({"user_id": user_id, "lesson_id": lesson_id, "status": "in_progress"}).execute().data), None)
+LocalDB.complete_lesson = lambda self, user_id, lesson_id: next(iter(self.client.table("lesson_progress").upsert({"user_id": user_id, "lesson_id": lesson_id, "status": "completed", "completed_at": datetime.now(timezone.utc).isoformat()}).execute().data), None)
 LocalDB.get_user_lesson_progress = lambda self, user_id: self.client.table("lesson_progress").select("*").eq("user_id", user_id).execute().data
 LocalDB.update_mastery = lambda self, user_id, skill_id, mastery_score, first_attempt_success_rate=None, retry_recovery_rate=None, hint_usage_count=None: next(iter(self.client.table("mastery_snapshots").upsert({"user_id": user_id, "skill_id": skill_id, "mastery_score": mastery_score, **({"first_attempt_success_rate": first_attempt_success_rate} if first_attempt_success_rate is not None else {}), **({"retry_recovery_rate": retry_recovery_rate} if retry_recovery_rate is not None else {}), **({"hint_usage_count": hint_usage_count} if hint_usage_count is not None else {})}).execute().data), None)
 
