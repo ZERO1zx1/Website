@@ -50,7 +50,7 @@
                     <span>6 lessons · 42 min</span>
                     <button class="text-button" data-view="learn">View path <span aria-hidden="true">→</span></button>
                 </div>
-                <button class="auth-preview-link" id="open-auth-screen" data-auth-view="login"><span aria-hidden="true">↗</span><span data-i18n="auth.preview">Preview login / register</span></button>
+                <button class="auth-preview-link" id="open-account-view" data-view="profile"><span aria-hidden="true">↗</span><span data-i18n="auth.account">Account</span></button>
                 <div class="sidebar-user">
                     <div class="avatar avatar-small">NS</div>
                     <div><strong id="sidebar-user-name">Nara S.</strong><span>Student</span></div>
@@ -93,38 +93,34 @@
                 <section class="view" id="dashboard-view" data-page="dashboard">
                     <div class="page-heading heading-with-action">
                         <div>
-                            <p class="eyebrow">Tuesday, August 13, 2026</p>
-                            <h1>Keep your momentum, Nara.</h1>
+                            <p class="eyebrow" id="dashboard-date">Your learning workspace</p>
+                            <h1 id="dashboard-title">Keep your momentum.</h1>
                             <p class="heading-copy">Small, consistent practice compounds into real confidence.</p>
                         </div>
                         <button class="button button-ghost" id="weekly-review">View weekly review <span aria-hidden="true">↗</span></button>
                     </div>
 
                     <div class="stats-grid" aria-label="Learning summary">
-                        <article class="stat-card stat-card-primary"><div class="stat-top"><span class="stat-label">Overall mastery</span><span class="stat-icon">↗</span></div><strong>74<span>%</span></strong><div class="stat-foot"><span class="trend positive">+8.4%</span><span>from last month</span></div></article>
-                        <article class="stat-card"><div class="stat-top"><span class="stat-label">Problems solved</span><span class="stat-icon">⌁</span></div><strong>28</strong><div class="stat-foot"><span class="trend positive">+6</span><span>this week</span></div></article>
-                        <article class="stat-card"><div class="stat-top"><span class="stat-label">Study time</span><span class="stat-icon">◷</span></div><strong>12<span>h</span> 40<span>m</span></strong><div class="stat-foot"><span class="trend neutral">On track</span><span>of 15h goal</span></div></article>
-                        <article class="stat-card"><div class="stat-top"><span class="stat-label">Current streak</span><span class="stat-icon">✦</span></div><strong>5<span> days</span></strong><div class="stat-foot"><span class="trend warning">Best: 12 days</span></div></article>
+                        <article class="stat-card stat-card-primary"><div class="stat-top"><span class="stat-label">Overall mastery</span><span class="stat-icon">↗</span></div><strong id="stat-mastery">0<span>%</span></strong><div class="stat-foot"><span class="trend neutral" id="stat-mastery-trend">No previous data</span><span>from your saved progress</span></div></article>
+                        <article class="stat-card"><div class="stat-top"><span class="stat-label">Problems solved</span><span class="stat-icon">⌁</span></div><strong id="stat-solved">0</strong><div class="stat-foot"><span class="trend neutral" id="stat-solved-trend">No submissions yet</span><span>from your account</span></div></article>
+                        <article class="stat-card"><div class="stat-top"><span class="stat-label">Study time</span><span class="stat-icon">◷</span></div><strong id="stat-study-time">0<span>m</span></strong><div class="stat-foot"><span class="trend neutral">Tracked activity</span><span>from your learning sessions</span></div></article>
+                        <article class="stat-card"><div class="stat-top"><span class="stat-label">Current streak</span><span class="stat-icon">✦</span></div><strong id="stat-streak">0<span> days</span></strong><div class="stat-foot"><span class="trend neutral">Start a lesson</span></div></article>
                     </div>
 
                     <div class="dashboard-grid dashboard-grid-main">
                         <article class="continue-card panel">
                             <div class="continue-copy">
-                                <div class="section-meta"><span class="status-dot"></span><span>Continue learning</span><span class="meta-divider">·</span><span>68% complete</span></div>
-                                <h2>Python foundations</h2>
-                                <p>Functions, data structures and the patterns you need to write clean, useful programs.</p>
-                                <div class="progress-track progress-track-wide"><span style="width:68%"></span></div>
-                                <div class="continue-footer"><span>Next: <strong>List comprehensions</strong></span><button class="button button-light" data-open-editor data-problem-id="1">Resume lesson <span aria-hidden="true">→</span></button></div>
+                                <div class="section-meta"><span class="status-dot"></span><span>Continue learning</span><span class="meta-divider">·</span><span id="continue-course-progress">0% complete</span></div>
+                                <h2 id="continue-course-title">Your learning path</h2>
+                                <p id="continue-course-description">Your next course will appear here after you begin learning.</p>
+                                <div class="progress-track progress-track-wide"><span id="continue-course-progress-bar" style="width:0%"></span></div>
+                                <div class="continue-footer"><span>Next: <strong id="continue-course-next">Start a lesson</strong></span><button class="button button-light" data-open-editor data-problem-id="1">Resume lesson <span aria-hidden="true">→</span></button></div>
                             </div>
                             <div class="code-art" aria-hidden="true"><span class="code-line short"></span><span class="code-line long"></span><span class="code-line medium"></span><span class="code-line indent"></span><span class="code-line short"></span><span class="code-cursor"></span></div>
                         </article>
                         <article class="panel focus-panel">
                             <div class="panel-heading"><div><p class="eyebrow">Today’s focus</p><h3>One clear next step</h3></div><span class="focus-count">2 / 3</span></div>
-                            <div class="focus-list">
-                                <button class="focus-item is-done"><span class="check-mark">✓</span><span><strong>Review function scope</strong><small>Completed 10 min ago</small></span></button>
-                                <button class="focus-item"><span class="empty-check"></span><span><strong>Finish list comprehensions</strong><small>Estimated 18 min</small></span><span class="arrow">→</span></button>
-                                <button class="focus-item"><span class="empty-check"></span><span><strong>Try one medium problem</strong><small>Suggested for your level</small></span><span class="arrow">→</span></button>
-                            </div>
+                            <div class="focus-list" id="focus-list"><p class="empty-state">No focus items yet. Start a lesson or solve a problem to build your plan.</p></div>
                         </article>
                     </div>
 
@@ -132,7 +128,7 @@
                         <article class="panel progress-panel">
                             <div class="panel-heading"><div><p class="eyebrow">Learning activity</p><h3>Hours studied</h3></div><button class="select-button">Last 7 days <span>⌄</span></button></div>
                             <div class="chart-summary"><strong>6h 25m</strong><span class="trend positive">+18%</span><span>vs. previous week</span></div>
-                            <div class="activity-chart" role="img" aria-label="Study activity: Monday 45 minutes, Tuesday 1 hour 20 minutes, Wednesday 55 minutes, Thursday 1 hour 40 minutes, Friday 30 minutes, Saturday 1 hour 15 minutes, Sunday 0 minutes">
+                            <div class="activity-chart" id="activity-chart" role="img" aria-label="Study activity from your account">
                                 <div class="chart-y-labels"><span>2h</span><span>1h</span><span>0h</span></div><div class="chart-plot"><div class="chart-grid-lines"><i></i><i></i><i></i></div><svg viewBox="0 0 620 170" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#8b7cff" stop-opacity=".28"/><stop offset="1" stop-color="#8b7cff" stop-opacity="0"/></linearGradient></defs><path class="chart-area" d="M0 120 C35 114 47 104 90 108 S140 80 180 92 S230 48 270 72 S320 90 360 62 S420 108 450 82 S510 62 540 78 S590 126 620 128 L620 170 L0 170 Z"/><path class="chart-line" d="M0 120 C35 114 47 104 90 108 S140 80 180 92 S230 48 270 72 S320 90 360 62 S420 108 450 82 S510 62 540 78 S590 126 620 128"/><circle cx="360" cy="62" r="5" class="chart-point"/></svg><div class="chart-days"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div></div>
                             </div>
                         </article>
@@ -212,7 +208,7 @@
                                 <button class="button button-primary auth-submit" type="submit"><span data-i18n="auth.register.submit">Create account</span><span aria-hidden="true">→</span></button>
                             </form>
                             <div class="auth-divider"><span data-i18n="auth.or">or continue with</span></div><div class="social-auth"><button type="button" id="google-auth" aria-label="Continue with Google">G <span data-i18n="auth.google">Continue with Google</span></button></div>
-                            <p class="auth-demo-note"><span data-i18n="auth.demo">Frontend preview only.</span> <button type="button" class="link-button" id="continue-demo" data-i18n="auth.demo.continue">Continue as demo learner</button></p>
+                            <p class="auth-demo-note"><span data-i18n="auth.demo">Create an account to use your persistent learning workspace.</span></p>
                         </div>
                     </div>
                 </section>
@@ -233,9 +229,9 @@ print(even_numbers([1, 2, 3, 4]))</textarea><div class="code-output" id="code-ou
     </div>
     <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
     <noscript><div class="noscript-message">JavaScript is required to use the Codehaven learning workspace.</div></noscript>
-    <script src="{{ url_for('static', filename='js/adapters/api-adapter.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/data/curriculum.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/i18n/translations.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/adapters/api-adapter.js', v='20260814-live-backend') }}"></script>
+    <script src="{{ url_for('static', filename='js/data/curriculum.js', v='20260814-live-backend') }}"></script>
+    <script src="{{ url_for('static', filename='js/i18n/translations.js', v='20260814-live-backend') }}"></script>
+    <script src="{{ url_for('static', filename='js/app.js', v='20260814-live-backend') }}"></script>
 </body>
 </html>

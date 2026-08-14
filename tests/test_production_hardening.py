@@ -102,3 +102,76 @@ def test_sandbox_insecure_bypass_requires_explicit_opt_in(monkeypatch):
     monkeypatch.delenv("SANDBOX_REQUIRE_TOKEN", raising=False)
     monkeypatch.setenv("SANDBOX_ALLOW_INSECURE", "true")
     assert sandbox_service._token_is_required() is False
+
+
+def test_local_backend_is_ready_without_supabase(monkeypatch, tmp_path):
+    monkeypatch.setenv("FLASK_ENV", "development")
+    monkeypatch.setenv("FRONTEND_ONLY", "false")
+    monkeypatch.setenv("LOCAL_DB", "true")
+    monkeypatch.setenv("LOCAL_DB_PATH", str(tmp_path / "codehaven.sqlite3"))
+    monkeypatch.setenv("SECRET_KEY", "local-development-secret-that-is-long-enough")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+    monkeypatch.setenv("SUBMISSION_QUEUE_MODE", "thread")
+
+    response = create_app().test_client().get("/api/ready")
+
+    assert response.status_code == 200
+    assert response.get_json()["checks"]["database"] == "local_sqlite"
+
+
+def test_local_authenticated_learning_flow(monkeypatch, tmp_path):
+    from backend.db import db
+
+    monkeypatch.setenv("FLASK_ENV", "development")
+    monkeypatch.setenv("FRONTEND_ONLY", "false")
+    monkeypatch.setenv("LOCAL_DB", "true")
+    monkeypatch.setenv("LOCAL_DB_PATH", str(tmp_path / "flow.sqlite3"))
+    monkeypatch.setenv("SECRET_KEY", "local-development-secret-that-is-long-enough")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+    monkeypatch.setenv("SUBMISSION_QUEUE_MODE", "thread")
+    db._client = None
+
+    client = create_app().test_client()
+    registered = client.post("/api/auth/register", json={"name": "Flow Learner", "email": "flow@example.com", "password": "password123"})
+    assert registered.status_code == 201
+    token = registered.get_json()["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    assert client.get("/api/auth/me", headers=headers).status_code == 200
+    courses = client.get("/api/courses", headers=headers)
+    problems = client.get("/api/problems", headers=headers)
+    dashboard = client.get("/api/analytics/dashboard", headers=headers)
+    assert courses.status_code == 200 and len(courses.get_json()["courses"]) >= 3
+    assert problems.status_code == 200 and len(problems.get_json()["problems"]) >= 3
+    assert dashboard.status_code == 200
+    assert dashboard.get_json()["stats"]["overall_mastery"] == 0
+
+
+def test_local_lesson_completion_updates_dashboard(monkeypatch, tmp_path):
+    from backend.db import db
+
+    monkeypatch.setenv("FLASK_ENV", "development")
+    monkeypatch.setenv("FRONTEND_ONLY", "false")
+    monkeypatch.setenv("LOCAL_DB", "true")
+    monkeypatch.setenv("LOCAL_DB_PATH", str(tmp_path / "progress.sqlite3"))
+    monkeypatch.setenv("SECRET_KEY", "local-development-secret-that-is-long-enough")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+    db._client = None
+
+    client = create_app().test_client()
+    registered = client.post("/api/auth/register", json={"name": "Progress Learner", "email": "progress@example.com", "password": "password123"})
+    token = registered.get_json()["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    course = client.get("/api/courses/1", headers=headers).get_json()["course"]
+    lesson_id = course["modules"][0]["lessons"][0]["id"]
+
+    completed = client.post(f"/api/courses/lessons/{lesson_id}/complete", headers=headers)
+    dashboard = client.get("/api/analytics/dashboard", headers=headers)
+
+    assert completed.status_code == 201
+    assert dashboard.status_code == 200
+    assert dashboard.get_json()["stats"]["study_minutes"] == 20
+    assert dashboard.get_json()["stats"]["current_streak"] == 1

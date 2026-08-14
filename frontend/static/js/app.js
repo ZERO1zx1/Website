@@ -30,7 +30,7 @@ const apiAdapterContract = {
 const backendEnabled = document.documentElement.dataset.backend === 'enabled';
 const hasOAuthSession = Boolean(new URLSearchParams(window.location.hash.slice(1)).get('auth_token'));
 const hasBackendSession = Boolean(sessionStorage.getItem('codehaven-access-token') || localStorage.getItem('codehaven-access-token') || hasOAuthSession);
-const demoMode = sessionStorage.getItem('codehaven-demo-mode') === 'true';
+const demoMode = !backendEnabled && sessionStorage.getItem('codehaven-demo-mode') === 'true';
 const selectedAdapter = backendEnabled && hasBackendSession && window.codehavenApiAdapter ? window.codehavenApiAdapter : mockAdapter;
 const app = {
     dataAdapter: selectedAdapter,
@@ -164,7 +164,14 @@ function bindInteractions() {
 }
 
 function hydrateUser(user) {
-    document.querySelectorAll('#sidebar-user-name').forEach((node) => { node.textContent = user.name; });
+    document.querySelectorAll('#sidebar-user-name').forEach((node) => { node.textContent = user.name || 'Learner'; });
+    document.querySelectorAll('.sidebar-user > .avatar, .user-avatar').forEach((node) => {
+        const initials = String(user.name || user.email || 'L').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0].toUpperCase()).join('');
+        node.textContent = initials || 'L';
+    });
+    document.querySelectorAll('.sidebar-user > div > span').forEach((node) => {
+        node.textContent = user.role ? capitalize(user.role) : 'Student';
+    });
 }
 
 function showView(viewName) {
@@ -207,6 +214,32 @@ async function renderDashboard() {
         throw error;
     }
     const recentPractice = Array.isArray(dashboard?.recentPractice) ? dashboard.recentPractice : [];
+    const stats = dashboard?.stats || {};
+    const mastery = Number(stats.overall_mastery || 0);
+    const solved = Number(stats.solved_problems || 0);
+    const studyMinutes = Number(stats.study_minutes || 0);
+    const streak = Number(stats.current_streak || 0);
+    const masteryNode = document.getElementById('stat-mastery');
+    const solvedNode = document.getElementById('stat-solved');
+    const studyNode = document.getElementById('stat-study-time');
+    const streakNode = document.getElementById('stat-streak');
+    if (masteryNode) masteryNode.innerHTML = `${mastery}<span>%</span>`;
+    if (solvedNode) solvedNode.textContent = String(solved);
+    if (studyNode) studyNode.innerHTML = studyMinutes >= 60 ? `${Math.floor(studyMinutes / 60)}<span>h</span> ${studyMinutes % 60}<span>m</span>` : `${studyMinutes}<span>m</span>`;
+    if (streakNode) streakNode.innerHTML = `${streak}<span> ${streak === 1 ? 'day' : 'days'}</span>`;
+    const titleNode = document.getElementById('dashboard-title');
+    const dateNode = document.getElementById('dashboard-date');
+    if (titleNode) titleNode.textContent = app.user?.name ? `Keep your momentum, ${app.user.name}.` : 'Keep your momentum.';
+    if (dateNode) dateNode.textContent = new Intl.DateTimeFormat(app.language === 'mn' ? 'mn-MN' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(new Date());
+    const chartSummary = document.querySelector('.chart-summary');
+    const chart = document.getElementById('activity-chart');
+    if (chartSummary) chartSummary.innerHTML = `<strong>${studyMinutes >= 60 ? `${Math.floor(studyMinutes / 60)}h ${studyMinutes % 60}m` : `${studyMinutes}m`}</strong><span class="trend neutral">No comparison yet</span><span>from your account</span>`;
+    if (chart) chart.innerHTML = studyMinutes === 0
+        ? '<p class="empty-state">No study activity recorded yet. Complete a lesson to start your timeline.</p>'
+        : `<p class="empty-state">${studyMinutes} minutes of learning activity are saved to your account. Daily activity detail will appear as you complete more lessons.</p>`;
+    const skillPanel = document.querySelector('.skills-panel');
+    const skills = Array.isArray(dashboard?.skills) ? dashboard.skills : [];
+    if (skillPanel && skills.length === 0) skillPanel.innerHTML = '<div class="panel-heading"><div><p class="eyebrow">Skill map</p><h3>Where you’re growing</h3></div></div><p class="empty-state">Your skill map will appear after your first completed activity.</p>';
     container.innerHTML = recentPractice.length ? recentPractice.map((item) => `
         <div class="practice-row">
             <div class="practice-title"><span class="practice-symbol">${escapeHtml(item.icon || '01')}</span><div><strong>${escapeHtml(localizeContent(item.title || 'Practice'))}</strong><small>${escapeHtml(localizeContent(item.category || 'Practice'))}</small></div></div>
@@ -306,17 +339,31 @@ function openLessonPreview(course, moduleIndex) {
     preview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function completeLessonPreview() {
+async function completeLessonPreview() {
     const preview = document.getElementById('lesson-preview');
-    const course = app.courses.find((item) => item.id === preview?.dataset.courseId);
+    const course = app.courses.find((item) => String(item.id) === String(preview?.dataset.courseId));
     const module = course?.modules?.[Number(preview?.dataset.moduleIndex)];
-    if (!module) return;
-    module.complete = true;
-    module.status = { en: 'Complete', mn: 'Дууссан' };
-    renderCourseCards(app.courses);
-    renderSelectedCourse(course);
-    preview.classList.add('is-hidden');
-    showToast(app.language === 'mn' ? 'Хичээл дууслаа. Ахиц хадгалагдлаа.' : 'Lesson complete. Progress saved in demo mode.', 'success');
+    const lesson = module?.lessons?.[0];
+    if (!module || !lesson) {
+        showToast(app.language === 'mn' ? 'Энэ модульд хадгалах хичээл алга.' : 'This module has no lesson to complete yet.', 'error');
+        return;
+    }
+    if (backendEnabled && app.dataAdapter.completeLesson) {
+        try {
+            await app.dataAdapter.completeLesson(lesson.id);
+            module.complete = true;
+            module.status = { en: 'Complete', mn: 'Дууссан' };
+            renderCourseCards(app.courses);
+            renderSelectedCourse(course);
+            preview.classList.add('is-hidden');
+            await renderDashboard();
+            showToast(app.language === 'mn' ? 'Хичээл дууслаа. Ахиц хадгалагдлаа.' : 'Lesson complete. Progress saved.', 'success');
+        } catch (error) {
+            showToast(error.message || (app.language === 'mn' ? 'Ахиц хадгалах боломжгүй.' : 'Progress could not be saved.'), 'error');
+        }
+        return;
+    }
+    showToast(app.language === 'mn' ? 'Бодит бүртгэлтэй хэрэглэгчээр нэвтэрнэ үү.' : 'Sign in with a real account to save progress.', 'error');
 }
 
 async function renderProblems() {
@@ -724,15 +771,6 @@ function bindAuthentication() {
             button.textContent = showing ? (app.language === 'mn' ? 'Харах' : 'Show') : (app.language === 'mn' ? 'Нуух' : 'Hide');
             button.setAttribute('aria-label', showing ? (app.language === 'mn' ? 'Нууц үгийг харах' : 'Show password') : (app.language === 'mn' ? 'Нууц үгийг нуух' : 'Hide password'));
         });
-    });
-    document.getElementById('continue-demo')?.addEventListener('click', async () => {
-        sessionStorage.setItem('codehaven-demo-mode', 'true');
-        app.isDemoMode = true;
-        app.dataAdapter = mockAdapter;
-        app.user = mockData.user;
-        hydrateUser(app.user);
-        await refreshDataViews();
-        showView('dashboard');
     });
 }
 

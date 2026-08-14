@@ -80,3 +80,14 @@ The repository still requires real Supabase credentials, applied migrations and 
 | Remote branch | `origin/fix/production-hardening` |
 | Pull request | Not created |
 | Working tree | Clean after the final verification commit |
+
+
+# Live local-backend upgrade — August 2026
+
+The authenticated browser experience was upgraded so the visible site no longer offers a demo-learner continuation or labels the account shortcut as preview login. In development without Supabase credentials, Flask now uses a real file-backed SQLite database at `instance/codehaven.sqlite3` by default when no database mode is explicitly configured. `LOCAL_DB_PATH` can override the location, and the database file is ignored by Git.
+
+The local backend seeds three courses, modules, lessons, skills, programming problems and test cases. Registration, login, current-user lookup, course catalog, course modules, problem library, dashboard statistics, and lesson completion now use persisted backend data. A new `lesson_progress` table and `004_learning_progress.sql` migration support production Supabase deployments.
+
+The live browser verification used a real local test account (`Browser Learner`) and confirmed authenticated registration, dashboard loading, three backend courses, three backend problems, editor loading, lesson completion with HTTP 201, and dashboard refresh from `0m` to `20m` study time with a one-day streak. The browser also confirmed that the authenticated sidebar shows `Account` rather than `Preview login / register`.
+
+The isolated code execution button correctly reports `Runtime execution is temporarily unavailable` in this environment because Docker/sandbox execution services are not available. This is an explicit safe failure rather than an unsafe in-process execution fallback. Production execution still requires the sandbox service and Docker Compose stack.

@@ -61,3 +61,5 @@ Thumbs.db
 
 # Local agent checkpoints
 .agentcore_checkpoint.md
+instance/
+*.sqlite3

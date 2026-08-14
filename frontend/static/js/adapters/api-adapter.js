@@ -126,12 +126,19 @@
                 ? await request(`/api/courses/${courseId}`)
                 : await request('/api/courses');
             const courses = payload.courses || payload.data || (payload.course ? [payload.course] : []);
-            const course = courseId
+            let course = courseId
                 ? (payload.course || courses.find((item) => String(item.id) === String(courseId)))
                 : (courses[0] || null);
-            if (!courseId && course?.id && !(course.modules || []).length) return this.getLearningPath(course.id);
+            if (!courseId && course?.id && !(course.modules || []).length) {
+                const selectedPayload = await request(`/api/courses/${course.id}`);
+                course = selectedPayload.course || course;
+            }
             const normalizedCourse = course ? normalizeCourse(course) : null;
-            return { ...normalizedCourse, courses: courses.map(normalizeCourse), modules: normalizedCourse?.modules || [] };
+            const normalizedCourses = courses.map((item) => String(item.id) === String(normalizedCourse?.id) ? normalizedCourse : normalizeCourse(item));
+            return { ...normalizedCourse, courses: normalizedCourses, modules: normalizedCourse?.modules || [] };
+        },
+        async completeLesson(lessonId) {
+            return request(`/api/courses/lessons/${lessonId}/complete`, { method: 'POST' });
         },
         async getProblems(query = {}) {
             const params = new URLSearchParams(query);

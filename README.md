@@ -142,11 +142,11 @@ To preview the labelled frontend-only mode:
 FRONTEND_ONLY=true PYTHONPATH=. python -m flask --app 'app:create_app()' run --host 0.0.0.0 --port 5000
 ```
 
-For backend mode, configure the required values in `.env` using `.env.example`, apply migrations in numeric order (`001_auth_roles.sql`, `002_learning_platform.sql`, `003_external_auth_identities.sql`), optionally apply `backend/db/seed/001_demo_content.sql`, and start Flask with `PYTHONPATH=. python app.py`. The backend requires real Supabase configuration; production also requires a strong `SECRET_KEY`, a non-empty `SANDBOX_TOKEN` when the sandbox is enabled, and `REDIS_URL` when Redis queue mode is selected.
+For local backend mode, set `FRONTEND_ONLY=false` and start Flask with `PYTHONPATH=. python app.py`. When Supabase credentials are absent in development, the application automatically uses a file-backed SQLite database at `instance/codehaven.sqlite3` (or `LOCAL_DB_PATH`), seeds real courses and problems, and persists registration, login, learning records, and submissions across requests and restarts. To use Supabase locally, provide `SUPABASE_URL` and `SUPABASE_KEY` in `.env`; apply migrations in numeric order (`001_auth_roles.sql`, `002_learning_platform.sql`, `003_external_auth_identities.sql`), then optionally apply `backend/db/seed/001_demo_content.sql`. Production still requires Supabase, a strong `SECRET_KEY`, a non-empty `SANDBOX_TOKEN` when the sandbox is enabled, and `REDIS_URL` when Redis queue mode is selected.
 
 ## Backend stack and role model
 
-The backend uses Python and Flask for the application/API layer, Supabase for persistence, Docker for the web and isolated code execution environments, YAML for role/configuration data, and Markdown for architecture and integration handoff documentation.
+The backend uses Python and Flask for the application/API layer, SQLite for credential-free local development, Supabase for production persistence, Docker for the web and isolated code execution environments, YAML for role/configuration data, and Markdown for architecture and integration handoff documentation.
 
 The supported roles are `owner` (**эзэмшигч**), `admin` (**администратор**), `teacher` (**багш**) and `student` (**суралцагч**). The owner is the highest platform role and can manage owner-level role assignments. Administrators manage operational resources and teacher approvals. Teachers manage their assigned classes and content. Students access their own learning, submissions and progress. The authoritative matrix is in [`docs/role-permission-spec.md`](docs/role-permission-spec.md), and the machine-readable policy is in [`config/roles.yml`](config/roles.yml).
 

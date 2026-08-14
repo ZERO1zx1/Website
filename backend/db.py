@@ -6,6 +6,8 @@ import os
 from supabase import create_client, Client
 from werkzeug.security import generate_password_hash
 
+from backend.local_db import LocalDB
+
 class SupabaseDB:
     """Supabase database client wrapper"""
     
@@ -18,13 +20,15 @@ class SupabaseDB:
         return cls._instance
 
     def _initialize(self):
-        """Initialize Supabase client only when a database operation is requested."""
+        """Initialize Supabase, or a real local SQLite backend for development."""
         supabase_url = os.getenv('SUPABASE_URL')
         supabase_key = os.getenv('SUPABASE_KEY')
-
         if not supabase_url or not supabase_key:
-            raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set for backend database operations")
-
+            if os.getenv('FLASK_ENV', 'development').lower() == 'production':
+                raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set for backend database operations")
+            self._local_backend = LocalDB()
+            self._client = self._local_backend.client
+            return
         self._client = create_client(supabase_url, supabase_key)
 
     @property
@@ -264,6 +268,11 @@ class SupabaseDB:
         )
         return response.data or []
     
+    def get_user_lesson_progress(self, user_id: int):
+        """Get lessons completed by a user."""
+        response = self.client.table('lesson_progress').select('*').eq('user_id', user_id).order('completed_at', desc=True).execute()
+        return response.data or []
+
     def update_submission_status(self, submission_id: int, status: str, score: float = None):
         """Update submission status"""
         data = {'status': status}

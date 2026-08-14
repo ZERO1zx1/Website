@@ -254,3 +254,10 @@ The latest `main` branch was audited and hardened on branch `fix/production-hard
 Live Supabase end-to-end verification and Docker image/service verification remain external requirements because they require deployment credentials and Docker Engine. The student-facing frontend is integrated with live backend APIs in authenticated backend mode; the explicitly labelled frontend-only mode remains available for credential-free design review.
 
 See [`docs/production-hardening-report.md`](docs/production-hardening-report.md) for the verified command results, changed files, security fixes, and remaining limitations.
+
+
+## Live authenticated local backend upgrade — August 2026
+
+The visible application no longer offers demo-learner continuation. Authenticated development mode now uses a real file-backed SQLite database when Supabase credentials are absent, with seeded courses, modules, lessons, skills, problems and test cases. The live frontend consumes the backend course catalog and problem library, persists lesson completion through `POST /api/courses/lessons/<lesson_id>/complete`, and refreshes dashboard study metrics from saved records.
+
+Browser verification confirmed registration, login, a three-course live catalog, three live practice problems, editor loading, lesson completion with HTTP 201, and dashboard study time changing from `0m` to `20m`. Isolated code execution remains explicitly unavailable until Docker and the sandbox service are running.

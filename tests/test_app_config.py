@@ -30,6 +30,7 @@ def test_normal_backend_readiness_reports_missing_configuration(monkeypatch):
     monkeypatch.delenv('SUPABASE_KEY', raising=False)
     monkeypatch.setenv('SECRET_KEY', 'test-secret-that-is-long-enough-for-the-test')
     monkeypatch.setenv('SUBMISSION_QUEUE_MODE', 'thread')
+    monkeypatch.setenv('LOCAL_DB', 'false')
     monkeypatch.delenv('SANDBOX_URL', raising=False)
 
     response = create_app().test_client().get('/api/ready')

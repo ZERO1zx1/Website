@@ -128,6 +128,24 @@ def delete_course(current_user, course_id):
     except Exception as e:
         return {'error': str(e)}, 500
 
+@courses_bp.route('/lessons/<int:lesson_id>/complete', methods=['POST'])
+@token_required
+def complete_lesson(current_user, lesson_id):
+    """Persist completion for a lesson owned by the authenticated learner."""
+    if current_user.get('role') != 'student':
+        return {'error': 'Only students can complete lessons'}, 403
+    try:
+        lesson = db.client.table('lessons').select('id,module_id,title').eq('id', lesson_id).execute()
+        if not lesson.data:
+            return {'error': 'Lesson not found'}, 404
+        progress = db.client.table('lesson_progress').upsert({
+            'user_id': current_user['id'],
+            'lesson_id': lesson_id,
+        }).execute()
+        return {'message': 'Lesson completion saved.', 'progress': progress.data[0] if progress.data else None}, 201
+    except Exception:
+        return {'error': 'Lesson progress could not be saved.'}, 503
+
 # ============ CLASS ENDPOINTS ============
 
 @courses_bp.route('/<int:course_id>/classes', methods=['GET'])

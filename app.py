@@ -55,7 +55,10 @@ def _valid_http_url(value: str | None) -> bool:
 def _required_config_missing(frontend_only: bool) -> list[str]:
     if frontend_only:
         return []
-    required = ["SECRET_KEY", "SUPABASE_URL", "SUPABASE_KEY"]
+    development = os.getenv("FLASK_ENV", "development").lower() != "production"
+    local_setting = os.getenv("LOCAL_DB")
+    local_db = development and (_is_true(local_setting) or (local_setting is None and (not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_KEY"))))
+    required = ["SECRET_KEY"] if local_db else ["SECRET_KEY", "SUPABASE_URL", "SUPABASE_KEY"]
     if os.getenv("SUBMISSION_QUEUE_MODE", "thread").lower() == "redis":
         required.append("REDIS_URL")
     if os.getenv("SANDBOX_URL"):
@@ -165,19 +168,23 @@ def create_app(config_name="development"):
         if not _is_true(os.getenv("READINESS_PROBE", "true")):
             return {"status": "ready", "mode": "backend", "checks": checks, "probes_skipped": True}, 200
 
-        supabase_url = os.getenv("SUPABASE_URL", "").rstrip("/")
-        try:
-            response = requests.get(
-                f"{supabase_url}/rest/v1/users?select=id&limit=1",
-                headers={"apikey": os.getenv("SUPABASE_KEY", ""), "Authorization": f"Bearer {os.getenv('SUPABASE_KEY', '')}"},
-                timeout=2,
-            )
-            if response.status_code >= 400:
-                checks["supabase"] = f"unavailable:{response.status_code}"
-            else:
-                checks["supabase"] = "ok"
-        except requests.RequestException:
-            checks["supabase"] = "unavailable"
+        local_setting = os.getenv("LOCAL_DB")
+        if environment != "production" and (_is_true(local_setting) or (local_setting is None and (not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_KEY")))):
+            checks["database"] = "local_sqlite"
+        else:
+            supabase_url = os.getenv("SUPABASE_URL", "").rstrip("/")
+            try:
+                response = requests.get(
+                    f"{supabase_url}/rest/v1/users?select=id&limit=1",
+                    headers={"apikey": os.getenv("SUPABASE_KEY", ""), "Authorization": f"Bearer {os.getenv('SUPABASE_KEY', '')}"},
+                    timeout=2,
+                )
+                if response.status_code >= 400:
+                    checks["supabase"] = f"unavailable:{response.status_code}"
+                else:
+                    checks["supabase"] = "ok"
+            except requests.RequestException:
+                checks["supabase"] = "unavailable"
 
         redis_url = os.getenv("REDIS_URL")
         if os.getenv("SUBMISSION_QUEUE_MODE", "thread").lower() == "redis":
@@ -197,7 +204,7 @@ def create_app(config_name="development"):
             except requests.RequestException:
                 checks["sandbox"] = "unavailable"
 
-        unavailable = [name for name, status in checks.items() if status != "ok"]
+        unavailable = [name for name, status in checks.items() if status not in {"ok", "local_sqlite"}]
         if unavailable:
             return {"status": "not_ready", "mode": "backend", "checks": checks}, 503
         return {"status": "ready", "mode": "backend", "checks": checks}, 200

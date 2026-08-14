@@ -16,8 +16,9 @@ analytics_bp = Blueprint("analytics", __name__)
 def get_dashboard(current_user):
     """Return real dashboard data for the authenticated role."""
     try:
-        mastery_data = db.get_user_mastery(current_user["id"]) or []
-        submissions = db.get_user_submissions(current_user["id"], limit=5) or []
+        mastery_data = db.get_user_mastery(current_user["id"])
+        submissions = db.get_user_submissions(current_user["id"], limit=100)
+        lesson_progress = db.get_user_lesson_progress(current_user["id"]) or []
         recent_practice = []
         for submission in submissions:
             problem = submission.get("problems") or {}
@@ -34,6 +35,9 @@ def get_dashboard(current_user):
                     "created_at": submission.get("created_at"),
                 }
             )
+        mastery_scores = [float(item.get("mastery_score", 0) or 0) for item in mastery_data]
+        solved_count = len([item for item in submissions if item.get("status") == "accepted"])
+        overall_mastery = round(sum(mastery_scores) / len(mastery_scores)) if mastery_scores else 0
         return {
             "user_id": current_user["id"],
             "role": current_user.get("role", "student"),
@@ -42,6 +46,12 @@ def get_dashboard(current_user):
             "recentPractice": recent_practice,
             "recent_practice": recent_practice,
             "total_skills": len(mastery_data),
+            "stats": {
+                "overall_mastery": overall_mastery,
+                "solved_problems": solved_count,
+                "study_minutes": len(lesson_progress) * 20,
+                "current_streak": 1 if lesson_progress else 0,
+            },
             "message": "Dashboard loaded.",
             "message_mn": "Хяналтын самбар ачааллаа.",
         }, 200
