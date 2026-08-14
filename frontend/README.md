@@ -39,4 +39,4 @@ Then open `http://localhost:5000`. The Flask shell serves `templates/index.html`
 
 ## Demo versus backend
 
-Demo V1 stores the selected language, theme, and demo session in browser storage and uses local mock data. The `api-adapter.js` file preserves the contract for the later Flask/Supabase phase. Do not treat demo completion, demo profile values, or mock progress as persisted production records.
+Demo V1 stores the selected language, theme, and demo session in browser storage and uses local mock data. The `api-adapter.js` file preserves the Flask/Supabase contract and is selected automatically when the Flask shell is in backend mode and a valid access token exists. Authentication actions use the live adapter in backend mode; the editor uses the local demo runner without a backend run endpoint, while **Submit solution** sends `problem_id`, `code`, and `language` to `POST /api/submissions` when a live session is active. Do not treat demo completion, demo profile values, or mock progress as persisted production records. Live submissions remain asynchronous until the backend evaluation worker is connected.

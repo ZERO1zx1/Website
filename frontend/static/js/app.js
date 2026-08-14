@@ -11,7 +11,10 @@ const mockData = {
 const mockAdapter = {
     async getUser() { return mockData.user; },
     async getDashboard() { return { recentPractice: mockData.recentPractice }; },
-    async getLearningPath() { return { modules: mockData.courses[0].modules, courses: mockData.courses }; },
+    async getLearningPath() {
+        const firstCourse = mockData.courses[0] || { modules: [] };
+        return { modules: firstCourse.modules || [], courses: mockData.courses };
+    },
     async getProblems() { return { problems: mockData.problems }; }
 };
 
@@ -114,9 +117,17 @@ function bindInteractions() {
     document.querySelectorAll('[data-theme-choice]').forEach((button) => {
         button.addEventListener('click', () => setTheme(button.dataset.themeChoice));
     });
-    document.getElementById('mobile-menu')?.addEventListener('click', () => {
-        document.querySelector('.sidebar')?.classList.toggle('is-open');
-    });
+    const mobileMenu = document.getElementById('mobile-menu');
+    const sidebar = document.querySelector('.sidebar');
+    const sidebarScrim = document.getElementById('sidebar-scrim');
+    const setSidebarOpen = (isOpen) => {
+        sidebar?.classList.toggle('is-open', isOpen);
+        sidebarScrim?.classList.toggle('is-visible', isOpen);
+        sidebarScrim?.setAttribute('aria-hidden', String(!isOpen));
+        mobileMenu?.setAttribute('aria-expanded', String(isOpen));
+    };
+    mobileMenu?.addEventListener('click', () => setSidebarOpen(!sidebar?.classList.contains('is-open')));
+    sidebarScrim?.addEventListener('click', () => setSidebarOpen(false));
     document.querySelectorAll('[data-open-editor]').forEach((button) => button.addEventListener('click', openEditor));
     document.querySelectorAll('[data-close-editor]').forEach((button) => button.addEventListener('click', closeEditor));
     document.getElementById('run-code')?.addEventListener('click', runCode);
@@ -127,10 +138,10 @@ function bindInteractions() {
         renderProblemCards(app.problems);
     }));
     document.getElementById('global-search')?.addEventListener('input', (event) => {
-        const query = event.target.value.trim().toLowerCase();
+            const query = event.target.value.trim().toLowerCase();
         if (query.length > 0) {
             showView('practice');
-            renderProblemCards(app.problems.filter((problem) => `${problem.title} ${problem.topic}`.toLowerCase().includes(query)));
+            renderProblemCards(app.problems.filter((problem) => `${localizeContent(problem.title)} ${localizeContent(problem.description)} ${problem.topic} ${(problem.tags || []).join(' ')} ${(problem.keywords || []).join(' ')}`.toLowerCase().includes(query)));
         } else {
             renderProblemCards(app.problems);
         }
@@ -140,7 +151,13 @@ function bindInteractions() {
             event.preventDefault();
             document.getElementById('global-search')?.focus();
         }
-        if (event.key === 'Escape') closeEditor();
+        if (event.key === 'Escape') {
+            closeEditor();
+            document.querySelector('.sidebar')?.classList.remove('is-open');
+            document.getElementById('sidebar-scrim')?.classList.remove('is-visible');
+            document.getElementById('sidebar-scrim')?.setAttribute('aria-hidden', 'true');
+            document.getElementById('mobile-menu')?.setAttribute('aria-expanded', 'false');
+        }
         if ((event.metaKey || event.ctrlKey) && event.key === 'Enter' && document.getElementById('editor-modal')?.classList.contains('is-open')) runCode();
     });
 }
@@ -169,6 +186,9 @@ function showView(viewName) {
     document.getElementById('breadcrumb-root').textContent = root;
     document.getElementById('breadcrumb-current').textContent = current;
     document.querySelector('.sidebar')?.classList.remove('is-open');
+    document.getElementById('sidebar-scrim')?.classList.remove('is-visible');
+    document.getElementById('sidebar-scrim')?.setAttribute('aria-hidden', 'true');
+    document.getElementById('mobile-menu')?.setAttribute('aria-expanded', 'false');
     if (viewName === 'practice') void renderProblems().catch(() => renderProblemCards(app.problems));
     if (viewName === 'auth') document.querySelector('.auth-card input')?.focus();
     applyLanguage();
@@ -178,13 +198,14 @@ async function renderDashboard() {
     const dashboard = await app.dataAdapter.getDashboard();
     const container = document.getElementById('recent-practice-list');
     if (!container) return;
-    container.innerHTML = dashboard.recentPractice.map((item) => `
+    const recentPractice = Array.isArray(dashboard?.recentPractice) ? dashboard.recentPractice : [];
+    container.innerHTML = recentPractice.length ? recentPractice.map((item) => `
         <div class="practice-row">
-            <div class="practice-title"><span class="practice-symbol">${item.icon}</span><div><strong>${item.title}</strong><small>${item.category}</small></div></div>
-            <span class="practice-meta"><span class="status-dot"></span>${item.status}</span>
-            <span class="practice-score">${item.score}</span>
-            <button class="text-button" data-open-editor>Review <span aria-hidden="true">→</span></button>
-        </div>`).join('');
+            <div class="practice-title"><span class="practice-symbol">${escapeHtml(item.icon || '01')}</span><div><strong>${escapeHtml(localizeContent(item.title || 'Practice'))}</strong><small>${escapeHtml(localizeContent(item.category || 'Practice'))}</small></div></div>
+            <span class="practice-meta"><span class="status-dot"></span>${escapeHtml(localizeContent(item.status || 'New'))}</span>
+            <span class="practice-score">${escapeHtml(item.score || '—')}</span>
+            <button class="text-button" data-open-editor data-problem-id="${escapeHtml(item.problem_id || item.id || '')}">Review <span aria-hidden="true">→</span></button>
+        </div>`).join('') : `<div class="empty-state">${app.language === 'mn' ? 'Одоогоор дадлагын түүх алга.' : 'No practice history yet.'}</div>`;
     container.querySelectorAll('[data-open-editor]').forEach((button) => button.addEventListener('click', openEditor));
     applyLanguage();
 }
@@ -212,12 +233,12 @@ function renderCourseCards(courses) {
     const selectedIsVisible = filtered.some((course) => course.id === app.selectedCourseId);
     if (!selectedIsVisible) app.selectedCourseId = filtered[0].id;
     container.innerHTML = filtered.map((course) => `
-        <article class="course-card ${course.id === app.selectedCourseId ? 'is-selected' : ''}">
-            <div class="course-card-top"><span class="course-icon">${course.icon}</span><span class="course-progress">${course.progress}%</span></div>
-            <h3>${localizeContent(course.title)}</h3><p>${localizeContent(course.description)}</p>
-            <div class="course-tags">${(course.tags || []).map((tag) => `<span class="tag-chip tag-chip-small">${tag}</span>`).join('')}</div>
-            <div class="course-card-meta"><span>${localizeContent(course.level)}</span><span>${localizeContent(course.duration)}</span></div>
-            <button class="text-button" data-select-course="${course.id}">${app.language === 'mn' ? 'Замыг харах' : 'View path'} <span aria-hidden="true">→</span></button>
+        <article class="course-card ${String(course.id) === String(app.selectedCourseId) ? 'is-selected' : ''}">
+            <div class="course-card-top"><span class="course-icon">${escapeHtml(course.icon || 'CO')}</span><span class="course-progress">${escapeHtml(course.progress ?? 0)}%</span></div>
+            <h3>${escapeHtml(localizeContent(course.title))}</h3><p>${escapeHtml(localizeContent(course.description))}</p>
+            <div class="course-tags">${(course.tags || []).map((tag) => `<span class="tag-chip tag-chip-small">${escapeHtml(tag)}</span>`).join('')}</div>
+            <div class="course-card-meta"><span>${escapeHtml(localizeContent(course.level))}</span><span>${escapeHtml(localizeContent(course.duration))}</span></div>
+            <button class="text-button" data-select-course="${escapeHtml(course.id)}">${app.language === 'mn' ? 'Замыг харах' : 'View path'} <span aria-hidden="true">→</span></button>
         </article>`).join('');
     container.querySelectorAll('[data-select-course]').forEach((button) => button.addEventListener('click', () => {
         app.selectedCourseId = button.dataset.selectCourse;
@@ -240,10 +261,10 @@ function renderSelectedCourse(course) {
     if (progressBar) progressBar.style.width = `${course.progress || 0}%`;
     if (!container) return;
     container.innerHTML = (course.modules || []).map((module, index) => `
-        <article class="module-card ${module.complete ? 'is-complete' : ''}" data-open-lesson="${index}" tabindex="0" role="button">
-            <span class="module-number">${module.complete ? '✓' : module.number}</span>
-            <div class="module-content"><strong>${localizeContent(module.title)}</strong><span>${localizeContent(module.meta)}</span></div>
-            <span class="module-status">${localizeContent(module.status)}</span>
+        <article class="module-card ${module.complete ? 'is-complete' : ''}" data-open-lesson="${index}" tabindex="0" role="button" aria-label="${escapeHtml(localizeContent(module.title))}">
+            <span class="module-number">${module.complete ? '✓' : escapeHtml(module.number || String(index + 1).padStart(2, '0'))}</span>
+            <div class="module-content"><strong>${escapeHtml(localizeContent(module.title))}</strong><span>${escapeHtml(localizeContent(module.meta))}</span></div>
+            <span class="module-status">${escapeHtml(localizeContent(module.status))}</span>
         </article>`).join('');
     container.querySelectorAll('[data-open-lesson]').forEach((moduleCard) => {
         const open = () => openLessonPreview(course, Number(moduleCard.dataset.openLesson));
@@ -262,7 +283,7 @@ function openLessonPreview(course, moduleIndex) {
     document.getElementById('lesson-preview-title').textContent = localizeContent(module.title);
     document.getElementById('lesson-preview-meta').textContent = localizeContent(module.meta);
     document.getElementById('lesson-preview-objective').textContent = localizeContent(course.description);
-    document.getElementById('lesson-preview-keywords').innerHTML = (course.keywords || []).slice(0, 5).map((keyword) => `<span class="tag-chip tag-chip-small">${keyword}</span>`).join('');
+    document.getElementById('lesson-preview-keywords').innerHTML = (course.keywords || []).slice(0, 5).map((keyword) => `<span class="tag-chip tag-chip-small">${escapeHtml(keyword)}</span>`).join('');
     preview.classList.remove('is-hidden');
     preview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -303,21 +324,52 @@ function renderProblemCards(problems) {
     if (!container) return;
     const filtered = app.activeFilter === 'all' ? problems : problems.filter((problem) => problem.difficulty === app.activeFilter);
     if (!filtered.length) {
-        container.innerHTML = '<div class="panel" style="grid-column:1/-1;padding:2rem;color:var(--color-text-secondary)">No problems match this filter yet.</div>';
+        container.innerHTML = `<div class="panel empty-state" style="grid-column:1/-1">${app.language === 'mn' ? 'Энэ шүүлтүүрт тохирох бодлого олдсонгүй.' : 'No problems match this filter yet.'}</div>`;
         return;
     }
     container.innerHTML = filtered.map((problem) => `
         <article class="problem-card">
-            <div class="problem-card-top"><span class="pill ${problem.progress === 'Solved' ? 'pill-teal' : 'pill-muted'}">${localizeContent(problem.progress)}</span><span class="practice-symbol">${problem.icon}</span></div>
-            <h3>${localizeContent(problem.title)}</h3><p>${localizeContent(problem.description)}</p>
-            <div class="problem-tags">${(problem.tags || []).map((tag) => `<span class="tag-chip tag-chip-small">${tag}</span>`).join('')}</div>
-            <div class="problem-card-footer"><span class="difficulty ${problem.difficulty}">${localizeContent(capitalize(problem.difficulty))} · ${localizeContent(problem.topic)}</span><button class="text-button" data-open-editor>${localizeContent('Solve')} <span aria-hidden="true">→</span></button></div>
+            <div class="problem-card-top"><span class="pill ${problem.progress === 'Solved' ? 'pill-teal' : 'pill-muted'}">${escapeHtml(localizeContent(problem.progress || 'New'))}</span><span class="practice-symbol">${escapeHtml(problem.icon || '01')}</span></div>
+            <h3>${escapeHtml(localizeContent(problem.title || 'Untitled problem'))}</h3><p>${escapeHtml(localizeContent(problem.description || ''))}</p>
+            <div class="problem-tags">${(problem.tags || []).map((tag) => `<span class="tag-chip tag-chip-small">${escapeHtml(tag)}</span>`).join('')}</div>
+            <div class="problem-card-footer"><span class="difficulty ${escapeHtml(problem.difficulty || 'easy')}">${escapeHtml(localizeContent(capitalize(problem.difficulty || 'easy')))} · ${escapeHtml(localizeContent(problem.topic || 'Practice'))}</span><button class="text-button" data-open-editor data-problem-id="${escapeHtml(problem.id || '')}">${localizeContent('Solve')} <span aria-hidden="true">→</span></button></div>
         </article>`).join('');
     container.querySelectorAll('[data-open-editor]').forEach((button) => button.addEventListener('click', openEditor));
     applyLanguage();
 }
 
-function capitalize(value) { return value.charAt(0).toUpperCase() + value.slice(1); }
+function capitalize(value) { return String(value || '').charAt(0).toUpperCase() + String(value || '').slice(1); }
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, (character) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[character]));
+}
+
+function getProblemById(problemId) {
+    const normalizedId = String(problemId || '');
+    return app.problems.find((problem) => String(problem.id) === normalizedId) || app.problems[0] || mockData.problems[0];
+}
+
+function renderEditorProblem(problem) {
+    const current = problem || getProblemById();
+    const title = document.getElementById('editor-title');
+    const badge = document.querySelector('#editor-modal .problem-brief .pill');
+    const problemTitle = document.querySelector('[data-editor-problem-title]');
+    const description = document.querySelector('[data-editor-problem-description]');
+    const editor = document.getElementById('code-editor');
+    const modal = document.getElementById('editor-modal');
+    if (!current || !modal) return;
+    modal.dataset.problemId = current.id || '';
+    if (title) title.textContent = localizeContent(current.title || 'Practice problem');
+    if (badge) badge.textContent = String(current.topic || 'CODE').toUpperCase();
+    if (problemTitle) problemTitle.textContent = localizeContent(current.title || 'Practice problem');
+    if (description) description.textContent = localizeContent(current.description || 'Write a solution for this problem.');
+    if (editor) editor.value = current.starter_code || `# ${localizeContent(current.title || 'Solve the problem')}\n\n# Write your solution here\n`;
+    const output = document.getElementById('code-output');
+    if (output) output.innerHTML = `<span class="output-label">${app.language === 'mn' ? 'ГАРАЛТ' : 'OUTPUT'}</span><code>${app.language === 'mn' ? 'Кодоо ажиллуулж үр дүнг энд харна.' : 'Run your code to see the output here.'}</code>`;
+}
+
 
 function localizeContent(value) {
     if (value && typeof value === 'object') return value[app.language] || value.en || Object.values(value)[0] || '';
@@ -326,10 +378,11 @@ function localizeContent(value) {
     return dictionary[source] || textTranslations[app.language]?.[source] || source;
 }
 
-function openEditor() {
+function openEditor(event) {
     const modal = document.getElementById('editor-modal');
     if (!modal) return;
     app.lastFocusedElement = document.activeElement;
+    renderEditorProblem(getProblemById(event?.currentTarget?.dataset.problemId));
     modal.classList.add('is-open');
     modal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
@@ -348,15 +401,35 @@ function closeEditor() {
 function runCode() {
     const output = document.getElementById('code-output');
     if (!output) return;
-    const outputLabel = app.language === 'mn' ? 'ГАРАЛТ · 0.18с' : 'OUTPUT · 0.18s';
-    const outputStatus = app.language === 'mn' ? 'Процесс амжилттай дууслаа.' : 'Process finished with exit code 0.';
+    const outputLabel = app.language === 'mn' ? 'DEMO ГАРАЛТ · 0.18с' : 'DEMO OUTPUT · 0.18s';
+    const outputStatus = app.language === 'mn' ? 'Demo runner амжилттай дууслаа.' : 'Demo runner finished with exit code 0.';
     output.innerHTML = `<span class="output-label">${outputLabel}</span><code style="color:#75e6c5">[2, 4]<br><br>${outputStatus}</code>`;
-    showToast(app.language === 'mn' ? 'Код амжилттай ажиллалаа. Сайн байна.' : 'Code ran successfully. Nice work.', 'success');
+    showToast(app.language === 'mn' ? 'Demo код амжилттай ажиллалаа.' : 'Demo code ran successfully.', 'success');
 }
 
-function submitCode() {
+async function submitCode() {
+    const modal = document.getElementById('editor-modal');
+    const editor = document.getElementById('code-editor');
+    const problem = getProblemById(modal?.dataset.problemId);
+    const code = editor?.value?.trim();
+    if (!code) {
+        showToast(app.language === 'mn' ? 'Илгээх кодоо оруулна уу.' : 'Enter code before submitting.', 'error');
+        editor?.focus();
+        return;
+    }
+    if (backendEnabled && app.dataAdapter === window.codehavenApiAdapter && problem?.id) {
+        try {
+            const result = await window.codehavenApiAdapter.submitCode({ problem_id: problem.id, code, language: 'python' });
+            showToast(app.language === 'mn' ? `Илгээлт хүлээгдэж байна (#${result.submission?.id || ''}).` : `Submission queued (#${result.submission?.id || 'pending'}).`, 'success');
+            closeEditor();
+            await refreshDataViews();
+        } catch (error) {
+            showToast(app.language === 'mn' ? 'Илгээлтийг серверт хүргэж чадсангүй.' : (error.message || 'The submission could not be sent.'), 'error');
+        }
+        return;
+    }
     runCode();
-    showToast(app.language === 'mn' ? 'Шийдэл дадлагын түүхэнд хадгалагдлаа.' : 'Solution saved to your practice history.', 'success');
+    showToast(app.language === 'mn' ? 'Demo шийдэл хадгалагдлаа.' : 'Demo solution saved to your practice history.', 'success');
     window.setTimeout(closeEditor, 500);
 }
 
@@ -529,6 +602,8 @@ function applyLanguage() {
         const value = dictionary[node.dataset.i18nAria];
         if (value) node.setAttribute('aria-label', value);
     });
+    const editorModal = document.getElementById('editor-modal');
+    if (editorModal?.classList.contains('is-open')) renderEditorProblem(getProblemById(editorModal.dataset.problemId));
     document.querySelectorAll('[data-i18n] input, [data-i18n] textarea').forEach((node) => {
         const value = dictionary[node.dataset.i18n];
         if (value) node.placeholder = value;
