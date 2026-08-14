@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/page-shell.css', v='20260815-auth-pages') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/site/site.css', v='20260815-auth-pages') }}">
     {% block head %}{% endblock %}
 </head>
 <body class="page-body {{ page_class|default('') }}">
@@ -23,7 +23,7 @@
     <main class="page-main">{% block content %}{% endblock %}</main>
     <footer class="site-footer"><span>© 2026 Codehaven</span><span><a href="{{ url_for('password_reset_page') }}">Password reset</a> · Learn. Practice. Build.</span></footer>
     <div id="page-toast" class="page-toast" role="status" aria-live="polite"></div>
-    <script src="{{ url_for('static', filename='js/page-auth.js', v='20260815-auth-pages') }}"></script>
+    <script src="{{ url_for('static', filename='js/pages/auth.js', v='20260815-auth-pages') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

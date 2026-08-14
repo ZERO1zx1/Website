@@ -153,23 +153,23 @@ def create_app(config_name="development"):
 
     @app.route("/home", methods=["GET"])
     def home_page():
-        return render_template("home.html", backend_enabled=not frontend_only, page_class="home-page")
+        return render_template("pages/home.html", backend_enabled=not frontend_only, page_class="home-page")
 
     @app.route("/login", methods=["GET"])
     def login_page():
-        return render_template("login.html", backend_enabled=not frontend_only, page_class="login-page")
+        return render_template("pages/login.html", backend_enabled=not frontend_only, page_class="login-page")
 
     @app.route("/register", methods=["GET"])
     def register_page():
-        return render_template("register.html", backend_enabled=not frontend_only, page_class="register-page")
+        return render_template("pages/register.html", backend_enabled=not frontend_only, page_class="register-page")
 
     @app.route("/password-reset", methods=["GET"])
     def password_reset_page():
-        return render_template("password_reset.html", backend_enabled=not frontend_only, page_class="password-reset-page")
+        return render_template("pages/password_reset.html", backend_enabled=not frontend_only, page_class="password-reset-page")
 
     @app.route("/dashboard", methods=["GET"])
     def dashboard_page():
-        return render_template("dashboard.html", backend_enabled=not frontend_only, page_class="dashboard-page-shell")
+        return render_template("pages/dashboard.html", backend_enabled=not frontend_only, page_class="dashboard-page-shell")
 
     @app.route("/api/health", methods=["GET"])
     def health_check():
