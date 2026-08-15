@@ -131,7 +131,7 @@ class LocalQuery:
         for record in records:
             record = dict(record)
             columns = list(record)
-            values = [record[column] for column in columns]
+            values = [json.dumps(record[column]) if self.table_name == "exam_questions" and column == "options" and not isinstance(record[column], str) else record[column] for column in columns]
             placeholders = ", ".join("?" for _ in columns)
             quoted = ", ".join(f'"{column}"' for column in columns)
             cursor = connection.execute(
@@ -169,6 +169,7 @@ class LocalQuery:
             "mastery_snapshots": ("user_id", "skill_id"),
             "problem_skills": ("problem_id", "skill_id"),
             "lesson_progress": ("user_id", "lesson_id"),
+            "exam_answers": ("attempt_id", "question_id"),
         }.get(self.table_name)
         connection = self.database.connection()
         if conflict_columns and all(column in record for column in conflict_columns):
@@ -336,6 +337,57 @@ class LocalDB:
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY(problem_id, skill_id)
             );
+            CREATE TABLE IF NOT EXISTS exams (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
+                title TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                duration_minutes INTEGER NOT NULL DEFAULT 20,
+                max_attempts INTEGER NOT NULL DEFAULT 3,
+                starts_at TEXT,
+                ends_at TEXT,
+                status TEXT NOT NULL DEFAULT 'published',
+                created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS exam_questions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                exam_id INTEGER NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
+                problem_id INTEGER REFERENCES problems(id) ON DELETE SET NULL,
+                position INTEGER NOT NULL DEFAULT 1,
+                question_type TEXT NOT NULL DEFAULT 'multiple_choice',
+                prompt TEXT NOT NULL,
+                options TEXT NOT NULL DEFAULT '[]',
+                correct_answer TEXT,
+                points REAL NOT NULL DEFAULT 1,
+                explanation TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(exam_id, position)
+            );
+            CREATE TABLE IF NOT EXISTS exam_attempts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                exam_id INTEGER NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                status TEXT NOT NULL DEFAULT 'in_progress',
+                score REAL NOT NULL DEFAULT 0,
+                earned_points REAL NOT NULL DEFAULT 0,
+                total_points REAL NOT NULL DEFAULT 0,
+                started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                submitted_at TEXT,
+                graded_at TEXT
+            );
+            CREATE TABLE IF NOT EXISTS exam_answers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                attempt_id INTEGER NOT NULL REFERENCES exam_attempts(id) ON DELETE CASCADE,
+                question_id INTEGER NOT NULL REFERENCES exam_questions(id) ON DELETE CASCADE,
+                answer TEXT NOT NULL DEFAULT '',
+                is_correct INTEGER,
+                earned_points REAL NOT NULL DEFAULT 0,
+                feedback TEXT NOT NULL DEFAULT '',
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(attempt_id, question_id)
+            );
             CREATE TABLE IF NOT EXISTS submissions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -464,6 +516,23 @@ class LocalDB:
                 "INSERT OR IGNORE INTO test_cases (problem_id, input, expected_output, is_hidden) VALUES (?, ?, ?, ?)",
                 (problem_id, input_data, expected_output, is_hidden),
             )
+        connection.execute(
+            "INSERT OR IGNORE INTO exams (title, description, duration_minutes, max_attempts, status) VALUES (?, ?, ?, ?, ?)",
+            ("Python foundations checkpoint", "A short checkpoint covering variables, functions, and practical problem solving.", 20, 3, "published"),
+        )
+        exam = connection.execute("SELECT id FROM exams WHERE title = ?", ("Python foundations checkpoint",)).fetchone()
+        if exam:
+            exam_id = exam["id"]
+            exam_questions = [
+                (exam_id, 1, "multiple_choice", "Which value is immutable in Python?", json.dumps(["list", "dictionary", "tuple", "set"]), "tuple", 1, "Tuples cannot be changed after creation."),
+                (exam_id, 2, "multiple_choice", "What does a function return when it has no return statement?", json.dumps(["0", "False", "None", "An error"]), "None", 1, "Python functions return None by default."),
+                (exam_id, 3, "short_answer", "Write the name of the built-in function used to get the length of a sequence.", json.dumps([]), "len", 1, "The len() function returns the number of items."),
+            ]
+            for question in exam_questions:
+                connection.execute(
+                    "INSERT OR IGNORE INTO exam_questions (exam_id, position, question_type, prompt, options, correct_answer, points, explanation) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    question,
+                )
         skills = {row["name"]: row["id"] for row in connection.execute("SELECT id, name FROM skills")}
         for problem_title, skill_name in [("Even number filter", "Python"), ("First unique character", "Problem solving"), ("Build a JSON response", "Flask APIs")]:
             connection.execute(

@@ -28,6 +28,10 @@ roles:
       - teacher.dashboard.read
       - student.dashboard.read
       - audit.read
+      - exams.read
+      - exams.manage
+      - exams.attempts.read
+      - analytics.exams.read
   admin:
     label:
       en: Administrator
@@ -49,6 +53,10 @@ roles:
       - teacher.dashboard.read
       - student.dashboard.read
       - audit.read
+      - exams.read
+      - exams.manage
+      - exams.attempts.read.assigned
+      - analytics.exams.read.assigned
   teacher:
     label:
       en: Teacher
@@ -63,6 +71,10 @@ roles:
       - submissions.read.assigned
       - analytics.read.assigned
       - teacher.dashboard.read
+      - exams.read
+      - exams.manage.own
+      - exams.attempts.read.assigned
+      - analytics.exams.read.assigned
   student:
     label:
       en: Student
@@ -74,6 +86,10 @@ roles:
       - submissions.read.own
       - analytics.read.own
       - student.dashboard.read
+      - exams.read
+      - exams.attempt
+      - exams.attempts.read.own
+      - analytics.exams.read.own
 approval:
   teacher_request:
     initial_effective_role: student

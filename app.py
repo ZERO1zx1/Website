@@ -135,6 +135,7 @@ def create_app(config_name="development"):
 
         from backend.api.analytics import analytics_bp
         from backend.api.auth import auth_bp
+        from backend.api.exams import exams_bp
         from backend.api.courses import courses_bp
         from backend.api.problems import problems_bp
         from backend.api.submissions import submissions_bp
@@ -146,6 +147,7 @@ def create_app(config_name="development"):
         app.register_blueprint(submissions_bp, url_prefix="/api/submissions")
         app.register_blueprint(teacher_bp, url_prefix="/api/teacher")
         app.register_blueprint(analytics_bp, url_prefix="/api/analytics")
+        app.register_blueprint(exams_bp, url_prefix="/api/exams")
 
     @app.route("/", methods=["GET"])
     def frontend_shell():

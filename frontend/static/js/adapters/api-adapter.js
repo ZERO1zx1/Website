@@ -143,6 +143,36 @@
         async completeLesson(lessonId) {
             return request(`/api/courses/lessons/${lessonId}/complete`, { method: 'POST' });
         },
+        async getExams() {
+            const payload = await request('/api/exams');
+            return { exams: payload.exams || [] };
+        },
+        async getExam(examId) {
+            const payload = await request(`/api/exams/${examId}`);
+            return payload.exam || payload;
+        },
+        async createExam(exam) {
+            return request('/api/exams', { method: 'POST', body: JSON.stringify(exam) });
+        },
+        async startExam(examId) {
+            const payload = await request(`/api/exams/${examId}/attempts`, { method: 'POST' });
+            return payload.attempt || payload;
+        },
+        async getExamAttempt(attemptId) {
+            const payload = await request(`/api/exams/attempts/${attemptId}`);
+            return payload.attempt || payload;
+        },
+        async saveExamAnswer(attemptId, questionId, answer) {
+            return request(`/api/exams/attempts/${attemptId}/answers/${questionId}`, { method: 'PATCH', body: JSON.stringify({ answer }) });
+        },
+        async submitExam(attemptId) {
+            const payload = await request(`/api/exams/attempts/${attemptId}/submit`, { method: 'POST' });
+            return payload.attempt || payload;
+        },
+        async getProgressReport() {
+            const payload = await request('/api/analytics/progress-report');
+            return payload.report || payload;
+        },
         async getProblems(query = {}) {
             const params = new URLSearchParams(query);
             const payload = await request(`/api/problems${params.toString() ? `?${params}` : ''}`);

@@ -314,3 +314,90 @@ def test_dashboard_workspace_uses_live_discovery_markers(monkeypatch):
     assert b"dashboard-course-grid" in html
     assert b"sidebar-up-next-title" in html
     assert b"Build your first API" not in html
+
+
+
+def test_local_exam_attempt_grading_and_progress_report(monkeypatch, tmp_path):
+    from backend.db import db
+
+    monkeypatch.setenv("FLASK_ENV", "development")
+    monkeypatch.setenv("FRONTEND_ONLY", "false")
+    monkeypatch.setenv("LOCAL_DB", "true")
+    monkeypatch.setenv("LOCAL_DB_PATH", str(tmp_path / "exam-flow.sqlite3"))
+    monkeypatch.setenv("SECRET_KEY", "local-development-secret-that-is-long-enough")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+    db._client = None
+    client = create_app().test_client()
+    registered = client.post("/api/auth/register", json={"name": "Exam Learner", "email": "exam@example.com", "password": "password123"})
+    headers = {"Authorization": f"Bearer {registered.get_json()['token']}"}
+
+    exams = client.get("/api/exams", headers=headers)
+    assert exams.status_code == 200
+    exam = exams.get_json()["exams"][0]
+    detail = client.get(f"/api/exams/{exam['id']}", headers=headers)
+    assert detail.status_code == 200
+    assert "correct_answer" not in detail.get_json()["exam"]["questions"][0]
+
+    started = client.post(f"/api/exams/{exam['id']}/attempts", headers=headers)
+    assert started.status_code == 201
+    attempt = started.get_json()["attempt"]
+    for question, answer in zip(attempt["exam"]["questions"], ["tuple", "None", "len"]):
+        saved = client.patch(f"/api/exams/attempts/{attempt['id']}/answers/{question['id']}", json={"answer": answer}, headers=headers)
+        assert saved.status_code == 200
+    submitted = client.post(f"/api/exams/attempts/{attempt['id']}/submit", headers=headers)
+    assert submitted.status_code == 200
+    assert submitted.get_json()["attempt"]["score"] == 100.0
+
+    report = client.get("/api/analytics/progress-report", headers=headers)
+    assert report.status_code == 200
+    assert report.get_json()["report"]["exams"][0]["score"] == 100.0
+    dashboard = client.get("/api/analytics/dashboard", headers=headers)
+    assert dashboard.status_code == 200
+    assert dashboard.get_json()["exam_summary"]["best_score"] == 100.0
+
+
+def test_exam_builder_permission_and_attempt_ownership(monkeypatch, tmp_path):
+    from backend.db import db
+
+    monkeypatch.setenv("FLASK_ENV", "development")
+    monkeypatch.setenv("FRONTEND_ONLY", "false")
+    monkeypatch.setenv("LOCAL_DB", "true")
+    monkeypatch.setenv("LOCAL_DB_PATH", str(tmp_path / "exam-owner.sqlite3"))
+    monkeypatch.setenv("SECRET_KEY", "local-development-secret-that-is-long-enough")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+    db._client = None
+    client = create_app().test_client()
+    teacher = client.post("/api/auth/register", json={"name": "Exam Teacher", "email": "teacher@example.com", "password": "password123"})
+    student = client.post("/api/auth/register", json={"name": "Exam Student", "email": "student@example.com", "password": "password123"})
+    teacher_id = teacher.get_json()["user"]["id"]
+    db.update_user(teacher_id, {"role": "teacher", "requested_role": None, "teacher_approval_status": "approved"})
+    teacher_headers = {"Authorization": f"Bearer {teacher.get_json()['token']}"}
+    student_headers = {"Authorization": f"Bearer {student.get_json()['token']}"}
+    payload = {"title": "Teacher checkpoint", "duration_minutes": 10, "max_attempts": 2, "questions": [{"question_type": "multiple_choice", "prompt": "What is 2 + 2?", "options": ["3", "4"], "correct_answer": "4", "points": 1}]}
+    created = client.post("/api/exams", json=payload, headers=teacher_headers)
+    assert created.status_code == 201
+    exam_id = created.get_json()["exam"]["id"]
+    assert client.post("/api/exams", json=payload, headers=student_headers).status_code == 403
+    started = client.post(f"/api/exams/{exam_id}/attempts", headers=student_headers)
+    assert started.status_code == 201
+    attempt_id = started.get_json()["attempt"]["id"]
+    assert client.get(f"/api/exams/attempts/{attempt_id}", headers=teacher_headers).status_code == 200
+    assert client.get(f"/api/exams/attempts/{attempt_id}", headers=student_headers).status_code == 200
+
+
+
+def test_assessment_workspace_contains_training_views(monkeypatch):
+    monkeypatch.setenv("FLASK_ENV", "development")
+    monkeypatch.setenv("FRONTEND_ONLY", "false")
+    monkeypatch.setenv("LOCAL_DB", "true")
+    monkeypatch.setenv("SECRET_KEY", "local-development-secret-that-is-long-enough")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+    from backend.db import db
+    db._client = None
+    html = create_app().test_client().get("/").data
+    assert b"exam-builder-form" in html
+    assert b"student-exam-view" in html
+    assert b"dashboard-report-summary" in html

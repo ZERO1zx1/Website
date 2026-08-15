@@ -172,7 +172,7 @@ For a local container run, configure `.env` and use:
 docker compose up --build
 ```
 
-The backend runbook is documented in [`docs/backend-integration.md`](docs/backend-integration.md), the complete Supabase Email/Google and local backend setup is in [`docs/supabase-and-local-backend.md`](docs/supabase-and-local-backend.md), and the project layout is in [`docs/project-structure.md`](docs/project-structure.md).
+The backend runbook is documented in [`docs/backend-integration.md`](docs/backend-integration.md), the complete Supabase Email/Google and local backend setup is in [`docs/supabase-and-local-backend.md`](docs/supabase-and-local-backend.md), the training assessment flow is in [`docs/training-assessments.md`](docs/training-assessments.md), and the project layout is in [`docs/project-structure.md`](docs/project-structure.md). Apply migrations `001` through `005_assessments_and_progress.sql` in order for production Supabase.
 
 ## Installation
 
@@ -250,9 +250,21 @@ The application will be available at `http://localhost:5000`
 - `GET /api/teacher/analytics/class/<class_id>` - Get class analytics
 
 ### Analytics
+- `GET /api/analytics/dashboard` - Get authenticated dashboard, exam summary, and progress report
+- `GET /api/analytics/progress-report` - Get course, lesson, mastery, and exam progress report
 - `GET /api/analytics/mastery/<user_id>` - Get user mastery
 - `GET /api/analytics/skill/<skill_id>` - Get skill statistics
 - `GET /api/analytics/problem/<problem_id>` - Get problem statistics
+
+### Training assessments
+- `GET /api/exams` - List published exams and learner attempt summaries
+- `POST /api/exams` - Create an exam and questions for teacher/admin/owner roles
+- `GET /api/exams/<exam_id>` - Get exam detail with answer keys restricted to staff
+- `POST /api/exams/<exam_id>/attempts` - Start or resume a student attempt
+- `GET /api/exams/attempts/<attempt_id>` - Get an owned or authorized attempt
+- `PATCH /api/exams/attempts/<attempt_id>/answers/<question_id>` - Autosave an answer
+- `POST /api/exams/attempts/<attempt_id>/submit` - Submit and grade an attempt
+- `GET /api/exams/<exam_id>/report` - Get scoped aggregate exam report
 
 ## Security Considerations
 

@@ -47,7 +47,11 @@ const app = {
     theme: localStorage.getItem('codehaven-theme') || 'light',
     language: localStorage.getItem('codehaven-language') || 'en',
     authMode: 'login',
-    realtimeTimer: null
+    realtimeTimer: null,
+    exams: [],
+    activeExamAttempt: null,
+    examTimer: null,
+    builderQuestionCount: 0
 };
 
 const viewLabels = {
@@ -118,6 +122,13 @@ function bindInteractions() {
     }));
     document.getElementById('close-lesson-preview')?.addEventListener('click', () => document.getElementById('lesson-preview')?.classList.add('is-hidden'));
     document.getElementById('complete-lesson')?.addEventListener('click', completeLessonPreview);
+    document.getElementById('exam-builder-toggle')?.addEventListener('click', openExamBuilder);
+    document.getElementById('close-exam-builder')?.addEventListener('click', closeExamBuilder);
+    document.getElementById('add-exam-question')?.addEventListener('click', addExamBuilderQuestion);
+    document.getElementById('exam-builder-form')?.addEventListener('submit', submitExamBuilder);
+    document.getElementById('save-exam-progress')?.addEventListener('click', saveActiveExamAnswers);
+    document.getElementById('submit-student-exam')?.addEventListener('click', submitActiveExam);
+    document.getElementById('close-exam-result')?.addEventListener('click', () => { document.getElementById('exam-result-panel')?.classList.add('is-hidden'); renderAssessments(); });
     document.getElementById('open-auth-screen')?.addEventListener('click', () => { setAuthMode('login'); showView('auth'); });
     document.querySelectorAll('[data-logout]').forEach((control) => control.addEventListener('click', logoutUser));
     document.querySelectorAll('[data-theme-choice]').forEach((button) => {
@@ -223,6 +234,7 @@ function showView(viewName) {
     document.getElementById('sidebar-scrim')?.setAttribute('aria-hidden', 'true');
     document.getElementById('mobile-menu')?.setAttribute('aria-expanded', 'false');
     if (viewName === 'practice') void renderProblems().catch(() => renderProblemCards(app.problems));
+    if (viewName === 'assessments') void renderAssessments().catch(() => showToast(app.language === 'mn' ? 'Шалгалтыг ачаалж чадсангүй.' : 'Assessments could not be loaded.', 'error'));
     if (viewName === 'auth') document.querySelector('.auth-card input')?.focus();
     applyLanguage();
 }
@@ -295,6 +307,7 @@ async function renderDashboard() {
     if (chart) chart.innerHTML = studyMinutes === 0
         ? '<p class="empty-state">No study activity recorded yet. Complete a lesson to start your timeline.</p>'
         : `<p class="empty-state">${studyMinutes} minutes of learning activity are saved to your account. Daily activity detail will appear as you complete more lessons.</p>`;
+    renderDashboardReport(dashboard?.progress_report, dashboard?.exam_summary);
     const skillPanel = document.querySelector('.skills-panel');
     const skills = Array.isArray(dashboard?.skills) ? dashboard.skills : [];
     if (skillPanel && skills.length === 0) skillPanel.innerHTML = '<div class="panel-heading"><div><p class="eyebrow">Skill map</p><h3>Where you’re growing</h3></div></div><p class="empty-state">Your skill map will appear after your first completed activity.</p>';
@@ -307,6 +320,188 @@ async function renderDashboard() {
         </div>`).join('') : `<div class="empty-state">${app.language === 'mn' ? 'Одоогоор дадлагын түүх алга.' : 'No practice history yet.'}</div>`;
     container.querySelectorAll('[data-open-editor]').forEach((button) => button.addEventListener('click', openEditor));
     applyLanguage();
+}
+
+function renderDashboardReport(report, examSummary) {
+    const source = report || {};
+    const summary = source.summary || {};
+    document.querySelector('[data-report="completed"]')?.replaceChildren(document.createTextNode(String(summary.lessons_completed ?? '—')));
+    document.querySelector('[data-report="active"]')?.replaceChildren(document.createTextNode(String(summary.courses_active ?? '—')));
+    document.querySelector('[data-report="mastery"]')?.replaceChildren(document.createTextNode(`${Number(summary.average_mastery || 0)}%`));
+    const bestScore = examSummary?.best_score == null ? '—' : `${Number(examSummary.best_score).toFixed(0)}%`;
+    document.querySelector('[data-report="exam-score"]')?.replaceChildren(document.createTextNode(bestScore));
+    const courseList = document.getElementById('dashboard-report-courses');
+    if (courseList) {
+        const courses = Array.isArray(source.courses) ? source.courses : [];
+        courseList.innerHTML = courses.length ? courses.slice(0, 4).map((course) => `<div class="report-course-row"><div><strong>${escapeHtml(localizeContent(course.title || 'Learning path'))}</strong><small>${Number(course.completed_lessons || 0)} / ${Number(course.lesson_count || 0)} lessons</small></div><div class="report-mini-progress"><span style="width:${Math.min(100, Math.max(0, Number(course.progress || 0)))}%"></span></div><strong>${Number(course.progress || 0)}%</strong></div>`).join('') : '<p class="empty-state">Complete a lesson to build your report.</p>';
+    }
+    const examNode = document.getElementById('dashboard-report-exams');
+    if (examNode) {
+        const exams = Array.isArray(source.exams) ? source.exams : [];
+        examNode.innerHTML = exams.length ? `<strong>${exams.length} attempt${exams.length === 1 ? '' : 's'}</strong><p>Your latest score: ${Number(exams[0].score || 0).toFixed(0)}% · ${escapeHtml(exams[0].status || 'graded')}</p>` : '<p class="empty-state">Start an assessment to see your score and learning signal here.</p>';
+    }
+}
+
+async function renderAssessments() {
+    const list = document.getElementById('exam-list');
+    if (!list || !app.user || !app.dataAdapter?.getExams) return;
+    renderDataState(list, 'loading');
+    try {
+        const payload = await app.dataAdapter.getExams();
+        app.exams = payload.exams || [];
+        const canBuild = ['owner', 'admin', 'teacher'].includes(String(app.user.role || '').toLowerCase());
+        document.getElementById('exam-builder-toggle')?.classList.toggle('is-hidden', !canBuild);
+        if (!app.exams.length) {
+            list.innerHTML = `<article class="assessment-card"><span class="pill pill-muted">${app.language === 'mn' ? 'ОДООРООР АЛГА' : 'COMING SOON'}</span><h2>${app.language === 'mn' ? 'Шалгалт бэлэн болоогүй байна' : 'No assessments yet'}</h2><p>${canBuild ? 'Build the first training checkpoint for your learners.' : 'Your teacher will publish a checkpoint here when it is ready.'}</p></article>`;
+            return;
+        }
+        list.innerHTML = app.exams.map((exam) => {
+            const latest = exam.latest_attempt;
+            const status = latest?.status === 'in_progress' ? 'IN PROGRESS' : latest ? 'AVAILABLE' : 'READY TO START';
+            const best = exam.best_score == null ? '—' : `${Number(exam.best_score).toFixed(0)}%`;
+            return `<article class="assessment-card ${latest?.status === 'in_progress' ? 'assessment-featured' : ''}"><span class="pill ${latest?.status === 'in_progress' ? 'pill-purple' : 'pill-teal'}">${status}</span><h2>${escapeHtml(localizeContent(exam.title))}</h2><p>${escapeHtml(localizeContent(exam.description || 'Training checkpoint'))}</p><div class="assessment-bottom"><span>${exam.question_count || 0} questions · ${exam.duration_minutes || 20} min · Best: <strong>${best}</strong></span><button class="button button-light" type="button" data-start-exam="${escapeHtml(exam.id)}">${latest?.status === 'in_progress' ? 'Resume exam' : 'Begin exam'} <span>→</span></button></div></article>`;
+        }).join('');
+        list.querySelectorAll('[data-start-exam]').forEach((button) => button.addEventListener('click', () => void startExamView(button.dataset.startExam)));
+    } catch (error) {
+        renderDataState(list, 'error', app.language === 'mn' ? 'Шалгалтыг ачаалж чадсангүй.' : 'Assessments could not be loaded.');
+        if (error.status === 401) logoutUser();
+    }
+}
+
+function openExamBuilder() {
+    document.getElementById('exam-builder-panel')?.classList.remove('is-hidden');
+    document.getElementById('student-exam-view')?.classList.add('is-hidden');
+    document.getElementById('exam-result-panel')?.classList.add('is-hidden');
+    if (!document.querySelector('[data-builder-question]')) addExamBuilderQuestion();
+    document.getElementById('exam-builder-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function closeExamBuilder() {
+    document.getElementById('exam-builder-panel')?.classList.add('is-hidden');
+}
+
+function addExamBuilderQuestion() {
+    const container = document.getElementById('exam-builder-questions');
+    if (!container) return;
+    const index = ++app.builderQuestionCount;
+    const question = document.createElement('div');
+    question.className = 'builder-question-card';
+    question.dataset.builderQuestion = String(index);
+    question.innerHTML = `<div class="builder-question-top"><strong>Question ${index}</strong><button class="text-button" type="button" data-remove-builder-question>Remove</button></div><label>Type<select data-builder-field="question_type"><option value="multiple_choice">Multiple choice</option><option value="short_answer">Short answer</option></select></label><label>Prompt<textarea data-builder-field="prompt" rows="2" required placeholder="What should the learner demonstrate?"></textarea></label><label>Options <small>One option per line; leave empty for short answer.</small><textarea data-builder-field="options" rows="3" placeholder="Option A\nOption B\nOption C"></textarea></label><label>Correct answer<input data-builder-field="correct_answer" required placeholder="Exact answer"></label><label>Points<input data-builder-field="points" type="number" min="1" value="1" required></label><label>Explanation<textarea data-builder-field="explanation" rows="2" placeholder="Explain the learning signal after submission."></textarea></label>`;
+    question.querySelector('[data-remove-builder-question]')?.addEventListener('click', () => question.remove());
+    container.appendChild(question);
+}
+
+function collectExamBuilderData(form) {
+    const questions = [...form.querySelectorAll('[data-builder-question]')].map((node, index) => {
+        const value = (name) => node.querySelector(`[data-builder-field="${name}"]`)?.value || '';
+        return { position: index + 1, question_type: value('question_type'), prompt: value('prompt'), options: value('options').split(/\n/).map((item) => item.trim()).filter(Boolean), correct_answer: value('correct_answer'), points: Number(value('points') || 1), explanation: value('explanation') };
+    });
+    return { title: form.elements.title.value.trim(), description: form.elements.description.value.trim(), duration_minutes: Number(form.elements.duration_minutes.value), max_attempts: Number(form.elements.max_attempts.value), questions };
+}
+
+async function submitExamBuilder(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const message = document.getElementById('exam-builder-message');
+    const data = collectExamBuilderData(form);
+    if (!data.title || data.questions.some((question) => !question.prompt || !question.correct_answer)) {
+        if (message) message.textContent = app.language === 'mn' ? 'Нэр, prompt болон зөв хариултаа бөглөнө үү.' : 'Add a title, prompt, and correct answer for every question.';
+        return;
+    }
+    try {
+        await app.dataAdapter.createExam(data);
+        if (message) message.textContent = app.language === 'mn' ? 'Шалгалт амжилттай нийтлэгдлээ.' : 'Exam published successfully.';
+        form.reset();
+        document.getElementById('exam-builder-questions').innerHTML = '';
+        app.builderQuestionCount = 0;
+        addExamBuilderQuestion();
+        closeExamBuilder();
+        await renderAssessments();
+    } catch (error) {
+        if (message) message.textContent = error.message || 'The exam could not be created.';
+    }
+}
+
+async function startExamView(examId) {
+    try {
+        const attempt = await app.dataAdapter.startExam(examId);
+        app.activeExamAttempt = attempt;
+        renderStudentExam(attempt);
+    } catch (error) {
+        showToast(error.message || (app.language === 'mn' ? 'Шалгалт эхлүүлж чадсангүй.' : 'The exam could not be started.'), 'error');
+    }
+}
+
+function renderStudentExam(attempt) {
+    const exam = attempt?.exam || {};
+    const panel = document.getElementById('student-exam-view');
+    const result = document.getElementById('exam-result-panel');
+    if (!panel) return;
+    document.getElementById('exam-list')?.classList.add('is-hidden');
+    document.getElementById('exam-builder-panel')?.classList.add('is-hidden');
+    result?.classList.add('is-hidden');
+    panel.classList.remove('is-hidden');
+    document.getElementById('student-exam-title').textContent = localizeContent(exam.title || 'Assessment');
+    document.getElementById('student-exam-description').textContent = localizeContent(exam.description || 'Work carefully and submit when you are ready.');
+    const answerMap = Object.fromEntries((attempt.answers || []).map((answer) => [answer.question_id, answer.answer]));
+    const questions = document.getElementById('student-exam-questions');
+    questions.innerHTML = (exam.questions || []).map((question, index) => {
+        const answer = escapeHtml(answerMap[question.id] || '');
+        const input = question.question_type === 'multiple_choice' ? (question.options || []).map((option) => `<label class="exam-option"><input type="radio" name="exam-question-${question.id}" data-exam-answer="${question.id}" value="${escapeHtml(option)}" ${String(answerMap[question.id] || '') === String(option) ? 'checked' : ''}><span>${escapeHtml(option)}</span></label>`).join('') : `<textarea data-exam-answer="${question.id}" rows="3" placeholder="Write your answer…">${answer}</textarea>`;
+        return `<article class="student-exam-question"><div class="student-exam-question-top"><span>${String(index + 1).padStart(2, '0')}</span><small>${Number(question.points || 1)} point${Number(question.points || 1) === 1 ? '' : 's'}</small></div><h3>${escapeHtml(question.prompt)}</h3><div class="exam-answer-control">${input}</div></article>`;
+    }).join('');
+    questions.querySelectorAll('[data-exam-answer]').forEach((input) => input.addEventListener(input.type === 'radio' ? 'change' : 'blur', () => saveExamAnswerField(input)));
+    startExamTimer(attempt);
+}
+
+function startExamTimer(attempt) {
+    if (app.examTimer) window.clearInterval(app.examTimer);
+    const timerNode = document.getElementById('student-exam-timer');
+    const duration = Number(attempt?.exam?.duration_minutes || 20) * 60;
+    const started = new Date(attempt?.started_at || Date.now()).getTime();
+    const tick = () => {
+        const remaining = Math.max(0, duration - Math.floor((Date.now() - started) / 1000));
+        const minutes = String(Math.floor(remaining / 60)).padStart(2, '0');
+        const seconds = String(remaining % 60).padStart(2, '0');
+        if (timerNode) { timerNode.textContent = `${minutes}:${seconds}`; timerNode.classList.toggle('is-warning', remaining <= 300); }
+        if (!remaining) { window.clearInterval(app.examTimer); void submitActiveExam(true); }
+    };
+    tick();
+    app.examTimer = window.setInterval(tick, 1000);
+}
+
+async function saveExamAnswerField(input) {
+    if (!app.activeExamAttempt || !input) return;
+    try { await app.dataAdapter.saveExamAnswer(app.activeExamAttempt.id, input.dataset.examAnswer, input.value); } catch (error) { /* save retry happens on explicit save */ }
+}
+
+async function saveActiveExamAnswers() {
+    const inputs = [...document.querySelectorAll('[data-exam-answer]')];
+    await Promise.all(inputs.map((input) => saveExamAnswerField(input)));
+    const message = document.getElementById('student-exam-message');
+    if (message) message.textContent = app.language === 'mn' ? 'Хариултууд хадгалагдлаа.' : 'Your answers are saved.';
+}
+
+async function submitActiveExam(autoSubmit = false) {
+    if (!app.activeExamAttempt) return;
+    const message = document.getElementById('student-exam-message');
+    if (!autoSubmit && !window.confirm(app.language === 'mn' ? 'Шалгалтаа илгээх үү?' : 'Submit this exam now?')) return;
+    try {
+        await saveActiveExamAnswers();
+        const result = await app.dataAdapter.submitExam(app.activeExamAttempt.id);
+        app.activeExamAttempt = null;
+        if (app.examTimer) window.clearInterval(app.examTimer);
+        document.getElementById('student-exam-view')?.classList.add('is-hidden');
+        document.getElementById('exam-result-panel')?.classList.remove('is-hidden');
+        document.getElementById('exam-result-score').textContent = `${Number(result.score || 0).toFixed(0)}%`;
+        document.getElementById('exam-result-message').textContent = result.status === 'expired' ? 'Time expired. Your answers were submitted.' : 'Your result has been saved to your progress report.';
+        document.getElementById('exam-list')?.classList.remove('is-hidden');
+        await renderAssessments();
+        await renderDashboard();
+    } catch (error) {
+        if (message) message.textContent = error.message || 'The exam could not be submitted.';
+    }
 }
 
 function renderDashboardCourseDiscovery(livePath) {

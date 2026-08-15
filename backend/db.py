@@ -2,7 +2,9 @@
 Supabase Database Client
 """
 
+import json
 import os
+from datetime import datetime, timezone
 from supabase import create_client, Client
 from werkzeug.security import generate_password_hash
 
@@ -258,6 +260,210 @@ class SupabaseDB:
             'completed_at': 'now()',
         }).execute()
         return response.data[0] if response.data else None
+
+    # ============ ASSESSMENT OPERATIONS ============
+
+    @staticmethod
+    def _question_payload(question, include_answers=False):
+        item = dict(question or {})
+        options = item.get('options', [])
+        if isinstance(options, str):
+            try:
+                options = json.loads(options)
+            except (TypeError, ValueError):
+                options = []
+        item['options'] = options or []
+        if not include_answers:
+            item.pop('correct_answer', None)
+            item.pop('explanation', None)
+        return item
+
+    def create_exam(self, data: dict, created_by: int):
+        exam_payload = {
+            'title': data['title'].strip(),
+            'description': str(data.get('description', '')).strip(),
+            'duration_minutes': int(data.get('duration_minutes', 20)),
+            'max_attempts': int(data.get('max_attempts', 3)),
+            'status': data.get('status', 'published'),
+            'created_by': created_by,
+        }
+        exam_response = self.client.table('exams').insert(exam_payload).execute()
+        exam = exam_response.data[0] if exam_response.data else None
+        if not exam:
+            return None
+        questions = []
+        for position, question in enumerate(data.get('questions', []), start=1):
+            payload = {
+                'exam_id': exam['id'],
+                'position': int(question.get('position', position)),
+                'question_type': question.get('question_type', 'multiple_choice'),
+                'prompt': str(question.get('prompt', '')).strip(),
+                'options': question.get('options', []),
+                'correct_answer': question.get('correct_answer'),
+                'points': float(question.get('points', 1)),
+                'explanation': str(question.get('explanation', '')).strip(),
+            }
+            response = self.client.table('exam_questions').insert(payload).execute()
+            if response.data:
+                questions.append(response.data[0])
+        exam['questions'] = questions
+        return exam
+
+    def get_exam(self, exam_id: int, include_answers=False):
+        response = self.client.table('exams').select('*').eq('id', exam_id).execute()
+        if not response.data:
+            return None
+        exam = dict(response.data[0])
+        question_response = self.client.table('exam_questions').select('*').eq('exam_id', exam_id).order('position').execute()
+        exam['questions'] = [self._question_payload(question, include_answers=include_answers) for question in (question_response.data or [])]
+        return exam
+
+    def get_exams_for_user(self, user_id: int, role: str = 'student'):
+        query = self.client.table('exams').select('*').order('created_at', desc=True)
+        if role == 'student':
+            query = query.eq('status', 'published')
+        response = query.execute()
+        exams = []
+        for row in response.data or []:
+            exam = dict(row)
+            questions = self.client.table('exam_questions').select('id,position,question_type,points').eq('exam_id', exam['id']).order('position').execute().data or []
+            attempts = self.client.table('exam_attempts').select('id,status,score,started_at,submitted_at').eq('exam_id', exam['id']).eq('user_id', user_id).order('started_at', desc=True).execute().data or []
+            exam['question_count'] = len(questions)
+            exam['attempt_count'] = len(attempts)
+            exam['best_score'] = max([float(item.get('score', 0) or 0) for item in attempts], default=None)
+            exam['latest_attempt'] = attempts[0] if attempts else None
+            exams.append(exam)
+        return exams
+
+    def start_exam(self, exam_id: int, user_id: int):
+        exam = self.get_exam(exam_id, include_answers=False)
+        if not exam or exam.get('status') != 'published':
+            return None, 'exam_not_available'
+        active = self.client.table('exam_attempts').select('*').eq('exam_id', exam_id).eq('user_id', user_id).eq('status', 'in_progress').order('started_at', desc=True).execute().data or []
+        if active:
+            return self.get_attempt(active[0]['id'], user_id=user_id, include_answers=False), None
+        attempts = self.client.table('exam_attempts').select('id').eq('exam_id', exam_id).eq('user_id', user_id).execute().data or []
+        if len(attempts) >= int(exam.get('max_attempts', 3) or 3):
+            return None, 'attempt_limit_reached'
+        total_points = sum(float(question.get('points', 1) or 1) for question in exam.get('questions', []))
+        response = self.client.table('exam_attempts').insert({
+            'exam_id': exam_id,
+            'user_id': user_id,
+            'status': 'in_progress',
+            'total_points': total_points,
+        }).execute()
+        attempt = response.data[0] if response.data else None
+        return (self.get_attempt(attempt['id'], user_id=user_id, include_answers=False) if attempt else None), None
+
+    def get_attempt(self, attempt_id: int, user_id: int | None = None, include_answers=False):
+        query = self.client.table('exam_attempts').select('*').eq('id', attempt_id)
+        if user_id is not None:
+            query = query.eq('user_id', user_id)
+        response = query.execute()
+        if not response.data:
+            return None
+        attempt = dict(response.data[0])
+        attempt['exam'] = self.get_exam(attempt['exam_id'], include_answers=include_answers)
+        answers = self.client.table('exam_answers').select('*').eq('attempt_id', attempt_id).execute().data or []
+        attempt['answers'] = answers
+        return attempt
+
+    def save_exam_answer(self, attempt_id: int, question_id: int, answer: str):
+        response = self.client.table('exam_answers').upsert({
+            'attempt_id': attempt_id,
+            'question_id': question_id,
+            'answer': str(answer or ''),
+            'updated_at': datetime.now(timezone.utc).isoformat(),
+        }).execute()
+        return response.data[0] if response.data else None
+
+    def submit_exam(self, attempt_id: int, user_id: int):
+        attempt = self.get_attempt(attempt_id, user_id=user_id, include_answers=True)
+        if not attempt:
+            return None, 'attempt_not_found'
+        if attempt.get('status') in {'submitted', 'graded', 'expired'}:
+            return attempt, None
+        started_at = attempt.get('started_at')
+        if started_at:
+            try:
+                parsed = datetime.fromisoformat(str(started_at).replace('Z', '+00:00'))
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=timezone.utc)
+                elapsed = (datetime.now(timezone.utc) - parsed).total_seconds() / 60
+                if elapsed > float(attempt['exam'].get('duration_minutes', 20)):
+                    status = 'expired'
+                else:
+                    status = 'graded'
+            except (TypeError, ValueError):
+                status = 'graded'
+        else:
+            status = 'graded'
+        answers_by_question = {item['question_id']: item for item in attempt.get('answers', [])}
+        earned = 0.0
+        total = 0.0
+        for question in attempt['exam'].get('questions', []):
+            points = float(question.get('points', 1) or 1)
+            total += points
+            answer = answers_by_question.get(question['id'], {}).get('answer', '')
+            expected = str(question.get('correct_answer', '') or '').strip().casefold()
+            actual = str(answer or '').strip().casefold()
+            correct = bool(expected and actual == expected)
+            item_score = points if correct else 0.0
+            earned += item_score
+            self.client.table('exam_answers').upsert({
+                'attempt_id': attempt_id,
+                'question_id': question['id'],
+                'answer': answer,
+                'is_correct': correct,
+                'earned_points': item_score,
+                'feedback': question.get('explanation', '') if correct or status != 'in_progress' else '',
+                'updated_at': datetime.now(timezone.utc).isoformat(),
+            }).execute()
+        score = round((earned / total) * 100, 2) if total else 0
+        updated = self.client.table('exam_attempts').update({
+            'status': status,
+            'score': score,
+            'earned_points': earned,
+            'total_points': total,
+            'submitted_at': datetime.now(timezone.utc).isoformat(),
+            'graded_at': datetime.now(timezone.utc).isoformat(),
+        }).eq('id', attempt_id).eq('user_id', user_id).execute()
+        final_attempt = self.get_attempt(attempt_id, user_id=user_id, include_answers=False)
+        if final_attempt:
+            final_attempt['result_answers'] = self.client.table('exam_answers').select('*').eq('attempt_id', attempt_id).execute().data or []
+            final_attempt['exam'] = self.get_exam(attempt['exam_id'], include_answers=True)
+        return final_attempt or attempt, None
+
+    def get_exam_report(self, exam_id: int):
+        exam = self.get_exam(exam_id, include_answers=True)
+        if not exam:
+            return None
+        attempts = self.client.table('exam_attempts').select('*').eq('exam_id', exam_id).order('submitted_at', desc=True).execute().data or []
+        submitted = [item for item in attempts if item.get('status') in {'submitted', 'graded'}]
+        scores = [float(item.get('score', 0) or 0) for item in submitted]
+        return {
+            'exam': {key: value for key, value in exam.items() if key != 'questions'},
+            'question_count': len(exam.get('questions', [])),
+            'attempt_count': len(attempts),
+            'submitted_count': len(submitted),
+            'average_score': round(sum(scores) / len(scores), 2) if scores else 0,
+            'highest_score': max(scores, default=0),
+            'pass_rate': round(sum(1 for score in scores if score >= 60) / len(scores) * 100, 2) if scores else 0,
+            'distribution': {'excellent': sum(1 for score in scores if score >= 80), 'pass': sum(1 for score in scores if 60 <= score < 80), 'needs_review': sum(1 for score in scores if score < 60)},
+        }
+
+    def get_progress_report(self, user_id: int):
+        progress = self.get_user_lesson_progress(user_id) or []
+        courses = self.get_courses_for_user(user_id)
+        attempts = self.client.table('exam_attempts').select('id,exam_id,status,score,started_at,submitted_at').eq('user_id', user_id).order('started_at', desc=True).execute().data or []
+        mastery = self.get_user_mastery(user_id) or []
+        completed = len([item for item in progress if item.get('status') == 'completed' or item.get('completed_at')])
+        return {
+            'summary': {'lessons_started': len(progress), 'lessons_completed': completed, 'courses_active': len([course for course in courses if float(course.get('progress', 0) or 0) < 100]), 'average_mastery': round(sum(float(item.get('mastery_score', 0) or 0) for item in mastery) / len(mastery), 2) if mastery else 0},
+            'courses': [{'id': course.get('id'), 'title': course.get('title'), 'progress': course.get('progress', 0), 'completed_lessons': course.get('completed_lessons', 0), 'lesson_count': course.get('lesson_count', 0)} for course in courses],
+            'exams': attempts,
+            'mastery': mastery,
+        }
 
     # ============ CLASS OPERATIONS ============
     

@@ -1,6 +1,6 @@
 """Learning analytics and progress tracking routes."""
 
-from flask import Blueprint
+from flask import Blueprint, request
 
 from backend.api.auth import token_required
 from backend.db import db
@@ -19,6 +19,12 @@ def get_dashboard(current_user):
         mastery_data = db.get_user_mastery(current_user["id"])
         submissions = db.get_user_submissions(current_user["id"], limit=100)
         lesson_progress = db.get_user_lesson_progress(current_user["id"]) or []
+        try:
+            progress_report = db.get_progress_report(current_user["id"])
+            exam_summary = {"attempts": len(progress_report.get("exams", [])), "best_score": max([float(item.get("score", 0) or 0) for item in progress_report.get("exams", [])], default=None)}
+        except Exception:
+            progress_report = None
+            exam_summary = {"attempts": 0, "best_score": None}
         recent_practice = []
         for submission in submissions:
             problem = submission.get("problems") or {}
@@ -58,6 +64,8 @@ def get_dashboard(current_user):
                 "study_minutes": len(lesson_progress) * 20,
                 "current_streak": 1 if lesson_progress else 0,
             },
+            "exam_summary": exam_summary,
+            "progress_report": progress_report,
             "message": "Dashboard loaded.",
             "message_mn": "Хяналтын самбар ачааллаа.",
         }, 200
@@ -69,6 +77,21 @@ def get_dashboard(current_user):
                 "message_mn": "Хяналтын самбар ачаалахад алдаа гарлаа.",
             }
         }, 503
+
+
+@analytics_bp.route("/progress-report", methods=["GET"])
+@token_required
+@any_permission_required(("analytics.read", "analytics.read.assigned", "analytics.read.own", "student.dashboard.read", "teacher.dashboard.read", "platform.read"))
+def get_progress_report(current_user):
+    requested_user_id = request.args.get("user_id", type=int)
+    staff_roles = {"owner", "admin", "teacher"}
+    target_user_id = requested_user_id if requested_user_id and current_user.get("role") in staff_roles else current_user["id"]
+    if target_user_id != current_user["id"] and current_user.get("role") not in staff_roles:
+        return error_response("permission_denied", "You can only view your own progress report.", "Та зөвхөн өөрийн ахицын тайланг харна.", 403)
+    try:
+        return {"user_id": target_user_id, "report": db.get_progress_report(target_user_id)}, 200
+    except Exception:
+        return error_response("progress_report_unavailable", "The progress report is temporarily unavailable.", "Ахицын тайлан түр боломжгүй байна.", 503)
 
 
 @analytics_bp.route("/mastery/<int:user_id>", methods=["GET"])
