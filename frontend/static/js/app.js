@@ -452,7 +452,24 @@ function renderStudentExam(attempt) {
         return `<article class="student-exam-question"><div class="student-exam-question-top"><span>${String(index + 1).padStart(2, '0')}</span><small>${Number(question.points || 1)} point${Number(question.points || 1) === 1 ? '' : 's'}</small></div><h3>${escapeHtml(question.prompt)}</h3><div class="exam-answer-control">${input}</div></article>`;
     }).join('');
     questions.querySelectorAll('[data-exam-answer]').forEach((input) => input.addEventListener(input.type === 'radio' ? 'change' : 'blur', () => saveExamAnswerField(input)));
+    renderStudentExamProgress('student-exam-progress', attempt);
     startExamTimer(attempt);
+}
+
+async function renderStudentExamProgress(targetId, attempt = null) {
+    const node = document.getElementById(targetId);
+    if (!node || !app.dataAdapter?.getProgressReport) return;
+    node.innerHTML = '<p class="muted">Loading your learning signal…</p>';
+    try {
+        const report = await app.dataAdapter.getProgressReport();
+        const summary = report?.summary || {};
+        const exams = Array.isArray(report?.exams) ? report.exams : [];
+        const questionCount = attempt?.exam?.questions?.length || 0;
+        const answeredCount = attempt?.answers?.filter((answer) => String(answer.answer || '').trim()).length || 0;
+        node.innerHTML = `<div class="student-progress-strip"><div><span>Lessons completed</span><strong>${Number(summary.lessons_completed || 0)}</strong></div><div><span>Average mastery</span><strong>${Number(summary.average_mastery || 0)}%</strong></div><div><span>Exam attempts</span><strong>${exams.length}</strong></div>${attempt ? `<div><span>Answers saved</span><strong>${answeredCount}/${questionCount}</strong></div>` : ''}</div>`;
+    } catch (error) {
+        node.innerHTML = '<p class="muted">Progress analytics will appear after your first saved activity.</p>';
+    }
 }
 
 function startExamTimer(attempt) {
@@ -496,6 +513,7 @@ async function submitActiveExam(autoSubmit = false) {
         document.getElementById('exam-result-panel')?.classList.remove('is-hidden');
         document.getElementById('exam-result-score').textContent = `${Number(result.score || 0).toFixed(0)}%`;
         document.getElementById('exam-result-message').textContent = result.status === 'expired' ? 'Time expired. Your answers were submitted.' : 'Your result has been saved to your progress report.';
+        await renderStudentExamProgress('exam-result-report');
         document.getElementById('exam-list')?.classList.remove('is-hidden');
         await renderAssessments();
         await renderDashboard();
