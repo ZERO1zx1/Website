@@ -28,6 +28,8 @@ const apiAdapterContract = {
 };
 
 const backendEnabled = document.documentElement.dataset.backend === 'enabled';
+const standalonePage = document.documentElement.dataset.workspacePage || 'workspace';
+const isStandalonePage = standalonePage !== 'workspace';
 const hasOAuthSession = Boolean(new URLSearchParams(window.location.hash.slice(1)).get('auth_token'));
 const hasBackendSession = Boolean(sessionStorage.getItem('codehaven-access-token') || localStorage.getItem('codehaven-access-token') || hasOAuthSession);
 const demoMode = !backendEnabled && sessionStorage.getItem('codehaven-demo-mode') === 'true';
@@ -36,13 +38,13 @@ const app = {
     dataAdapter: selectedAdapter,
     user: null,
     isDemoMode: demoMode,
-    currentView: 'auth',
+    currentView: isStandalonePage ? standalonePage : 'auth',
     activeFilter: 'all',
     problems: mockData.problems,
     courses: mockData.courses,
     curriculumTag: 'all',
     curriculumQuery: '',
-    selectedCourseId: 'python',
+    selectedCourseId: new URLSearchParams(window.location.search).get('course_id') || 'python',
     lastFocusedElement: null,
     theme: localStorage.getItem('codehaven-theme') || 'light',
     language: localStorage.getItem('codehaven-language') || 'en',
@@ -92,7 +94,16 @@ async function initializeApp() {
         startRealtimeRefresh();
     }
     applyLanguage();
-    showView(app.user ? 'dashboard' : 'home');
+    if (isStandalonePage) {
+        if (!app.user) {
+            const next = `${window.location.pathname}${window.location.search}`;
+            window.location.replace(`/login?next=${encodeURIComponent(next)}`);
+            return;
+        }
+        showView(standalonePage);
+    } else {
+        showView(app.user ? 'dashboard' : 'home');
+    }
 }
 
 function bindNavigation() {
@@ -205,6 +216,10 @@ function logoutUser() {
     app.realtimeTimer = null;
     app.user = null;
     app.dataAdapter = window.codehavenApiAdapter || mockAdapter;
+    if (isStandalonePage) {
+        window.location.assign('/login');
+        return;
+    }
     setAuthMode('login');
     showView('auth');
     showToast(app.language === 'mn' ? 'Та аккаунтаас гарлаа.' : 'You have been signed out.', 'success');
@@ -222,17 +237,19 @@ function showView(viewName) {
     document.body.classList.toggle('public-view', isPublicView);
     document.querySelectorAll('.view').forEach((view) => view.classList.toggle('is-visible', view.dataset.page === viewName));
     document.querySelectorAll('.nav-item').forEach((item) => {
-        const active = item.dataset.view === viewName;
+        const active = (item.dataset.view || item.dataset.pageLink) === viewName;
         item.classList.toggle('is-active', active);
         if (active) item.setAttribute('aria-current', 'page'); else item.removeAttribute('aria-current');
     });
     const [root, current] = viewLabels[viewName];
-    document.getElementById('breadcrumb-root').textContent = root;
-    document.getElementById('breadcrumb-current').textContent = current;
+    document.getElementById('breadcrumb-root')?.replaceChildren(document.createTextNode(root));
+    document.getElementById('breadcrumb-current')?.replaceChildren(document.createTextNode(current));
     document.querySelector('.sidebar')?.classList.remove('is-open');
     document.getElementById('sidebar-scrim')?.classList.remove('is-visible');
     document.getElementById('sidebar-scrim')?.setAttribute('aria-hidden', 'true');
     document.getElementById('mobile-menu')?.setAttribute('aria-expanded', 'false');
+    if (viewName === 'dashboard') void renderDashboard().catch(() => {});
+    if (viewName === 'learn') void renderLearningPath().catch(() => showToast(app.language === 'mn' ? 'Learning path ачаалж чадсангүй.' : 'Learning path could not be loaded.', 'error'));
     if (viewName === 'practice') void renderProblems().catch(() => renderProblemCards(app.problems));
     if (viewName === 'assessments') void renderAssessments().catch(() => showToast(app.language === 'mn' ? 'Шалгалтыг ачаалж чадсангүй.' : 'Assessments could not be loaded.', 'error'));
     if (viewName === 'auth') document.querySelector('.auth-card input')?.focus();
@@ -539,8 +556,12 @@ function renderDashboardCourseDiscovery(livePath) {
     }).join('');
     container.querySelectorAll('[data-dashboard-course]').forEach((button) => button.addEventListener('click', () => {
         app.selectedCourseId = button.dataset.dashboardCourse;
-        showView('learn');
-        void renderLearningPath();
+        if (isStandalonePage) {
+            window.location.assign(`/learn?course_id=${encodeURIComponent(button.dataset.dashboardCourse)}`);
+        } else {
+            showView('learn');
+            void renderLearningPath();
+        }
     }));
 }
 
@@ -565,6 +586,10 @@ function renderDashboardFocus(livePath) {
         </button>`).join('');
     focusList.querySelectorAll('[data-focus-course]').forEach((button) => button.addEventListener('click', async () => {
         app.selectedCourseId = button.dataset.focusCourse;
+        if (isStandalonePage) {
+            window.location.assign(`/learn?course_id=${encodeURIComponent(button.dataset.focusCourse)}`);
+            return;
+        }
         showView('learn');
         try {
             await renderLearningPath();
@@ -735,11 +760,13 @@ async function renderProblems() {
 }
 
 async function refreshDataViews() {
-    const results = await Promise.allSettled([
-        renderDashboard(),
-        renderLearningPath(),
-        renderProblems()
-    ]);
+    const jobs = [];
+    if (document.getElementById('recent-practice-list')) jobs.push(renderDashboard());
+    if (document.getElementById('course-grid')) jobs.push(renderLearningPath());
+    if (document.getElementById('problem-grid')) jobs.push(renderProblems());
+    if (document.getElementById('exam-list')) jobs.push(renderAssessments());
+    if (!jobs.length) return;
+    const results = await Promise.allSettled(jobs);
     const failed = results.some((result) => result.status === 'rejected');
     if (failed && backendEnabled && window.codehavenApiAdapter === app.dataAdapter) {
         showToast(app.language === 'mn' ? 'Зарим мэдээллийг одоогоор ачаалж чадсангүй.' : 'Some live data could not be loaded yet.', 'error');

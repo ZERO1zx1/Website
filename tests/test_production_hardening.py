@@ -240,6 +240,33 @@ def test_public_multi_page_routes_render(monkeypatch):
         assert marker in response.data
 
 
+def test_standalone_workspace_pages_render_separately(monkeypatch):
+    monkeypatch.setenv("FLASK_ENV", "development")
+    monkeypatch.setenv("FRONTEND_ONLY", "false")
+    monkeypatch.setenv("LOCAL_DB", "true")
+    monkeypatch.setenv("SECRET_KEY", "local-development-secret-that-is-long-enough")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+    from backend.db import db
+    db._client = None
+    client = create_app().test_client()
+    for path, marker in [
+        ("/learn", b'id="learn-view"'),
+        ("/courses", b'id="learn-view"'),
+        ("/practice", b'id="practice-view"'),
+        ("/assessments", b'id="assessments-view"'),
+        ("/exams", b'id="assessments-view"'),
+        ("/profile", b'id="profile-view"'),
+        ("/settings", b'id="settings-view"'),
+    ]:
+        response = client.get(path)
+        assert response.status_code == 200
+        assert marker in response.data
+        assert b'workspace_base.html' not in response.data
+        assert b'frontend/static/js/app.js' not in response.data
+        assert b'id="primary-navigation"' in response.data
+
+
 def test_local_password_reset_request_and_confirm(monkeypatch, tmp_path):
     from backend.db import db
     monkeypatch.setenv("FLASK_ENV", "development")

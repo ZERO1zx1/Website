@@ -1,0 +1,9 @@
+{% extends 'pages/workspace_base.html' %}
+{% set workspace_page = 'settings' %}
+{% block title %}Codehaven — Preferences{% endblock %}
+{% block workspace_content %}
+<section class="view is-visible" id="settings-view" data-page="settings">
+    <div class="page-heading"><p class="eyebrow">Workspace</p><h1>Preferences</h1><p class="heading-copy">Tune the workspace for your best learning sessions. These settings are saved in this browser.</p></div>
+    <div class="panel settings-panel"><div class="setting-row"><div><strong>Color theme</strong><span>Choose the environment that feels easiest on your eyes.</span></div><div class="segmented-control"><button class="is-active" type="button" data-theme-choice="light">Light</button><button type="button" data-theme-choice="dark">Dark</button></div></div><div class="setting-row"><div><strong>Language</strong><span>Choose the language for the learning workspace.</span></div><select class="select-button" id="settings-language-select"><option value="en">English</option><option value="mn">Монгол</option></select></div><div class="setting-row"><div><strong>Editor font size</strong><span>Set a comfortable reading size for code.</span></div><select class="select-button" id="editor-font-size"><option value="14">14 px</option><option value="16">16 px</option><option value="18">18 px</option></select></div></div>
+</section>
+{% endblock %}

@@ -39,6 +39,10 @@
         return payload?.user || payload;
     }
     function go(path) { window.location.assign(path); }
+    function nextAfterAuth() {
+        const candidate = new URLSearchParams(window.location.search).get('next') || '/dashboard';
+        return candidate.startsWith('/') && !candidate.startsWith('//') ? candidate : '/dashboard';
+    }
     function isValidEmail(value) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim()); }
     function validationCopy(key) {
         const mn = document.documentElement.lang === 'mn';
@@ -105,11 +109,11 @@
             try {
                 if (form.dataset.pageAuth === 'login') {
                     const payload = await api.request('/api/auth/login', {method: 'POST', body: JSON.stringify({email: data.email, password: data.password})});
-                    saveSession(payload); go('/dashboard'); return;
+                    saveSession(payload); go(nextAfterAuth()); return;
                 }
                 if (form.dataset.pageAuth === 'register') {
                     const payload = await api.request('/api/auth/register', {method: 'POST', body: JSON.stringify({name: data.name, email: data.email, password: data.password})});
-                    saveSession(payload); go('/dashboard'); return;
+                    saveSession(payload); go(nextAfterAuth()); return;
                 }
                 if (form.dataset.pageAuth === 'reset-request') {
                     const payload = await api.request('/api/auth/password-reset/request', {method: 'POST', body: JSON.stringify({email: data.email})});

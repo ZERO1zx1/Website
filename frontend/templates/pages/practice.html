@@ -1,0 +1,10 @@
+{% extends 'pages/workspace_base.html' %}
+{% set workspace_page = 'practice' %}
+{% block title %}Codehaven — Practice library{% endblock %}
+{% block workspace_content %}
+<section class="view is-visible" id="practice-view" data-page="practice">
+    <div class="page-heading heading-with-action"><div><p class="eyebrow">Build fluency</p><h1>Practice library</h1><p class="heading-copy">Choose a challenge that matches your energy today. Problems and progress load from your account.</p></div><button class="button button-primary" type="button" data-open-editor data-problem-id="1">Quick practice <span aria-hidden="true">+</span></button></div>
+    <div class="filter-bar"><div class="filter-tabs" role="tablist"><button class="filter-tab is-active" type="button" data-filter="all">All problems</button><button class="filter-tab" type="button" data-filter="easy">Easy</button><button class="filter-tab" type="button" data-filter="medium">Medium</button><button class="filter-tab" type="button" data-filter="hard">Hard</button></div><button class="select-button" type="button">Newest first <span>⌄</span></button></div>
+    <div class="problem-grid" id="problem-grid"><div class="panel data-state data-state-loading"><strong>Loading practice problems…</strong></div></div>
+</section>
+{% endblock %}

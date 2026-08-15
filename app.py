@@ -171,7 +171,65 @@ def create_app(config_name="development"):
 
     @app.route("/dashboard", methods=["GET"])
     def dashboard_page():
-        return render_template("pages/dashboard.html", backend_enabled=not frontend_only, page_class="dashboard-page-shell")
+        return render_template(
+            "pages/workspace_dashboard.html",
+            backend_enabled=not frontend_only,
+            page_class="workspace-dashboard-page",
+            workspace_page="dashboard",
+            breadcrumb="Dashboard",
+        )
+
+    @app.route("/learn", methods=["GET"])
+    @app.route("/courses", methods=["GET"])
+    def learn_page():
+        return render_template(
+            "pages/learn.html",
+            backend_enabled=not frontend_only,
+            page_class="workspace-learn-page",
+            workspace_page="learn",
+            breadcrumb="Learning paths",
+        )
+
+    @app.route("/practice", methods=["GET"])
+    def practice_page():
+        return render_template(
+            "pages/practice.html",
+            backend_enabled=not frontend_only,
+            page_class="workspace-practice-page",
+            workspace_page="practice",
+            breadcrumb="Practice library",
+        )
+
+    @app.route("/assessments", methods=["GET"])
+    @app.route("/exams", methods=["GET"])
+    def assessments_page():
+        return render_template(
+            "pages/assessments.html",
+            backend_enabled=not frontend_only,
+            page_class="workspace-assessments-page",
+            workspace_page="assessments",
+            breadcrumb="Assessments",
+        )
+
+    @app.route("/profile", methods=["GET"])
+    def profile_page():
+        return render_template(
+            "pages/profile.html",
+            backend_enabled=not frontend_only,
+            page_class="workspace-profile-page",
+            workspace_page="profile",
+            breadcrumb="Profile",
+        )
+
+    @app.route("/settings", methods=["GET"])
+    def settings_page():
+        return render_template(
+            "pages/settings.html",
+            backend_enabled=not frontend_only,
+            page_class="workspace-settings-page",
+            workspace_page="settings",
+            breadcrumb="Preferences",
+        )
 
     @app.route("/api/health", methods=["GET"])
     def health_check():

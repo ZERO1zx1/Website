@@ -1,0 +1,9 @@
+{% extends 'pages/workspace_base.html' %}
+{% set workspace_page = 'profile' %}
+{% block title %}Codehaven — Profile{% endblock %}
+{% block workspace_content %}
+<section class="view is-visible" id="profile-view" data-page="profile">
+    <div class="page-heading"><p class="eyebrow">Your account</p><h1>Profile</h1><p class="heading-copy">Manage your own learning account and workspace.</p></div>
+    <div class="profile-grid"><article class="panel profile-card"><div class="profile-header"><div class="avatar avatar-large" data-profile-avatar>L</div><div><h2 data-profile-name>Account holder</h2><p data-profile-email>Loading account…</p><span class="pill pill-purple" data-profile-role>STUDENT</span></div></div><div class="profile-details"><div><span>Focus</span><strong>Personal learning progress</strong></div><div><span>Weekly goal</span><strong>Set your own pace</strong></div><div><span>Current level</span><strong data-profile-level>Student</strong></div></div><button class="button button-light" type="button" data-logout>Sign out</button></article><article class="panel preferences-card"><div class="panel-heading"><div><p class="eyebrow">Account status</p><h3>Your privacy boundary</h3></div></div><p class="heading-copy">Your lessons, attempts, submissions, and analytics are loaded for the authenticated account only.</p><div class="profile-details"><div><span>Data source</span><strong>Live backend account</strong></div><div><span>Access model</span><strong>Role-protected</strong></div></div></article></div>
+</section>
+{% endblock %}
