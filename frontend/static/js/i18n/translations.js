@@ -14,8 +14,6 @@ const translations = {
         'landing.live': 'YOUR NEXT STEP',
         'landing.cardTitle': 'Functions and clean code',
         'landing.cardDescription': 'A focused lesson, a small challenge, and a clear sense of progress.',
-        'landing.complete': '68% complete',
-        'landing.mastery': 'overall mastery',
         'landing.feature1Title': 'Learn with direction',
         'landing.feature1Text': 'A calm path from foundations to practical programming.',
         'landing.feature2Title': 'Practice without pressure',
@@ -106,8 +104,6 @@ const translations = {
         'landing.live': 'ТАНЫ ДАРААГИЙН АЛХАМ',
         'landing.cardTitle': 'Function ба цэвэр код',
         'landing.cardDescription': 'Төвлөрсөн хичээл, жижиг бодлого, ойлгомжтой ахиц.',
-        'landing.complete': '68% дууссан',
-        'landing.mastery': 'нийт эзэмшилт',
         'landing.feature1Title': 'Чиглэлтэй суралц',
         'landing.feature1Text': 'Сууриас практик programming хүртэл тайван, бүтэцтэй зам.',
         'landing.feature2Title': 'Дарамтгүй дадлага хий',
@@ -190,7 +186,6 @@ const textTranslations = {
     en: {
         'View path': 'View path', 'Student': 'Student', 'Overview': 'Overview', 'Learning path': 'Learning path',
         'Practice': 'Practice', 'Assessments': 'Assessments', 'Profile': 'Profile', 'Preferences': 'Preferences',
-        'Tuesday, August 13, 2026': 'Tuesday, August 13, 2026', 'Keep your momentum, Nara.': 'Keep your momentum, Nara.',
         'Learning activity': 'Learning activity', 'Hours studied': 'Hours studied', 'Skill map': 'Skill map',
         'Where you’re growing': 'Where you’re growing', 'Recent practice': 'Recent practice', 'Review': 'Review',
         'Solve': 'Solve', 'Sign in': 'Sign in', 'Create account': 'Create account'
@@ -198,7 +193,6 @@ const textTranslations = {
     mn: {
         'View path': 'Замыг харах', 'Student': 'Суралцагч', 'Overview': 'Тойм', 'Learning path': 'Суралцах зам',
         'Practice': 'Дадлага', 'Assessments': 'Шалгалт', 'Profile': 'Профайл', 'Preferences': 'Тохиргоо',
-        'Tuesday, August 13, 2026': '2026 оны 8-р сарын 13, Мягмар', 'Keep your momentum, Nara.': 'Ахицын эрчээ үргэлжлүүлээрэй, Нара.',
         'Learning activity': 'Суралцсан идэвх', 'Hours studied': 'Суралцсан цаг', 'Skill map': 'Ур чадварын зураг',
         'Where you’re growing': 'Таны хөгжиж буй ур чадвар', 'Recent practice': 'Сүүлийн дадлага', 'Review': 'Дахин харах',
         'Solve': 'Бодох', 'Sign in': 'Нэвтрэх', 'Create account': 'Бүртгэл үүсгэх'
@@ -212,7 +206,6 @@ const plainMn = {
     'Overview': 'Тойм', 'Learning': 'Суралцах', 'Practice': 'Дадлага', 'Assessments': 'Шалгалт',
     'Profile': 'Профайл', 'Preferences': 'Тохиргоо', 'Dashboard': 'Хянах самбар', 'Learning path': 'Суралцах зам',
     'Practice library': 'Дадлагын сан', 'Account': 'Бүртгэл', 'Sign in': 'Нэвтрэх',
-    'Tuesday, August 13, 2026': '2026 оны 8-р сарын 13, Мягмар', 'Keep your momentum, Nara.': 'Ахицын эрчээ үргэлжлүүлээрэй, Нара.',
     'Small, consistent practice compounds into real confidence.': 'Бага боловч тогтмол дадлага бодит итгэл болж хуримтлагдана.',
     'View weekly review': 'Долоо хоногийн тойм харах', 'Overall mastery': 'Нийт эзэмшил', 'Problems solved': 'Бодсон бодлого',
     'Study time': 'Суралцсан цаг', 'Current streak': 'Одоогийн дараалал', 'from last month': 'өнгөрсөн сараас',

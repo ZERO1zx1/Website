@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='20260815-pages') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='20260816-live-flow') }}">
     {% block head %}{% endblock %}
 </head>
 <body class="workspace-body {{ page_class|default('') }}">
@@ -77,10 +77,10 @@
     </div>
     <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
     <noscript><div class="noscript-message">JavaScript is required to use the Codehaven learning workspace.</div></noscript>
-    <script src="{{ url_for('static', filename='js/adapters/api-adapter.js', v='20260815-pages') }}"></script>
-    <script src="{{ url_for('static', filename='js/data/curriculum.js', v='20260815-pages') }}"></script>
-    <script src="{{ url_for('static', filename='js/i18n/translations.js', v='20260815-pages') }}"></script>
-    <script src="{{ url_for('static', filename='js/app.js', v='20260815-pages') }}"></script>
+    <script src="{{ url_for('static', filename='js/adapters/api-adapter.js', v='20260816-live-flow') }}"></script>
+    <script src="{{ url_for('static', filename='js/data/curriculum.js', v='20260816-live-flow') }}"></script>
+    <script src="{{ url_for('static', filename='js/i18n/translations.js', v='20260816-live-flow') }}"></script>
+    <script src="{{ url_for('static', filename='js/app.js', v='20260816-live-flow') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

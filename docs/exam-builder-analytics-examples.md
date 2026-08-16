@@ -1,6 +1,6 @@
 # Dashboard Analytics and Exam Builder Examples
 
-These examples match the Codehaven Flask API contract. The production implementation lives in `frontend/templates/index.html`, `frontend/static/js/app.js`, and `frontend/static/js/adapters/api-adapter.js`.
+These examples match the Codehaven Flask API contract. The production implementation lives in `frontend/templates/pages/workspace_dashboard.html`, `frontend/templates/pages/assessments.html`, `frontend/static/js/app.js`, and `frontend/static/js/adapters/api-adapter.js`.
 
 ## 1. Dashboard progress report
 

@@ -76,6 +76,9 @@
     }
 
     window.codehavenApiAdapter = {
+        async getReadiness() {
+            return request('/api/ready');
+        },
         async getUser() {
             if (!getToken()) return null;
             const payload = await request('/api/auth/me');
@@ -171,6 +174,10 @@
         },
         async getProgressReport() {
             const payload = await request('/api/analytics/progress-report');
+            return payload.report || payload;
+        },
+        async getExamReport(examId) {
+            const payload = await request(`/api/exams/${examId}/report`);
             return payload.report || payload;
         },
         async getProblems(query = {}) {

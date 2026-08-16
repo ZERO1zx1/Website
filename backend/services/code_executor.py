@@ -41,7 +41,13 @@ class CodeExecutor:
             image_name: Docker image name for sandbox
         """
         self.image_name = image_name
-        self.client = docker.from_env()
+        # The HTTP sandbox is the preferred production/local integration.
+        # Do not initialize Docker when SANDBOX_URL is configured: local
+        # development may have no Docker daemon while the sandbox service is
+        # already available on the application network.
+        self.client = None
+        if not os.getenv('SANDBOX_URL', '').strip():
+            self.client = docker.from_env()
     
     def build_image(self, dockerfile_path: str = 'sandbox/Dockerfile') -> bool:
         """
@@ -54,6 +60,9 @@ class CodeExecutor:
             True if build successful, False otherwise
         """
         try:
+            if self.client is None:
+                logger.error('Docker client is unavailable because an HTTP sandbox is configured.')
+                return False
             logger.info(f"Building Docker image: {self.image_name}")
             self.client.images.build(
                 path='.',
@@ -130,7 +139,9 @@ class CodeExecutor:
                 result['timestamp'] = datetime.now(timezone.utc).isoformat()
                 return result
             
-            # Run container
+            # Run container when no HTTP sandbox is configured.
+            if self.client is None:
+                return _error_result('No sandbox runtime is configured.')
             container = self.client.containers.run(
                 self.image_name,
                 json.dumps(input_data),
@@ -228,6 +239,8 @@ class CodeExecutor:
         """Clean up Docker resources"""
         try:
             # Remove dangling containers
+            if self.client is None:
+                return
             containers = self.client.containers.list(all=True, filters={'status': 'exited'})
             for container in containers:
                 if self.image_name in container.image.tags:

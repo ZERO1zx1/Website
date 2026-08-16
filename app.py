@@ -150,8 +150,20 @@ def create_app(config_name="development"):
         app.register_blueprint(exams_bp, url_prefix="/api/exams")
 
     @app.route("/", methods=["GET"])
-    def frontend_shell():
-        return render_template("index.html", backend_enabled=not frontend_only)
+    def frontend_home():
+        """Serve the public landing page at the canonical site root."""
+        return render_template("pages/home.html", backend_enabled=not frontend_only, page_class="home-page")
+
+    @app.route("/workspace", methods=["GET"])
+    def legacy_workspace():
+        """Compatibility alias for the canonical authenticated dashboard."""
+        return render_template(
+            "pages/workspace_dashboard.html",
+            backend_enabled=not frontend_only,
+            page_class="workspace-dashboard-page",
+            workspace_page="dashboard",
+            breadcrumb="Dashboard",
+        )
 
     @app.route("/home", methods=["GET"])
     def home_page():

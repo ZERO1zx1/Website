@@ -1,11 +1,12 @@
-/* Codehaven frontend prototype. Replace mockAdapter with apiAdapter in the integration phase. */
+/* Codehaven authenticated workspace runtime. */
 
-const curriculumData = window.CodehavenCurriculum || { recentPractice: [], courses: [], problems: [] };
+// No preset learner is shipped. Authenticated views are populated only from
+// the signed-in user's API responses; preview mode stays an explicit empty state.
 const mockData = {
-    user: { id: 7, name: 'Nara Sukh', initials: 'NS', role: 'Student', focus: 'Python & problem solving' },
-    recentPractice: curriculumData.recentPractice,
-    courses: curriculumData.courses,
-    problems: curriculumData.problems
+    user: null,
+    recentPractice: [],
+    courses: [],
+    problems: []
 };
 
 const mockAdapter = {
@@ -140,6 +141,7 @@ function bindInteractions() {
     document.getElementById('save-exam-progress')?.addEventListener('click', saveActiveExamAnswers);
     document.getElementById('submit-student-exam')?.addEventListener('click', submitActiveExam);
     document.getElementById('close-exam-result')?.addEventListener('click', () => { document.getElementById('exam-result-panel')?.classList.add('is-hidden'); renderAssessments(); });
+    document.getElementById('close-teacher-exam-report')?.addEventListener('click', closeExamReport);
     document.getElementById('open-auth-screen')?.addEventListener('click', () => { setAuthMode('login'); showView('auth'); });
     document.querySelectorAll('[data-logout]').forEach((control) => control.addEventListener('click', logoutUser));
     document.querySelectorAll('[data-theme-choice]').forEach((button) => {
@@ -320,10 +322,14 @@ async function renderDashboard() {
     if (dateNode) dateNode.textContent = new Intl.DateTimeFormat(app.language === 'mn' ? 'mn-MN' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(new Date());
     const chartSummary = document.querySelector('.chart-summary');
     const chart = document.getElementById('activity-chart');
-    if (chartSummary) chartSummary.innerHTML = `<strong>${studyMinutes >= 60 ? `${Math.floor(studyMinutes / 60)}h ${studyMinutes % 60}m` : `${studyMinutes}m`}</strong><span class="trend neutral">No comparison yet</span><span>from your account</span>`;
-    if (chart) chart.innerHTML = studyMinutes === 0
-        ? '<p class="empty-state">No study activity recorded yet. Complete a lesson to start your timeline.</p>'
-        : `<p class="empty-state">${studyMinutes} minutes of learning activity are saved to your account. Daily activity detail will appear as you complete more lessons.</p>`;
+    const dailyActivity = Array.isArray(stats.daily_activity) ? stats.daily_activity : [];
+    const maxActivity = Math.max(...dailyActivity.map((item) => Number(item.minutes || 0)), 1);
+    if (chartSummary) chartSummary.innerHTML = `<strong>${studyMinutes >= 60 ? `${Math.floor(studyMinutes / 60)}h ${studyMinutes % 60}m` : `${studyMinutes}m`}</strong><span class="trend neutral">Estimated from saved lessons</span><span>your account activity</span>`;
+    if (chart) {
+        chart.innerHTML = studyMinutes === 0 || !dailyActivity.some((item) => Number(item.minutes || 0) > 0)
+            ? '<p class="empty-state">No study activity recorded yet. Start or complete a lesson to build your timeline.</p>'
+            : `<div class="activity-bars" role="img" aria-label="Estimated study minutes for the last seven days">${dailyActivity.map((item) => { const minutes = Number(item.minutes || 0); const label = new Intl.DateTimeFormat(app.language === 'mn' ? 'mn-MN' : 'en-US', { weekday: 'short' }).format(new Date(`${item.date}T12:00:00Z`)); return `<div class="activity-bar-column"><span class="activity-bar-value">${minutes ? `${minutes}m` : ''}</span><span class="activity-bar" style="height:${Math.max(minutes ? 8 : 2, Math.round((minutes / maxActivity) * 100))}%" title="${escapeHtml(item.date)}: ${minutes} minutes"></span><small>${escapeHtml(label)}</small></div>`; }).join('')}</div>`;
+    }
     renderDashboardReport(dashboard?.progress_report, dashboard?.exam_summary);
     const skillPanel = document.querySelector('.skills-panel');
     const skills = Array.isArray(dashboard?.skills) ? dashboard.skills : [];
@@ -376,13 +382,46 @@ async function renderAssessments() {
             const latest = exam.latest_attempt;
             const status = latest?.status === 'in_progress' ? 'IN PROGRESS' : latest ? 'AVAILABLE' : 'READY TO START';
             const best = exam.best_score == null ? '—' : `${Number(exam.best_score).toFixed(0)}%`;
-            return `<article class="assessment-card ${latest?.status === 'in_progress' ? 'assessment-featured' : ''}"><span class="pill ${latest?.status === 'in_progress' ? 'pill-purple' : 'pill-teal'}">${status}</span><h2>${escapeHtml(localizeContent(exam.title))}</h2><p>${escapeHtml(localizeContent(exam.description || 'Training checkpoint'))}</p><div class="assessment-bottom"><span>${exam.question_count || 0} questions · ${exam.duration_minutes || 20} min · Best: <strong>${best}</strong></span><button class="button button-light" type="button" data-start-exam="${escapeHtml(exam.id)}">${latest?.status === 'in_progress' ? 'Resume exam' : 'Begin exam'} <span>→</span></button></div></article>`;
+            const reportButton = canBuild ? `<button class="text-button" type="button" data-view-exam-report="${escapeHtml(exam.id)}">View report</button>` : '';
+            return `<article class="assessment-card ${latest?.status === 'in_progress' ? 'assessment-featured' : ''}"><span class="pill ${latest?.status === 'in_progress' ? 'pill-purple' : 'pill-teal'}">${status}</span><h2>${escapeHtml(localizeContent(exam.title))}</h2><p>${escapeHtml(localizeContent(exam.description || 'Training checkpoint'))}</p><div class="assessment-bottom"><span>${exam.question_count || 0} questions · ${exam.duration_minutes || 20} min · Best: <strong>${best}</strong></span><div class="assessment-actions">${reportButton}<button class="button button-light" type="button" data-start-exam="${escapeHtml(exam.id)}">${latest?.status === 'in_progress' ? 'Resume exam' : 'Begin exam'} <span>→</span></button></div></div></article>`;
         }).join('');
         list.querySelectorAll('[data-start-exam]').forEach((button) => button.addEventListener('click', () => void startExamView(button.dataset.startExam)));
+        list.querySelectorAll('[data-view-exam-report]').forEach((button) => button.addEventListener('click', () => void renderExamReport(button.dataset.viewExamReport)));
     } catch (error) {
         renderDataState(list, 'error', app.language === 'mn' ? 'Шалгалтыг ачаалж чадсангүй.' : 'Assessments could not be loaded.');
         if (error.status === 401) logoutUser();
     }
+}
+
+async function renderExamReport(examId) {
+    const panel = document.getElementById('teacher-exam-report');
+    const body = document.getElementById('teacher-exam-report-body');
+    if (!panel || !body || !app.dataAdapter?.getExamReport) return;
+    panel.classList.remove('is-hidden');
+    body.innerHTML = '<p class="muted">Loading exam report…</p>';
+    try {
+        const report = await app.dataAdapter.getExamReport(examId);
+        const distribution = report?.distribution || {};
+        const total = Math.max(1, Number(report?.submitted_count || 0));
+        const copy = app.language === 'mn'
+            ? { submitted: 'илгээсэн оролдлого', questions: 'асуулт', average: 'Дундаж', highest: 'Хамгийн өндөр', passRate: 'Тэнцсэн хувь', attempts: 'оролдлого', distribution: 'Дүнгийн тархалт', excellent: '80–100%', pass: '60–79%', needsReview: '60%-аас доош' }
+            : { submitted: 'submitted attempts', questions: 'questions', average: 'Average', highest: 'Highest', passRate: 'Pass rate', attempts: 'attempts', distribution: 'Grade distribution', excellent: '80–100%', pass: '60–79%', needsReview: 'Below 60%' };
+        const categories = [
+            { key: 'excellent', label: copy.excellent, tone: 'excellent' },
+            { key: 'pass', label: copy.pass, tone: 'pass' },
+            { key: 'needs_review', label: copy.needsReview, tone: 'needs-review' },
+        ];
+        document.getElementById('teacher-exam-report-title').textContent = localizeContent(report?.exam?.title || 'Exam performance');
+        document.getElementById('teacher-exam-report-description').textContent = `${Number(report?.submitted_count || 0)} ${copy.submitted} · ${Number(report?.question_count || 0)} ${copy.questions}`;
+        body.innerHTML = `<div class="teacher-report-summary"><div><span>${copy.average}</span><strong>${Number(report?.average_score || 0).toFixed(0)}%</strong></div><div><span>${copy.highest}</span><strong>${Number(report?.highest_score || 0).toFixed(0)}%</strong></div><div><span>${copy.passRate}</span><strong>${Number(report?.pass_rate || 0).toFixed(0)}%</strong></div></div><h3 class="grade-distribution-title">${copy.distribution}</h3><div class="grade-distribution" aria-label="${copy.distribution}">${categories.map((item) => { const count = Number(distribution[item.key] || 0); return `<div class="grade-row"><div><strong>${escapeHtml(item.label)}</strong><span>${count} ${copy.attempts}</span></div><div class="grade-track"><span class="grade-track-${item.tone}" style="width:${Math.round((count / total) * 100)}%"></span></div><b>${Math.round((count / total) * 100)}%</b></div>`; }).join('')}</div>`;
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (error) {
+        body.innerHTML = `<p class="empty-state">${escapeHtml(error.message || 'The exam report could not be loaded.')}</p>`;
+    }
+}
+
+function closeExamReport() {
+    document.getElementById('teacher-exam-report')?.classList.add('is-hidden');
 }
 
 function openExamBuilder() {
@@ -854,7 +893,15 @@ async function openEditor(event) {
     document.body.style.overflow = 'hidden';
     window.setTimeout(() => document.getElementById('code-editor')?.focus(), 50);
 
-    setRuntimeStatus(backendEnabled ? 'connected' : 'ready');
+    setRuntimeStatus(backendEnabled ? 'offline' : 'ready');
+    if (backendEnabled && app.dataAdapter === window.codehavenApiAdapter && window.codehavenApiAdapter.getReadiness) {
+        try {
+            const readiness = await window.codehavenApiAdapter.getReadiness();
+            setRuntimeStatus(readiness.status === 'ready' ? 'connected' : 'offline');
+        } catch (error) {
+            setRuntimeStatus('offline');
+        }
+    }
     if (backendEnabled && app.dataAdapter === window.codehavenApiAdapter && problem?.id && window.codehavenApiAdapter.getProblem) {
         try {
             const liveProblem = await window.codehavenApiAdapter.getProblem(problem.id);
@@ -938,12 +985,12 @@ async function runCode() {
             return;
         }
 
-        setRuntimeStatus('running');
-        const outputLabel = app.language === 'mn' ? 'DEMO ГАРАЛТ · 0.18с' : 'DEMO OUTPUT · 0.18s';
-        const outputStatus = app.language === 'mn' ? 'Demo runner амжилттай дууслаа.' : 'Demo runner finished with exit code 0.';
-        output.innerHTML = `<span class="output-label">${outputLabel}</span><code style="color:#75e6c5">[2, 4]<br><br>${outputStatus}</code>`;
-        setRuntimeStatus('ready');
-        showToast(app.language === 'mn' ? 'Demo код амжилттай ажиллалаа.' : 'Demo code ran successfully.', 'success');
+        setRuntimeStatus('offline');
+        const message = app.isDemoMode
+            ? (app.language === 'mn' ? 'Preview mode-д бодит sandbox ажиллахгүй. Нэвтэрч байж код ажиллуулна уу.' : 'Code execution is disabled in preview mode. Sign in to use the real sandbox.')
+            : (app.language === 'mn' ? 'Код ажиллуулахын өмнө бодит аккаунтаар нэвтэрч, sandbox readiness-г шалгана уу.' : 'Sign in with a real account and make sure the sandbox is ready before running code.');
+        output.innerHTML = `<span class="output-label">RUNTIME UNAVAILABLE</span><code class="output-error">${escapeHtml(message)}</code>`;
+        showToast(message, 'error');
     } catch (error) {
         setRuntimeStatus('offline');
         output.innerHTML = `<span class="output-label">RUNTIME ERROR</span><code class="output-error">${escapeHtml(error.message || 'Runtime execution is unavailable.')}</code>`;

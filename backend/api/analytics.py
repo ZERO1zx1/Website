@@ -5,6 +5,7 @@ from flask import Blueprint, request
 from backend.api.auth import token_required
 from backend.db import db
 from backend.rbac import any_permission_required, error_response
+from backend.services.analytics import summarize_learning_activity
 
 
 analytics_bp = Blueprint("analytics", __name__)
@@ -19,6 +20,8 @@ def get_dashboard(current_user):
         mastery_data = db.get_user_mastery(current_user["id"])
         submissions = db.get_user_submissions(current_user["id"], limit=100)
         lesson_progress = db.get_user_lesson_progress(current_user["id"]) or []
+        lesson_rows = db.client.table("lessons").select("id,estimated_minutes").execute().data or []
+        activity = summarize_learning_activity(lesson_progress, lesson_rows)
         try:
             progress_report = db.get_progress_report(current_user["id"])
             exam_summary = {"attempts": len(progress_report.get("exams", [])), "best_score": max([float(item.get("score", 0) or 0) for item in progress_report.get("exams", [])], default=None)}
@@ -61,8 +64,10 @@ def get_dashboard(current_user):
             "stats": {
                 "overall_mastery": overall_mastery,
                 "solved_problems": solved_count,
-                "study_minutes": len(lesson_progress) * 20,
-                "current_streak": 1 if lesson_progress else 0,
+                "study_minutes": activity["study_minutes"],
+                "estimated_study_minutes": activity["study_minutes"],
+                "current_streak": activity["current_streak"],
+                "daily_activity": activity["daily_activity"],
             },
             "exam_summary": exam_summary,
             "progress_report": progress_report,

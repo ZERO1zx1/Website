@@ -257,7 +257,7 @@ class SupabaseDB:
             'user_id': user_id,
             'lesson_id': lesson_id,
             'status': 'completed',
-            'completed_at': 'now()',
+            'completed_at': datetime.now(timezone.utc).isoformat(),
         }).execute()
         return response.data[0] if response.data else None
 
@@ -431,7 +431,9 @@ class SupabaseDB:
         final_attempt = self.get_attempt(attempt_id, user_id=user_id, include_answers=False)
         if final_attempt:
             final_attempt['result_answers'] = self.client.table('exam_answers').select('*').eq('attempt_id', attempt_id).execute().data or []
-            final_attempt['exam'] = self.get_exam(attempt['exam_id'], include_answers=True)
+            # The submit endpoint is student-only. Return result feedback but
+            # never send the answer key or teacher explanation source fields.
+            final_attempt['exam'] = self.get_exam(attempt['exam_id'], include_answers=False)
         return final_attempt or attempt, None
 
     def get_exam_report(self, exam_id: int):

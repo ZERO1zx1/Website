@@ -313,7 +313,8 @@ class LocalDB:
                 input TEXT NOT NULL DEFAULT '',
                 expected_output TEXT NOT NULL DEFAULT '',
                 is_hidden INTEGER NOT NULL DEFAULT 0,
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(problem_id, input, expected_output, is_hidden)
             );
             CREATE TABLE IF NOT EXISTS hints (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -448,6 +449,57 @@ class LocalDB:
         if 'started_at' not in columns:
             connection.execute("ALTER TABLE lesson_progress ADD COLUMN started_at TEXT")
             connection.execute("UPDATE lesson_progress SET started_at = COALESCE(completed_at, CURRENT_TIMESTAMP)")
+        # Older local databases were created before test_cases had a unique
+        # constraint. Remove duplicate seed rows before creating the index so
+        # restarts remain deterministic without touching distinct user data.
+        connection.execute(
+            """
+            DELETE FROM test_cases
+            WHERE id NOT IN (
+                SELECT MIN(id)
+                FROM test_cases
+                GROUP BY problem_id, input, expected_output, is_hidden
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS test_cases_unique_case_idx
+            ON test_cases (problem_id, input, expected_output, is_hidden)
+            """
+        )
+        # The original local seed used INSERT OR IGNORE without a uniqueness
+        # constraint on exams, so every app restart could create an empty copy.
+        # Keep the canonical seeded exam (the first one with questions), move
+        # any existing attempts to it, and remove only empty seed duplicates.
+        seed_exam_rows = connection.execute(
+            """
+            SELECT e.id,
+                   (SELECT COUNT(*) FROM exam_questions q WHERE q.exam_id = e.id) AS question_count
+            FROM exams e
+            WHERE e.title = 'Python foundations checkpoint' AND e.created_by IS NULL
+            ORDER BY e.id
+            """
+        ).fetchall()
+        canonical_exam = next((row for row in seed_exam_rows if row['question_count'] > 0), None)
+        if canonical_exam is None and seed_exam_rows:
+            canonical_exam = seed_exam_rows[0]
+        if canonical_exam:
+            for row in seed_exam_rows:
+                if row['id'] == canonical_exam['id'] or row['question_count'] > 0:
+                    continue
+                connection.execute(
+                    "UPDATE exam_attempts SET exam_id = ? WHERE exam_id = ?",
+                    (canonical_exam['id'], row['id']),
+                )
+                connection.execute("DELETE FROM exams WHERE id = ?", (row['id'],))
+        connection.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS exams_seed_title_idx
+            ON exams (title)
+            WHERE created_by IS NULL
+            """
+        )
         connection.commit()
         self._seed(connection)
         connection.close()
@@ -495,7 +547,7 @@ class LocalDB:
         ]:
             connection.execute("INSERT OR IGNORE INTO skills (name, description, category) VALUES (?, ?, ?)", (name, description, category))
         problems = [
-            ("Even number filter", "Return only the even numbers from a list while keeping the original order.", "easy", "def even_numbers(values):\n    return [value for value in values if value % 2 == 0]\n\nprint(even_numbers([1, 2, 3, 4]))", "python"),
+            ("Even number filter", "Return only the even numbers from a list while keeping the original order.", "easy", 'import json\nimport sys\n\ndef even_numbers(values):\n    return [value for value in values if value % 2 == 0]\n\nvalues = json.loads(sys.stdin.read() or "[]")\nprint(even_numbers(values))', "python"),
             ("First unique character", "Find the first character that occurs exactly once in a string.", "medium", "def first_unique(value):\n    return None", "python"),
             ("Build a JSON response", "Return a predictable JSON object with a status and message.", "easy", "def build_response(message):\n    return {}", "python"),
         ]
@@ -505,9 +557,36 @@ class LocalDB:
                 (title, description, difficulty, starter_code, language),
             )
         problem_ids = {row["title"]: row["id"] for row in connection.execute("SELECT id, title FROM problems")}
+        # Keep the built-in learning problem executable after upgrades to the
+        # local seed while leaving teacher-authored problems untouched.
+        connection.execute(
+            "UPDATE problems SET starter_code = ? WHERE title = ? AND (starter_code IS NULL OR starter_code LIKE 'def even_numbers%')",
+            (problems[0][3], "Even number filter"),
+        )
+        even_problem_id = problem_ids["Even number filter"]
+        connection.execute(
+            """
+            DELETE FROM test_cases
+            WHERE problem_id = ?
+              AND expected_output = '[]'
+              AND id NOT IN (
+                  SELECT MIN(id) FROM test_cases
+                  WHERE problem_id = ? AND expected_output = '[]'
+              )
+            """,
+            (even_problem_id, even_problem_id),
+        )
+        connection.execute(
+            "UPDATE test_cases SET input = ? WHERE problem_id = ? AND expected_output = ?",
+            ("[1, 2, 3, 4]", even_problem_id, "[2, 4]"),
+        )
+        connection.execute(
+            "UPDATE test_cases SET input = ? WHERE problem_id = ? AND expected_output = ?",
+            ("[]", even_problem_id, "[]"),
+        )
         test_cases = [
-            (problem_ids["Even number filter"], "", "[2, 4]", 0),
-            (problem_ids["Even number filter"], "", "[]", 1),
+            (problem_ids["Even number filter"], "[1, 2, 3, 4]", "[2, 4]", 0),
+            (problem_ids["Even number filter"], "[]", "[]", 1),
             (problem_ids["First unique character"], "", "a", 0),
             (problem_ids["Build a JSON response"], "", "{\"status\": \"ok\"}", 0),
         ]

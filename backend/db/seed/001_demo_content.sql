@@ -62,7 +62,7 @@ begin
 
     insert into public.problems (title, description, difficulty, starter_code, explanation, language)
     select 'Even number filter', 'Return only the even numbers from a list while keeping the original order.', 'easy',
-           'def even_numbers(values):\n    return []\n\nprint(even_numbers([1, 2, 3, 4]))',
+           'import json\nimport sys\n\ndef even_numbers(values):\n    return [value for value in values if value % 2 == 0]\n\nvalues = json.loads(sys.stdin.read() or "[]")\nprint(even_numbers(values))',
            'Use a list comprehension or a loop with a modulo check.', 'python'
     where not exists (select 1 from public.problems where title = 'Even number filter');
 
@@ -75,11 +75,14 @@ begin
     select id into even_problem_id from public.problems where title = 'Even number filter' order by id limit 1;
     select id into unique_problem_id from public.problems where title = 'First unique character' order by id limit 1;
 
+    update public.test_cases
+    set input = '[1, 2, 3, 4]'
+    where problem_id = even_problem_id and expected_output = '[2, 4]';
     insert into public.test_cases (problem_id, input, expected_output, is_hidden)
-    select even_problem_id, '', '[2, 4]', false
+    select even_problem_id, '[1, 2, 3, 4]', '[2, 4]', false
     where not exists (select 1 from public.test_cases where problem_id = even_problem_id and expected_output = '[2, 4]');
     insert into public.test_cases (problem_id, input, expected_output, is_hidden)
-    select even_problem_id, '', '[]', true
+    select even_problem_id, '[]', '[]', true
     where not exists (select 1 from public.test_cases where problem_id = even_problem_id and expected_output = '[]');
     insert into public.test_cases (problem_id, input, expected_output, is_hidden)
     select unique_problem_id, '', 'a', false

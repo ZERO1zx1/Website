@@ -177,6 +177,34 @@ def test_local_lesson_completion_updates_dashboard(monkeypatch, tmp_path):
     assert dashboard.get_json()["stats"]["current_streak"] == 1
 
 
+def test_http_sandbox_mode_does_not_initialize_docker(monkeypatch):
+    from backend.services import code_executor
+
+    monkeypatch.setenv("SANDBOX_URL", "http://sandbox:8080")
+    monkeypatch.setattr(code_executor.docker, "from_env", lambda: pytest.fail("Docker should be lazy in HTTP sandbox mode"))
+
+    executor = code_executor.CodeExecutor()
+
+    assert executor.client is None
+
+
+def test_local_seed_is_idempotent_for_test_cases(tmp_path):
+    from backend.local_db import LocalDB
+
+    path = tmp_path / "seed.sqlite3"
+    first = LocalDB(str(path))
+    first_counts = first.client.table("test_cases").select("*").execute().data
+    first_exams = first.client.table("exams").select("*").execute().data
+    second = LocalDB(str(path))
+    second_counts = second.client.table("test_cases").select("*").execute().data
+    second_exams = second.client.table("exams").select("*").execute().data
+
+    assert len(first_counts) == 4
+    assert len(second_counts) == 4
+    assert len(first_exams) == 1
+    assert len(second_exams) == 1
+
+
 def test_course_status_is_user_owned_and_realtime(monkeypatch, tmp_path):
     from backend.db import db
 
@@ -229,6 +257,7 @@ def test_public_multi_page_routes_render(monkeypatch):
     db._client = None
     client = create_app().test_client()
     for path, marker in [
+        ("/", b"Start learning free"),
         ("/home", b"Start learning free"),
         ("/login", b"Forgot password?"),
         ("/register", b"Join Codehaven"),
@@ -337,7 +366,7 @@ def test_dashboard_workspace_uses_live_discovery_markers(monkeypatch):
     monkeypatch.delenv("SUPABASE_KEY", raising=False)
     from backend.db import db
     db._client = None
-    html = create_app().test_client().get("/").data
+    html = create_app().test_client().get("/workspace").data
     assert b"dashboard-course-grid" in html
     assert b"sidebar-up-next-title" in html
     assert b"Build your first API" not in html
@@ -374,7 +403,10 @@ def test_local_exam_attempt_grading_and_progress_report(monkeypatch, tmp_path):
         assert saved.status_code == 200
     submitted = client.post(f"/api/exams/attempts/{attempt['id']}/submit", headers=headers)
     assert submitted.status_code == 200
-    assert submitted.get_json()["attempt"]["score"] == 100.0
+    submitted_attempt = submitted.get_json()["attempt"]
+    assert submitted_attempt["score"] == 100.0
+    assert "correct_answer" not in submitted_attempt["exam"]["questions"][0]
+    assert bool(submitted_attempt["result_answers"][0]["is_correct"]) is True
 
     report = client.get("/api/analytics/progress-report", headers=headers)
     assert report.status_code == 200
@@ -424,7 +456,7 @@ def test_assessment_workspace_contains_training_views(monkeypatch):
     monkeypatch.delenv("SUPABASE_KEY", raising=False)
     from backend.db import db
     db._client = None
-    html = create_app().test_client().get("/").data
+    html = create_app().test_client().get("/assessments").data
     assert b"exam-builder-form" in html
     assert b"student-exam-view" in html
-    assert b"dashboard-report-summary" in html
+    assert b"teacher-exam-report" in html

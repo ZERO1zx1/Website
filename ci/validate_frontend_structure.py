@@ -5,13 +5,11 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_FILES = {
-    "frontend/templates/index.html",
     "frontend/templates/pages/base.html",
     "frontend/templates/pages/home.html",
     "frontend/templates/pages/login.html",
     "frontend/templates/pages/register.html",
     "frontend/templates/pages/password_reset.html",
-    "frontend/templates/pages/dashboard.html",
     "frontend/templates/pages/workspace_base.html",
     "frontend/templates/pages/workspace_dashboard.html",
     "frontend/templates/pages/learn.html",

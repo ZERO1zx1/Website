@@ -2,74 +2,118 @@
 
 ## Зорилго
 
-Repository нь frontend болон backend-ийг нэг application дотор ажиллуулж болох боловч тусдаа ownership, dependency болон integration boundary-тай байхаар зохион байгуулагдана. Frontend нь plain HTML, CSS, JavaScript хэвээр үлдэнэ. Backend нь Flask API, Supabase client, route blueprint болон service layer-ээ `backend/` дотор төвлөрүүлнэ.
+Codehaven нь Flask backend болон server-rendered HTML/CSS/JavaScript frontend-ийг нэг application дотор ажиллуулна. Feature бүр тодорхой ownership-тэй: page route нь HTML/Jinja-г, API blueprint нь JSON contract-ийг, service layer нь domain logic-ийг, DB wrapper нь persistence-ийг хариуцна.
 
-## Target tree
+## Canonical tree
 
 ```text
 Website/
-├── app.py                         # Flask application factory and shell route
+├── app.py                         # Flask app factory, page routes, health/readiness
 ├── requirements.txt
 ├── .env.example
-├── README.md
+├── Dockerfile
+├── docker-compose.yml
+│
 ├── backend/
-│   ├── __init__.py
-│   ├── db.py                      # Supabase database gateway
+│   ├── db.py                      # SQLite local / Supabase production gateway
+│   ├── local_db.py                # SQLite schema, deterministic seed, cleanup
+│   ├── rbac.py                    # Owner/Admin/Teacher/Student permissions
 │   ├── api/
-│   │   ├── __init__.py
-│   │   ├── auth.py
-│   │   ├── courses.py
-│   │   ├── problems.py
-│   │   ├── submissions.py
-│   │   ├── teacher.py
-│   │   └── analytics.py
+│   │   ├── auth.py                # Authentication and password recovery
+│   │   ├── courses.py             # Courses, lessons, user-owned progress
+│   │   ├── problems.py             # Coding problem data
+│   │   ├── submissions.py          # Run, submit, status, feedback
+│   │   ├── exams.py                # Exam Builder, attempts, autosave, grading
+│   │   ├── analytics.py            # Dashboard and progress analytics
+│   │   └── teacher.py              # Teacher/Admin operations
 │   └── services/
-│       ├── __init__.py
-│       ├── code_executor.py
-│       └── submission_evaluator.py
+│       ├── analytics.py            # Timestamp-based activity/streak metrics
+│       ├── code_executor.py        # HTTP sandbox or Docker fallback
+│       ├── submission_evaluator.py # Visible/hidden test grading
+│       └── submission_queue.py     # Thread/Redis queue abstraction
+│
 ├── frontend/
-│   ├── templates/
-│   │   └── index.html
-│   └── static/
-│       ├── css/
-│       │   └── style.css
-│       ├── js/
-│       │   ├── app.js
-│       │   ├── monaco-editor.js
-│       │   └── adapters/
-│       │       └── README.md
-│       └── assets/
-├── sandbox/
-│   ├── Dockerfile
-│   └── runner.py
-├── tests/
-│   ├── test_frontend_shell.py
-│   └── test_code_executor.py
-└── docs/
-    ├── project-structure.md
-    ├── frontend-design-handoff.md
-    ├── frontend-uiux-final-report-mn.md
-    └── backend-integration.md
+│   ├── templates/pages/
+│   │   ├── base.html               # Public/auth shared layout
+│   │   ├── home.html               # `/`, `/home`
+│   │   ├── login.html              # `/login`
+│   │   ├── register.html           # `/register`
+│   │   ├── password_reset.html     # `/password-reset`
+│   │   ├── workspace_base.html     # Authenticated shared shell
+│   │   ├── workspace_dashboard.html# `/dashboard`
+│   │   ├── learn.html              # `/learn`, `/courses`
+│   │   ├── practice.html           # `/practice`
+│   │   ├── assessments.html        # `/assessments`, `/exams`
+│   │   ├── profile.html             # `/profile`
+│   │   └── settings.html            # `/settings`
+│   ├── static/css/
+│   │   ├── style.css               # Workspace design system
+│   │   ├── site/site.css            # Public/auth styling
+│   │   └── workspace/               # Workspace extension directory
+│   ├── static/js/
+│   │   ├── app.js                  # Authenticated runtime
+│   │   ├── adapters/api-adapter.js # API boundary
+│   │   ├── pages/auth.js            # Auth page logic
+│   │   ├── i18n/translations.js     # EN/MN dictionary
+│   │   └── modules/monaco-editor.js # Editor integration
+│   └── static/assets/
+│       ├── images/
+│       ├── icons/
+│       └── fonts/
+│
+├── config/
+│   └── roles.yml                   # Authoritative RBAC matrix
+├── backend/db/migrations/          # Supabase migrations
+├── backend/db/seed/                # Supabase production seed
+├── sandbox/                        # Isolated code execution service
+├── tests/                          # Regression and security tests
+├── ci/                             # Canonical quality gate
+└── docs/                           # Runbooks and integration guides
 ```
+
+## Page and API boundary
+
+| User experience | HTML route/template | Live API boundary |
+|---|---|---|
+| Public home | `/` → `pages/home.html` | None; marketing content only |
+| Dashboard | `/dashboard` → `workspace_dashboard.html` | `/api/auth/me`, `/api/analytics/dashboard`, `/api/courses` |
+| Learning | `/learn` → `learn.html` | `/api/courses`, lesson start/complete endpoints |
+| Practice | `/practice` → `practice.html` | `/api/problems`, `/api/submissions`, sandbox health |
+| Assessments | `/assessments` → `assessments.html` | `/api/exams`, attempts, answers, submit, report |
+| Profile/preferences | `/profile`, `/settings` | `/api/auth/me` and account-owned settings |
+
+The old all-in-one `frontend/templates/index.html` shell has been removed from the canonical structure. `/workspace` remains only as a compatibility alias to the canonical dashboard template; it does not render a second UI.
 
 ## Boundary rules
 
-`frontend/` нь presentation болон browser interaction-ийг хариуцна. Browser code нь backend route руу шууд scattered `fetch` хийхгүй; `mockAdapter` эсвэл дараагийн `apiAdapter` interface-ээр дамжина. `backend/api/` нь request validation, authentication болон response contract-ийг хариуцна. `backend/services/` нь code execution, evaluation болон domain workflow-ийг хариуцна. `backend/db.py` нь Supabase client-ийн ганц gateway байна.
+The browser does not trust a client-provided role. The API adapter sends the authenticated bearer token, and Flask enforces ownership and RBAC on every protected endpoint. A student can see only that student’s progress, answers, submissions, and attempts. Teacher/Admin/Owner permissions are checked server-side.
 
-`FRONTEND_ONLY=true` үед backend blueprint болон Supabase import-ууд ачаалагдахгүй. Ингэснээр frontend designer болон developer нь credential шаардахгүйгээр UI-г ажиллуулж чадна. Normal mode үед `app.py` backend API blueprint-үүдийг `/api/*` prefix-ээр бүртгэнэ.
+The frontend does not invent account statistics. Empty states such as “No study activity recorded yet” are rendered when the backend has no saved activity. The explicit frontend-only preview mode is an empty design-review state, not a demo learner or a production data source.
 
-## Migration map
+`backend/services/analytics.py` derives study minutes, daily activity, and streak from persisted lesson timestamps. Coding execution uses the HTTP sandbox when `SANDBOX_URL` is configured and falls back to Docker only when no HTTP sandbox is configured. Assessment submission grades on the server and redacts answer keys from student responses.
 
-| Одоогийн байрлал | Шинэ байрлал | Тайлбар |
-|---|---|---|
-| `db.py` | `backend/db.py` | Database gateway-ийг backend namespace-д оруулна |
-| `routes/*.py` | `backend/api/*.py` | API blueprint-үүдийг route-оос api гэж тодорхой болгоно |
-| `services/*.py` | `backend/services/*.py` | Domain/service layer-ийг backend namespace-д оруулна |
-| `frontend/templates/*` | Хэвээр | Browser presentation layer |
-| `frontend/static/css/*` | Хэвээр | Theme болон component system |
-| `frontend/static/js/app.js` | Хэвээр | UI state; adapter boundary хадгална |
-| `sandbox/*` | Хэвээр | Docker runtime context тусдаа байна |
+## Runtime sequence
 
-## Backend integration sequence
+```text
+Browser page
+    ↓
+workspace_base.html + app.js
+    ↓
+static/js/adapters/api-adapter.js
+    ↓
+Flask API blueprint
+    ↓
+RBAC + ownership checks
+    ↓
+backend/services + backend/db.py
+    ↓
+SQLite in local development / Supabase in production
+```
 
-Эхний integration нь authentication adapter-ээс эхэлнэ. Дараа нь current user, learning path, problems, submissions гэсэн дарааллаар бодит endpoint-үүдийг mock method-оор солино. Нэг endpoint холбосны дараа response shape, loading state, empty state, error state болон unauthorized state-ийг тусад нь шалгана. Бүх backend холболт бэлэн болсны дараа `FRONTEND_ONLY` preview-г устгахгүй; энэ нь UI regression болон design review-д хэрэгтэй хэвээр байна.
+The canonical local quality gate is:
+
+```bash
+bash ci/check.sh
+```
+
+It compiles Python, runs regression tests, validates JavaScript syntax, checks the frontend structure, verifies the workflow and Compose contracts, and checks repository hygiene.
