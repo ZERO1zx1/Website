@@ -1,7 +1,124 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% set page = 'lesson' %}
 {% block title %}{{ lesson.title }} — CodeCraft Academy{% endblock %}
+
 {% block content %}
-<section class="lesson-shell container-wide"><div class="lesson-breadcrumb"><a href="{{ url_for('frontend_page', page='curriculum') }}">Сурах зам</a><span>/</span><a href="{{ url_for('frontend_page', page='course') }}?id={{ course.id }}">{{ course.title }}</a><span>/</span><strong>Хичээл</strong></div><div class="lesson-layout"><article class="lesson-content"><span class="eyebrow">{{ lesson.unit }} · {{ lesson.minutes }} МИНУТ</span><h1>{{ lesson.title }}</h1><p class="lesson-intro">{{ lesson.outcome }}</p><div class="lesson-callout"><span>✦</span><div><strong>Энэ хичээлийн зорилго</strong><p>Ойлголтыг уншаад зогсохгүй, доорх богино даалгаврыг өөрөө гүйцэтгэж чаддаг болох.</p></div></div><h2>Ойлголт</h2><p>Кодын сайн суурь гэдэг нь цээжлэхээс илүүтэйгээр <strong>өгөгдөл, үйлдэл, үр дүнгийн холбоог</strong> харж сурах явдал. Багахан жишээг мөр мөрөөр уншаад, дараа нь өөрийн хувилбарыг бичиж туршаарай.</p><div class="code-block"><div class="code-block-top"><span><i></i><i></i><i></i></span><small>{{ lesson.language|default('python') }}</small><button data-copy-code>Хуулах</button></div><pre><code>{{ lesson.code }}</code></pre></div><div class="lesson-note"><strong>Санамж</strong><span>Алдаа гарвал хэвийн. Эхлээд алдааны мессежийг уншаад, нэг өөрчлөлт хийгээд дахин ажиллуулаарай.</span></div><div class="lesson-task"><span class="task-number">ДААЛГАВАР</span><h2>{{ lesson.task }}</h2><p>Кодын лабораторид ороод өөрийн шийдлийг бич. Дууссаны дараа хадгалж, ахицдаа тэмдэглээрэй.</p><a class="button button-primary" href="{{ url_for('frontend_page', page='workspace') }}?course={{ course.id }}&lesson={{ lesson.id }}">Лабораторид нээх <span>→</span></a></div></article><aside class="lesson-aside"><div class="lesson-progress-card"><span class="eyebrow">ТАНЫ АХИЦ</span><strong>1 <small>/ {{ course.lesson_count }}</small></strong><div class="progress-bar"><i style="width:{{ (1 / course.lesson_count * 100)|round|int }}%"></i></div><span>Энэ хичээл эхлээгүй байна</span></div><div class="lesson-outline"><span class="eyebrow">ЭНЭ ХИЧЭЭЛД</span><a class="is-active" href="#goal">Зорилго</a><a href="#concept">Ойлголт</a><a href="#practice">Дадлага</a><a href="#next">Дараагийн алхам</a></div><a class="next-lesson" href="{{ url_for('frontend_page', page='course') }}?id={{ course.id }}"><span>БҮХ ХИЧЭЭЛ</span><strong>Хөтөлбөр рүү буцах →</strong></a></aside></div></section>
+<section class="lesson-shell container-wide">
+  <div class="lesson-breadcrumb">
+    <a href="{{ url_for('frontend_page', page='curriculum') }}">Сурах зам</a><span>/</span><a href="{{ url_for('frontend_page', page='course') }}?id={{ course.id }}">{{ course.title }}</a><span>/</span><strong>Хичээл</strong>
+  </div>
+  <div class="lesson-layout">
+    <article class="lesson-content">
+      <span class="eyebrow">{{ lesson.unit }} · {{ lesson.minutes }} МИНУТ</span>
+      <h1>{{ lesson.title }}</h1>
+      <p class="lesson-intro">{{ lesson.outcome }}</p>
+
+      {% if lesson.concept %}
+      <div class="lesson-section" id="concept">
+        <h2>01 · Гол ойлголт</h2>
+        {{ lesson.concept|safe }}
+      </div>
+      {% endif %}
+
+      {% if lesson.mental_model %}
+      <div class="lesson-section" id="mental-model">
+        <h2>02 · Mental Model (Хэрхэн төсөөлөх вэ?)</h2>
+        <div class="mental-model-card">
+          <span class="icon">🧠</span>
+          <p>{{ lesson.mental_model|safe }}</p>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if lesson.code %}
+      <div class="lesson-section" id="code">
+        <h2>Код ба жишээ</h2>
+        <div class="code-block">
+          <div class="code-block-top">
+            <span><i></i><i></i><i></i></span>
+            <small>{{ lesson.language|default('python') }}</small>
+            <button data-copy-code>Хуулах</button>
+          </div>
+          <pre><code>{{ lesson.code }}</code></pre>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if lesson.mistake or lesson.best_practice %}
+      <div class="lesson-grid">
+        {% if lesson.mistake %}
+        <div class="lesson-note error">
+          <strong>Түгээмэл алдаа (Common Mistake)</strong>
+          <span>{{ lesson.mistake }}</span>
+        </div>
+        {% endif %}
+        {% if lesson.best_practice %}
+        <div class="lesson-note success">
+          <strong>Зөв дадал (Best Practice)</strong>
+          <span>{{ lesson.best_practice }}</span>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if lesson.quiz %}
+      <div class="lesson-section" id="quiz">
+        <h2>04 · 1 минутын Review</h2>
+        <div class="quiz-card">
+          <p>{{ lesson.quiz.question }}</p>
+          <details class="quiz-answer">
+            <summary>Хариуг харах</summary>
+            <div>{{ lesson.quiz.answer }}</div>
+          </details>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="lesson-task" id="practice">
+        <span class="task-number">MINI PRACTICE</span>
+        <h2>{{ lesson.task }}</h2>
+        <p>Кодын лабораторид ороод өөрийн шийдлийг бич. Дууссаны дараа хадгалж, ахицдаа тэмдэглээрэй.</p>
+        <a class="button button-primary" href="{{ url_for('frontend_page', page='workspace') }}?course={{ course.id }}&lesson={{ lesson.id }}">Лабораторид нээх <span>→</span></a>
+      </div>
+    </article>
+
+    <aside class="lesson-aside">
+      <div class="lesson-progress-card">
+        <span class="eyebrow">ТАНЫ АХИЦ</span>
+        <strong>1 <small>/ {{ course.lesson_count }}</small></strong>
+        <div class="progress-bar">
+          <i style="width:{{ (1 / course.lesson_count * 100)|round|int }}%"></i>
+        </div>
+        <span>Энэ хичээл эхлээгүй байна</span>
+      </div>
+      <div class="lesson-outline">
+        <span class="eyebrow">ЭНЭ ХИЧЭЭЛД</span>
+        <a class="is-active" href="#concept">Гол ойлголт</a>
+        <a href="#mental-model">Mental Model</a>
+        <a href="#code">Код</a>
+        <a href="#quiz">Review</a>
+        <a href="#practice">Дадлага</a>
+      </div>
+      <a class="next-lesson" href="{{ url_for('frontend_page', page='course') }}?id={{ course.id }}">
+        <span>БҮХ ХИЧЭЭЛ</span>
+        <strong>Хөтөлбөр рүү буцах →</strong>
+      </a>
+    </aside>
+  </div>
+</section>
 {% endblock %}
-{% block scripts %}<script>document.querySelector('[data-copy-code]')?.addEventListener('click', async (e) => { const code = document.querySelector('.code-block code')?.textContent || ''; try { await navigator.clipboard.writeText(code); e.currentTarget.textContent = 'Хууллаа ✓'; } catch { e.currentTarget.textContent = 'Хуулах боломжгүй'; } });</script>{% endblock %}
+
+{% block scripts %}
+<script>
+  document.querySelector('[data-copy-code]')?.addEventListener('click', async (e) => {
+    const code = document.querySelector('.code-block code')?.textContent || '';
+    try {
+      await navigator.clipboard.writeText(code);
+      e.currentTarget.textContent = 'Хууллаа ✓';
+      setTimeout(() => e.currentTarget.textContent = 'Хуулах', 2000);
+    } catch {
+      e.currentTarget.textContent = 'Хуулах боломжгүй';
+    }
+  });
+</script>
+{% endblock %}

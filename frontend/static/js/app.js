@@ -2,14 +2,28 @@
   'use strict';
   const config = window.CODECRAFT_CONFIG || {};
   const root = document.documentElement;
-  const storedTheme = localStorage.getItem('codecraft_theme') || 'system';
-  const applyTheme = (theme) => {
-    const resolved = theme === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme;
+  const storedTheme = localStorage.getItem('codecraft_theme');
+  const getSystemTheme = () => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  const applyTheme = (theme, save = true) => {
+    const resolved = theme === 'system' || !theme ? getSystemTheme() : theme;
     root.dataset.theme = resolved;
-    localStorage.setItem('codecraft_theme', theme);
+    if (save && theme) localStorage.setItem('codecraft_theme', theme);
   };
-  applyTheme(storedTheme);
-  document.querySelectorAll('[data-theme-toggle]').forEach((button) => button.addEventListener('click', () => applyTheme(root.dataset.theme === 'dark' ? 'light' : 'dark')));
+  applyTheme(storedTheme || 'system', false);
+  
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    if (!localStorage.getItem('codecraft_theme') || localStorage.getItem('codecraft_theme') === 'system') {
+      applyTheme('system', false);
+    }
+  });
+
+  document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const current = root.dataset.theme;
+      const next = current === 'dark' ? 'light' : 'dark';
+      applyTheme(next, true);
+    });
+  });
   const menuButton = document.querySelector('[data-mobile-menu]');
   const menuPanel = document.querySelector('[data-mobile-menu-panel]');
   if (menuButton && menuPanel) {
