@@ -12,7 +12,7 @@ load_dotenv(ROOT / ".env")
 
 def check_supabase() -> dict:
     url = os.getenv("SUPABASE_URL", "").rstrip("/")
-    key = os.getenv("SUPABASE_KEY", "")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
     if not url or not key:
         return {
             "configured": False,

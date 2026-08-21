@@ -3,8 +3,9 @@ Supabase Database Client
 """
 
 import os
-from supabase import create_client, Client
-from werkzeug.security import generate_password_hash
+
+from supabase import Client, create_client
+
 
 class SupabaseDB:
     """Supabase database client wrapper"""
@@ -20,10 +21,14 @@ class SupabaseDB:
     def _initialize(self):
         """Initialize Supabase client only when a database operation is requested."""
         supabase_url = os.getenv('SUPABASE_URL')
-        supabase_key = os.getenv('SUPABASE_KEY')
+        # Database mutations made by Flask are server-side operations. The
+        # publishable key is intentionally never used as a privileged client.
+        supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
 
         if not supabase_url or not supabase_key:
-            raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set for backend database operations")
+            raise RuntimeError(
+                "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set for backend database operations"
+            )
 
         self._client = create_client(supabase_url, supabase_key)
 
@@ -40,19 +45,24 @@ class SupabaseDB:
     # ============ USER OPERATIONS ============
     
     def create_user(self, email: str, password: str, name: str, role: str = 'student'):
-        """Create a new user"""
+        """Create a Supabase Auth identity and its local RBAC projection."""
         try:
-            response = self.client.table('users').insert({
+            response = self.client.auth.sign_up({
                 'email': email,
-                'name': name,
-                'password_hash': generate_password_hash(password),
-                'role': role,
-                'requested_role': None,
-                'teacher_approval_status': 'pending' if role == 'teacher' else 'approved'
-            }).execute()
-            return response.data[0] if response.data else None
-        except Exception as e:
-            raise Exception(f"Failed to create user: {str(e)}")
+                'password': password,
+                'options': {'data': {'display_name': name}},
+            })
+            if not response.user:
+                raise RuntimeError('Supabase Auth did not return a user')
+            return self.ensure_external_user(
+                auth_user_id=str(response.user.id), email=email, name=name, provider='email'
+            )
+        except Exception as error:
+            raise RuntimeError("Failed to create user") from error
+
+    def sign_in_with_password(self, email: str, password: str):
+        """Authenticate email/password through Supabase Auth."""
+        return self.client.auth.sign_in_with_password({'email': email, 'password': password})
     
     def get_user(self, user_id: int):
         """Get user by ID"""
@@ -91,7 +101,6 @@ class SupabaseDB:
         identity_data.update({
             'email': email,
             'name': name or email.split('@')[0],
-            'password_hash': None,
             'role': 'student',
             'requested_role': None,
             'teacher_approval_status': 'approved',
@@ -136,6 +145,53 @@ class SupabaseDB:
             .eq('teacher_approval_status', 'pending')
             .execute()
         )
+        return response.data or []
+
+    # ============ LEARNER-OWNED STATE ============
+
+    def get_profile(self, user_id: str):
+        response = self.client.table('profiles').select('*').eq('id', user_id).single().execute()
+        return response.data
+
+    def update_profile(self, user_id: str, changes: dict):
+        allowed = {'display_name', 'locale', 'theme'}
+        response = self.client.table('profiles').update(
+            {key: value for key, value in changes.items() if key in allowed}
+        ).eq('id', user_id).execute()
+        return response.data[0] if response.data else None
+
+    def get_learning_progress(self, user_id: str):
+        courses = self.client.table('course_progress').select('*').eq('user_id', user_id).execute()
+        lessons = self.client.table('lesson_progress').select('*').eq('user_id', user_id).execute()
+        return {'course_progress': courses.data or [], 'lesson_progress': lessons.data or []}
+
+    def upsert_course_progress(self, user_id: str, values: dict):
+        payload = {'user_id': user_id, **values}
+        response = self.client.table('course_progress').upsert(
+            payload, on_conflict='user_id,course_slug'
+        ).execute()
+        return response.data[0] if response.data else None
+
+    def set_lesson_progress(self, user_id: str, values: dict, completed: bool):
+        query = self.client.table('lesson_progress')
+        if completed:
+            response = query.upsert(
+                {'user_id': user_id, **values}, on_conflict='user_id,course_slug,lesson_slug'
+            ).execute()
+            return response.data[0] if response.data else None
+        query.delete().eq('user_id', user_id).eq('course_slug', values['course_slug']).eq(
+            'lesson_slug', values['lesson_slug']
+        ).execute()
+        return None
+
+    def create_quiz_attempt(self, user_id: str, values: dict):
+        response = self.client.table('quiz_attempts').insert({'user_id': user_id, **values}).execute()
+        return response.data[0] if response.data else None
+
+    def get_quiz_attempts(self, user_id: str):
+        response = self.client.table('quiz_attempts').select('*').eq('user_id', user_id).order(
+            'submitted_at', desc=True
+        ).limit(100).execute()
         return response.data or []
     
     # ============ COURSE OPERATIONS ============
