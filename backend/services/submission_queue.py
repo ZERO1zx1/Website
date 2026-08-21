@@ -1,9 +1,9 @@
 """Submission queue with a local development mode and a Redis worker mode."""
 
-from concurrent.futures import Future, ThreadPoolExecutor
 import json
 import logging
 import os
+from concurrent.futures import Future, ThreadPoolExecutor
 from typing import Optional
 
 from backend.services.submission_evaluator import get_processor

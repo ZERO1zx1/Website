@@ -4,10 +4,11 @@ Evaluates code submissions and manages results
 """
 
 import logging
-from typing import Dict, List, Optional
 from datetime import datetime, timezone
-from backend.services.code_executor import get_executor, SubmissionEvaluator
+from typing import Dict, List, Optional
+
 from backend.db import db
+from backend.services.code_executor import SubmissionEvaluator, get_executor
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,7 @@ class SubmissionProcessor:
             
             return results
         
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to process submission %s", submission_id)
             results = {
                 'submission_id': submission_id,

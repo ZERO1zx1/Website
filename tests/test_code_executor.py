@@ -1,7 +1,7 @@
 import json
 
-from backend.services.code_executor import CodeExecutor
 import backend.services.code_executor as code_executor_module
+from backend.services.code_executor import CodeExecutor
 
 
 class FakeContainers:
@@ -94,3 +94,14 @@ def test_remote_sandbox_path_uses_internal_http_service(monkeypatch):
     assert calls['kwargs']['headers']['X-Sandbox-Token'] == 'sandbox-secret'
     assert calls['kwargs']['json']['expected_output'] == '1'
     assert executor.client.containers.kwargs is None
+
+
+def test_host_docker_execution_is_disabled_by_default(monkeypatch):
+    monkeypatch.delenv('SANDBOX_URL', raising=False)
+    monkeypatch.delenv('ALLOW_LOCAL_DOCKER_SANDBOX', raising=False)
+    executor = CodeExecutor()
+
+    result = executor.execute_code('print(1)', 'python')
+
+    assert result['status'] == 'error'
+    assert result['error'] == 'Sandbox execution is temporarily unavailable.'
