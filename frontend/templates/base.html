@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="mn" data-backend="{{ 'enabled' if backend_enabled else 'demo' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1020">
+  <meta name="description" content="CodeCraft Academy — HTML, CSS, JavaScript, Python-ийг дадлагаар сурах платформ.">
+  <title>{% block title %}CodeCraft Academy{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body class="page-{{ page|default('home') }}">
+  <a class="skip-link" href="#main-content">Үндсэн агуулга руу очих</a>
+  <header class="site-header">
+    <a class="brand" href="{{ url_for('frontend_shell') }}" aria-label="CodeCraft Academy нүүр хуудас">
+      <span class="brand-symbol"><i></i><i></i><i></i></span>
+      <span><strong>CodeCraft</strong><small>ACADEMY</small></span>
+    </a>
+    <nav class="desktop-nav" aria-label="Үндсэн цэс">
+      <a class="{% if page == 'home' %}is-active{% endif %}" href="{{ url_for('frontend_page', page='home') }}">Нүүр</a>
+      <a class="{% if page in ['curriculum','course','lesson'] %}is-active{% endif %}" href="{{ url_for('frontend_page', page='curriculum') }}">Сурах зам</a>
+      <a class="{% if page == 'workspace' %}is-active{% endif %}" href="{{ url_for('frontend_page', page='workspace') }}">Кодын лаборатори</a>
+      <a class="{% if page == 'dashboard' %}is-active{% endif %}" href="{{ url_for('frontend_page', page='dashboard') }}">Ахиц</a>
+    </nav>
+    <div class="header-actions">
+      <button class="icon-btn" data-theme-toggle aria-label="Өнгөний горим солих">◐</button>
+      <a class="button button-ghost button-small" href="{{ url_for('frontend_page', page='auth') }}?mode=login">Нэвтрэх</a>
+      <a class="button button-primary button-small" href="{{ url_for('frontend_page', page='auth') }}?mode=register">Бүртгүүлэх</a>
+      <button class="mobile-menu-btn" data-mobile-menu aria-label="Цэс нээх">☰</button>
+    </div>
+  </header>
+  <div class="mobile-menu" data-mobile-menu-panel aria-hidden="true">
+    <a href="{{ url_for('frontend_page', page='home') }}">Нүүр</a>
+    <a href="{{ url_for('frontend_page', page='curriculum') }}">Сурах зам</a>
+    <a href="{{ url_for('frontend_page', page='workspace') }}">Кодын лаборатори</a>
+    <a href="{{ url_for('frontend_page', page='dashboard') }}">Миний ахиц</a>
+    <a href="{{ url_for('frontend_page', page='profile') }}">Профайл</a>
+  </div>
+  <main id="main-content">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">
+    <div class="footer-main">
+      <a class="brand" href="{{ url_for('frontend_page', page='home') }}"><span class="brand-symbol"><i></i><i></i><i></i></span><span><strong>CodeCraft</strong><small>ACADEMY</small></span></a>
+      <p>Код бичих чадварыг жижиг, бодит алхмаар бүтээнэ.</p>
+      <div class="footer-links"><a href="{{ url_for('frontend_page', page='curriculum') }}">Сургалтын хөтөлбөр</a><a href="{{ url_for('frontend_page', page='workspace') }}">Дадлага</a><a href="{{ url_for('frontend_page', page='auth') }}">Нэвтрэх</a></div>
+    </div>
+    <div class="footer-bottom"><span>© 2026 CodeCraft Academy</span><span>HTML · CSS · JavaScript · Python</span></div>
+  </footer>
+  <div class="toast" data-toast role="status" aria-live="polite"></div>
+  <script>window.CODECRAFT_CONFIG = { apiBase: {{ request.script_root|tojson }}, backendEnabled: {{ backend_enabled|tojson }} };</script>
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
