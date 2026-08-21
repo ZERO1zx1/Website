@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8">
+  <title>CodeCraft Academy</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    .slide-container { width: 1280px; min-height: 720px; background: #F4F4F5; color: #18181B; font-family: "Courier New", monospace; display: grid; grid-template-rows: 84px 1fr 64px; }
+    .topbar, .footer { border-bottom: 2px solid #18181B; display: flex; align-items: center; justify-content: space-between; margin: 0 48px; }
+    .footer { border-top: 2px solid #18181B; border-bottom: 0; color: #3F3F46; font-size: 16px; }
+    .label { color: #059669; font-size: 17px; font-weight: 700; letter-spacing: 1px; }
+    .main { display: grid; grid-template-columns: 1.55fr 0.9fr; gap: 60px; align-items: center; margin: 0 48px; }
+    .eyebrow { color: #059669; font-size: 19px; font-weight: 700; letter-spacing: 2px; margin: 0 0 18px 0; }
+    h1 { font-size: 72px; line-height: 0.98; letter-spacing: -3px; margin: 0; max-width: 690px; }
+    .subtitle { color: #3F3F46; font-size: 22px; line-height: 1.35; margin: 24px 0 0 0; max-width: 650px; }
+    .cursor { color: #059669; }
+    .file { border: 2px solid #18181B; display: grid; grid-template-rows: 52px auto; }
+    .filebar { border-bottom: 2px solid #18181B; display: flex; align-items: center; justify-content: space-between; margin: 0 16px; font-size: 15px; }
+    .filebody { display: grid; gap: 14px; margin: 20px 18px 22px; }
+    .line { font-size: 18px; line-height: 1.2; }
+    .muted { color: #3F3F46; }
+    .stack { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+    .tag { border: 2px solid #18181B; color: #18181B; font-size: 17px; font-weight: 700; text-align: center; line-height: 40px; }
+    .tag.accent { border-color: #059669; color: #059669; }
+  </style>
+</head>
+<body>
+  <div class="slide-container">
+    <div class="topbar">
+      <div class="label">CODECRAFT / CURRICULUM</div>
+      <div>01 / 12</div>
+    </div>
+    <main class="main">
+      <section>
+        <p class="eyebrow">BUILD → LEARN → SHIP</p>
+        <h1>CodeCraft<br>Academy<span class="cursor">_</span></h1>
+        <p class="subtitle">Frontend-ээс programming foundations хүртэлх Монгол хэл дээрх практик сургалтын платформ.</p>
+      </section>
+      <aside class="file" aria-label="Course stack summary">
+        <div class="filebar"><span>academy.config</span><span class="label">READY</span></div>
+        <div class="filebody">
+          <div class="line"><span class="muted">target:</span> анхан шатны суралцагч</div>
+          <div class="line"><span class="muted">format:</span> read + code + practice</div>
+          <div class="line"><span class="muted">language:</span> Монгол</div>
+          <div class="stack">
+            <div class="tag">HTML</div><div class="tag">CSS</div>
+            <div class="tag accent">JAVASCRIPT</div><div class="tag">PYTHON</div>
+          </div>
+        </div>
+      </aside>
+    </main>
+    <div class="footer"><span>2026 · Curriculum & Learning Platform Overview</span><span>codecraft.academy</span></div>
+  </div>
+</body>
+</html>

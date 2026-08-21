@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8">
+  <title>JavaScript Interaction</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; }
+    .slide-container { width: 1280px; min-height: 720px; background: #F4F4F5; color: #18181B; font-family: "Courier New", monospace; display: grid; grid-template-rows: 78px 1fr 62px; }
+    .head, .foot { margin: 0 54px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #18181B; }
+    .foot { border-top: 2px solid #18181B; border-bottom: 0; font-size: 15px; color: #3F3F46; }
+    .accent { color: #059669; font-weight: 700; }
+    .body { margin: 0 54px; display: grid; grid-template-columns: .82fr 1.18fr; gap: 48px; align-items: center; }
+    .eyebrow { color: #059669; font-size: 17px; font-weight: 700; letter-spacing: 1.5px; margin: 0 0 20px 0; }
+    h1 { font-size: 45px; line-height: 1.04; letter-spacing: -2px; }
+    .lead { color: #3F3F46; font-size: 19px; line-height: 1.4; margin: 23px 0 0 0; max-width: 440px; }
+    .duration { border-top: 2px solid #18181B; border-bottom: 2px solid #18181B; margin-top: 31px; font-size: 18px; line-height: 49px; }
+    .flow { border: 2px solid #18181B; display: grid; grid-template-columns: 1fr 1fr 1fr; }
+    .node { min-height: 234px; display: grid; grid-template-rows: 42px auto 1fr; gap: 13px; margin: 0 20px; }
+    .node + .node { border-left: 2px solid #18181B; padding-left: 20px; margin-left: 0; }
+    .node-no { color: #059669; font-size: 15px; font-weight: 700; line-height: 42px; border-bottom: 2px solid #18181B; }
+    .node h2 { font-size: 23px; line-height: 1.06; }
+    .node p { color: #3F3F46; font-size: 16px; line-height: 1.37; }
+    .code { border-top: 2px solid #18181B; margin-top: 22px; font-size: 15px; line-height: 1.45; color: #3F3F46; }
+    .practice { margin-top: 24px; border: 2px solid #18181B; display: grid; grid-template-columns: 160px 1fr; min-height: 72px; }
+    .practice-label { color: #059669; font-size: 16px; font-weight: 700; display: grid; place-items: center; border-right: 2px solid #18181B; }
+    .practice-list { display: flex; align-items: center; justify-content: space-evenly; font-size: 15px; color: #3F3F46; }
+  </style>
+</head>
+<body>
+  <div class="slide-container">
+    <header class="head"><span class="accent">JAVASCRIPT FOUNDATIONS</span><span>06 / 12</span></header>
+    <main class="body">
+      <section>
+        <p class="eyebrow">STATIC → INTERACTIVE</p>
+        <h1>JavaScript: статик хуудсыг интерактив болгох</h1>
+        <p class="lead">Суралцагч browser доторх value, logic, event, DOM болон UI state-ийг нэг урсгал болгон холбож сурна.</p>
+        <div class="duration"><span class="accent">05 WEEKS</span> · Анхан шат · DOM-driven UI</div>
+      </section>
+      <section>
+        <div class="flow" aria-label="JavaScript learning flow">
+          <article class="node"><div class="node-no">01 / LOGIC</div><h2>Value & function</h2><p>Variable, data type, operator, condition, loop, function ашиглан шийдвэрийн логик бичнэ.</p><div class="code">const score = 86;<br>if (score &gt;= 80) {<br>&nbsp;&nbsp;showBadge();<br>}</div></article>
+          <article class="node"><div class="node-no">02 / EVENT</div><h2>Хэрэглэгчийн үйлдэл</h2><p>Click, input, submit зэрэг event-ийг сонсож, form interaction-ийг удирдана.</p><div class="code">button.addEventListener(<br>&nbsp;&nbsp;"click", submitTask<br>);</div></article>
+          <article class="node"><div class="node-no">03 / DOM</div><h2>UI state update</h2><p>Element сонгох, class toggle хийх, контент солих замаар interface-ийг бодитоор өөрчилнө.</p><div class="code">panel.classList<br>&nbsp;&nbsp;.toggle("is-dark");</div></article>
+        </div>
+        <div class="practice"><div class="practice-label">PRACTICE</div><div class="practice-list"><span>Theme toggle</span><span>Todo interaction</span><span>Quiz response</span><span>Form validation</span></div></div>
+      </section>
+    </main>
+    <footer class="foot"><span>Logic → Event → DOM → Visible feedback</span><span>CODECRAFT ACADEMY</span></footer>
+  </div>
+</body>
+</html>

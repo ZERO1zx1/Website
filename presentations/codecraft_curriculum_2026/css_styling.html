@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8">
+  <title>CSS: дизайн систем ба responsive сэтгэлгээ</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; }
+    .slide-container { width: 1280px; min-height: 720px; background: #F4F4F5; color: #18181B; font-family: "Courier New", monospace; display: grid; grid-template-rows: 78px 1fr 62px; }
+    .head, .foot { margin: 0 54px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #18181B; }
+    .foot { border-top: 2px solid #18181B; border-bottom: 0; color: #3F3F46; font-size: 15px; }
+    .accent { color: #059669; font-weight: 700; }
+    .body { margin: 0 54px; display: grid; grid-template-columns: .76fr 1.36fr; gap: 54px; align-items: center; }
+    .eyebrow { color: #059669; font-size: 17px; font-weight: 700; letter-spacing: 1px; margin-bottom: 18px; }
+    h1 { font-size: 43px; line-height: 1.04; letter-spacing: -2px; }
+    .desc { color: #3F3F46; font-size: 19px; line-height: 1.4; margin-top: 22px; }
+    .meta { border-top: 2px solid #18181B; display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 30px; }
+    .meta div { font-size: 16px; line-height: 1.45; padding-top: 13px; }
+    .meta div + div { border-left: 2px solid #18181B; padding-left: 16px; }
+    .roadmap { border: 2px solid #18181B; }
+    .module { display: grid; grid-template-columns: 86px 1.04fr .95fr; min-height: 126px; align-items: stretch; }
+    .module + .module { border-top: 2px solid #18181B; }
+    .module > div { display: grid; align-content: center; margin: 0 18px; }
+    .module > div + div { border-left: 2px solid #18181B; padding-left: 18px; }
+    .module-no { color: #059669; font-size: 24px; font-weight: 700; }
+    .module h2 { font-size: 23px; line-height: 1.1; }
+    .module p { color: #3F3F46; font-size: 16px; line-height: 1.35; margin-top: 8px; }
+    .code { font-size: 15px; line-height: 1.55; color: #3F3F46; }
+    .code strong { color: #059669; }
+  </style>
+</head>
+<body>
+  <div class="slide-container">
+    <header class="head"><span class="accent">CSS / VISUAL SYSTEM</span><span>05 / 12</span></header>
+    <main class="body">
+      <section>
+        <p class="eyebrow">4 ДОЛОО ХОНОГ · АНХАН ШАТ</p>
+        <h1>CSS: дизайн систем ба responsive сэтгэлгээ</h1>
+        <p class="desc">HTML бүтцийг зөвхөн гоёх биш, дэлгэц бүрт ойлгомжтой бөгөөд тогтвортой ажиллах visual system болгон хөгжүүлнэ.</p>
+        <div class="meta"><div><span class="accent">INPUT</span><br>semantic HTML</div><div><span class="accent">OUTPUT</span><br>responsive interface</div></div>
+      </section>
+      <section class="roadmap" aria-label="CSS learning roadmap">
+        <article class="module"><div class="module-no">01</div><div><h2>Selector & Cascade</h2><p>Property, value, inheritance, specificity-ийг уялдуулж ойлгоно.</p></div><div class="code"><strong>h1</strong> {<br> color: green;<br> }</div></article>
+        <article class="module"><div class="module-no">02</div><div><h2>Box Model & Spacing</h2><p>Content, padding, border, margin-ийн зай ба хэмжээг хянаж сурна.</p></div><div class="code"><strong>.card</strong> {<br> margin: 16px;<br> border: 2px solid;<br> }</div></article>
+        <article class="module"><div class="module-no">03</div><div><h2>Flexbox, Grid & Media Query</h2><p>Layout-аа component болон дэлгэцийн өргөнтэй хамт төлөвлөнө.</p></div><div class="code"><strong>@media</strong> (max-width: 700px) {<br> grid-template-columns:<br> 1fr;<br> }</div></article>
+      </section>
+    </main>
+    <footer class="foot"><span>Style with intent, not with overrides.</span><span>CODECRAFT ACADEMY</span></footer>
+  </div>
+</body>
+</html>

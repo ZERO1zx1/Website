@@ -100,6 +100,7 @@ def create_app(config_name='development'):
         from backend.api.submissions import submissions_bp
         from backend.api.teacher import teacher_bp
         from backend.api.analytics import analytics_bp
+        from backend.api.progress import progress_bp
 
         app.register_blueprint(auth_bp, url_prefix='/api/auth')
         app.register_blueprint(courses_bp, url_prefix='/api/courses')
@@ -107,6 +108,7 @@ def create_app(config_name='development'):
         app.register_blueprint(submissions_bp, url_prefix='/api/submissions')
         app.register_blueprint(teacher_bp, url_prefix='/api/teacher')
         app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
+        app.register_blueprint(progress_bp, url_prefix='/api/progress')
     
     # Multi-page CodeCraft frontend. Each learning surface has a dedicated template.
     @app.context_processor
@@ -151,7 +153,7 @@ def create_app(config_name='development'):
     def readiness_check():
         if frontend_only:
             return {'status': 'ready', 'mode': 'frontend-only'}, 200
-        required = ['SECRET_KEY', 'SUPABASE_URL', 'SUPABASE_KEY']
+        required = ['SECRET_KEY', 'SUPABASE_URL', 'SUPABASE_KEY', 'SUPABASE_SERVICE_ROLE_KEY']
         queue_mode = os.getenv('SUBMISSION_QUEUE_MODE', 'thread').lower()
         if queue_mode == 'redis':
             required.append('REDIS_URL')

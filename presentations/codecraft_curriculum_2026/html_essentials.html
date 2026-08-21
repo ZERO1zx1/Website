@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8">
+  <title>HTML Essentials</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; }
+    .slide-container { width: 1280px; min-height: 720px; background: #F4F4F5; color: #18181B; font-family: "Courier New", monospace; display: grid; grid-template-rows: 78px 1fr 62px; }
+    .head, .foot { margin: 0 54px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #18181B; }
+    .foot { border-top: 2px solid #18181B; border-bottom: 0; color: #3F3F46; font-size: 15px; }
+    .accent { color: #059669; font-weight: 700; }
+    .content { margin: 0 54px; display: grid; grid-template-columns: .86fr 1.36fr; gap: 48px; align-items: center; }
+    .title { font-size: 46px; line-height: 1.02; letter-spacing: -2px; }
+    .meta { margin-top: 18px; color: #059669; font-size: 17px; font-weight: 700; }
+    .lead { margin-top: 20px; color: #3F3F46; font-size: 18px; line-height: 1.42; }
+    .points { margin-top: 28px; border-top: 2px solid #18181B; }
+    .point { min-height: 48px; display: grid; grid-template-columns: 36px 1fr; align-items: center; border-bottom: 2px solid #18181B; font-size: 16px; }
+    .point b { color: #059669; font-size: 17px; }
+    .practice { margin-top: 26px; font-size: 16px; line-height: 1.35; color: #3F3F46; }
+    .editor { border: 2px solid #18181B; display: grid; grid-template-rows: 48px 1fr; min-height: 390px; }
+    .editorbar { border-bottom: 2px solid #18181B; display: flex; align-items: center; justify-content: space-between; margin: 0 18px; font-size: 15px; }
+    .codegrid { display: grid; grid-template-columns: 58px 1fr; }
+    .lines { border-right: 2px solid #18181B; color: #3F3F46; font-size: 16px; line-height: 1.65; text-align: center; margin-top: 22px; }
+    .code { font-size: 18px; line-height: 1.65; white-space: pre; margin: 22px 24px; }
+    .tag { color: #059669; font-weight: 700; }
+    .note { color: #3F3F46; }
+  </style>
+</head>
+<body>
+  <div class="slide-container">
+    <header class="head"><span class="accent">01 / HTML ESSENTIALS</span><span>04 / 12</span></header>
+    <main class="content">
+      <section>
+        <h1 class="title">HTML: вебийн<br>утга ба бүтэц</h1>
+        <p class="meta">4 ДОЛОО ХОНОГ · АНХАН ШАТ</p>
+        <p class="lead">HTML нь веб хуудасны харагдах байдлыг биш, түүний <strong>утга, дараалал, бүтцийг</strong> browser-д тодорхойлно.</p>
+        <div class="points">
+          <div class="point"><b>01</b><span>Browser, URL, request, document</span></div>
+          <div class="point"><b>02</b><span>Tag, element, nesting, hyperlink</span></div>
+          <div class="point"><b>03</b><span>Semantic HTML ба accessibility</span></div>
+        </div>
+        <p class="practice"><span class="accent">PRACTICE:</span> semantic article layout болон зөв гарчгийн шатлал бүхий personal page бүтээнэ.</p>
+      </section>
+      <section class="editor" aria-label="Semantic HTML code example">
+        <div class="editorbar"><span>semantic-page.html</span><span class="accent">STRUCTURE</span></div>
+        <div class="codegrid">
+          <div class="lines">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11</div>
+          <div class="code"><span class="tag">&lt;main&gt;</span>
+  <span class="tag">&lt;article&gt;</span>
+    <span class="tag">&lt;header&gt;</span>
+      <span class="tag">&lt;h1&gt;</span>Миний анхны вэб<span class="tag">&lt;/h1&gt;</span>
+    <span class="tag">&lt;/header&gt;</span>
+    <span class="tag">&lt;p&gt;</span><span class="note">Утгатай бүтэц нь ойлгомжтой.</span><span class="tag">&lt;/p&gt;</span>
+    <span class="tag">&lt;a href="#next"&gt;</span>Дараах lesson<span class="tag">&lt;/a&gt;</span>
+  <span class="tag">&lt;/article&gt;</span>
+<span class="tag">&lt;/main&gt;</span></div>
+        </div>
+      </section>
+    </main>
+    <footer class="foot"><span>Structure before styling.</span><span>CODECRAFT ACADEMY</span></footer>
+  </div>
+</body>
+</html>

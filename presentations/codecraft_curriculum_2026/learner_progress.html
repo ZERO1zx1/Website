@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8">
+  <title>Ахиц нь хэрэглэгчтэй хамт хадгалагдана</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; }
+    .slide-container { width: 1280px; min-height: 720px; background: #F4F4F5; color: #18181B; font-family: "Courier New", monospace; display: grid; grid-template-rows: 78px 1fr 62px; }
+    .head, .foot { margin: 0 54px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #18181B; }
+    .foot { border-top: 2px solid #18181B; border-bottom: 0; color: #3F3F46; font-size: 15px; }
+    .accent { color: #059669; font-weight: 700; }
+    .body { margin: 0 54px; display: grid; grid-template-columns: .72fr 1.42fr; gap: 56px; align-items: center; }
+    .eyebrow { color: #059669; font-size: 17px; font-weight: 700; letter-spacing: 1.3px; margin: 0 0 20px 0; }
+    h1 { font-size: 45px; line-height: 1.04; letter-spacing: -2px; }
+    .lead { color: #3F3F46; font-size: 19px; line-height: 1.42; margin: 22px 0 0 0; max-width: 440px; }
+    .promise { border-top: 2px solid #18181B; border-bottom: 2px solid #18181B; margin-top: 30px; display: grid; grid-template-columns: 42px 1fr; gap: 14px; align-items: center; min-height: 84px; font-size: 16px; line-height: 1.35; }
+    .promise .lock { color: #059669; font-size: 27px; font-weight: 700; text-align: center; }
+    .pipeline { border: 2px solid #18181B; display: grid; grid-template-rows: 1fr 1fr 1fr 58px; }
+    .stage { display: grid; grid-template-columns: 180px 1fr 216px; min-height: 107px; align-items: center; }
+    .stage + .stage { border-top: 2px solid #18181B; }
+    .stage > div { margin: 0 18px; }
+    .stage > div + div { border-left: 2px solid #18181B; padding-left: 18px; }
+    .stage-id { color: #059669; font-size: 17px; font-weight: 700; }
+    .stage h2 { font-size: 21px; line-height: 1.08; }
+    .stage p { color: #3F3F46; font-size: 15px; line-height: 1.34; margin-top: 6px; }
+    .field { color: #3F3F46; font-size: 14px; line-height: 1.45; }
+    .field strong { color: #18181B; }
+    .rule { border-top: 2px solid #18181B; display: grid; grid-template-columns: 156px 1fr; align-items: center; font-size: 15px; }
+    .rule b { color: #059669; text-align: center; border-right: 2px solid #18181B; line-height: 56px; }
+    .rule span { color: #3F3F46; margin-left: 18px; }
+  </style>
+</head>
+<body>
+  <div class="slide-container">
+    <header class="head"><span class="accent">LEARNER DATA MODEL</span><span>10 / 12</span></header>
+    <main class="body">
+      <section>
+        <p class="eyebrow">AUTHENTICATED PROGRESS</p>
+        <h1>Ахиц нь хэрэглэгчтэй хамт хадгалагдана</h1>
+        <p class="lead">Нэвтэрсэн суралцагчийн lesson completion болон course percentage нь Supabase дээр зөвхөн тухайн хэрэглэгчийн ownership-той хадгалагдана.</p>
+        <div class="promise"><div class="lock">⌁</div><div><span class="accent">LEARNER PROMISE</span><br>Хэрэглэгч зөвхөн өөрийн profile болон ахицын өгөгдлийг уншиж, шинэчилнэ.</div></div>
+      </section>
+      <section class="pipeline" aria-label="Supabase learner progress data flow">
+        <article class="stage"><div class="stage-id">01 / AUTH</div><div><h2>Email/password + Google</h2><p>Supabase Auth access token нь session болон user identity-г баталгаажуулна.</p></div><div class="field"><strong>identity:</strong> auth.users<br><strong>key:</strong> user UUID</div></article>
+        <article class="stage"><div class="stage-id">02 / PROFILE</div><div><h2>Нэг суралцагч, нэг profile</h2><p>Нэр, email, locale, theme болон role preference-ийг learner profile-д хадгална.</p></div><div class="field"><strong>table:</strong> profiles<br><strong>scope:</strong> own profile</div></article>
+        <article class="stage"><div class="stage-id">03 / PROGRESS</div><div><h2>Lesson → course summary</h2><p>Completion нь lesson-level дээр хадгалагдаж, dashboard course percentage-г тооцоолно.</p></div><div class="field"><strong>tables:</strong><br>lesson_progress<br>course_progress</div></article>
+        <div class="rule"><b>RLS ACTIVE</b><span><strong>auth.uid() = user_id</strong> · learner-owned rows only · server access token-оор scoped request</span></div>
+      </section>
+    </main>
+    <footer class="foot"><span>Identity → Profile → Lesson completion → Dashboard</span><span>CODECRAFT ACADEMY</span></footer>
+  </div>
+</body>
+</html>

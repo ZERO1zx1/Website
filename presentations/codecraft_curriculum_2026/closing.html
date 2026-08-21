@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8">
+  <title>Build, learn, ship.</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; }
+    .slide-container { width: 1280px; min-height: 720px; background: #F4F4F5; color: #18181B; font-family: "Courier New", monospace; display: grid; grid-template-rows: 86px 1fr 68px; }
+    .head, .foot { margin: 0 54px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #18181B; }
+    .foot { border-top: 2px solid #18181B; border-bottom: 0; color: #3F3F46; font-size: 15px; }
+    .accent { color: #059669; font-weight: 700; }
+    .main { margin: 0 54px; display: grid; grid-template-columns: 1.5fr .78fr; gap: 68px; align-items: center; }
+    .eyebrow { color: #059669; font-size: 18px; font-weight: 700; letter-spacing: 1.5px; margin: 0 0 22px 0; }
+    h1 { font-size: 70px; line-height: .96; letter-spacing: -3px; max-width: 700px; }
+    .subtitle { color: #3F3F46; font-size: 21px; line-height: 1.38; margin: 26px 0 0 0; max-width: 630px; }
+    .cursor { color: #059669; }
+    .status { border: 2px solid #18181B; display: grid; grid-template-rows: 48px 1fr; min-height: 270px; }
+    .status-head { margin: 0 16px; border-bottom: 2px solid #18181B; display: flex; align-items: center; justify-content: space-between; font-size: 15px; }
+    .status-body { display: grid; align-content: center; gap: 14px; margin: 0 20px; }
+    .row { display: flex; align-items: center; justify-content: space-between; font-size: 18px; }
+    .row .ok { color: #059669; font-weight: 700; }
+    .next { border-top: 2px solid #18181B; margin-top: 8px; padding-top: 15px; color: #3F3F46; font-size: 15px; line-height: 1.35; }
+  </style>
+</head>
+<body>
+  <div class="slide-container">
+    <header class="head"><span class="accent">CODECRAFT / END OF OVERVIEW</span><span>12 / 12</span></header>
+    <main class="main">
+      <section>
+        <p class="eyebrow">MONGOLIAN PRACTICAL CODING PATHWAY</p>
+        <h1>Build,<br>learn,<br>ship<span class="cursor">.</span></h1>
+        <p class="subtitle">CodeCraft Academy нь Монгол суралцагчийг унших материалаас бодит code, interaction, problem solving руу нэг тасралтгүй замаар хөтөлнө.</p>
+      </section>
+      <aside class="status" aria-label="CodeCraft course stack">
+        <div class="status-head"><span>academy.status</span><span class="accent">READY</span></div>
+        <div class="status-body">
+          <div class="row"><span>HTML</span><span class="ok">✓</span></div>
+          <div class="row"><span>CSS</span><span class="ok">✓</span></div>
+          <div class="row"><span>JAVASCRIPT</span><span class="ok">✓</span></div>
+          <div class="row"><span>PYTHON</span><span class="ok">✓</span></div>
+          <p class="next"><span class="accent">NEXT:</span> Read → Code Lab → Progress</p>
+        </div>
+      </aside>
+    </main>
+    <footer class="foot"><span>codecraft.academy</span><span>CURRICULUM OVERVIEW · 2026</span></footer>
+  </div>
+</body>
+</html>

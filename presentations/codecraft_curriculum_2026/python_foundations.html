@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8">
+  <title>Python Foundations</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; }
+    .slide-container { width: 1280px; min-height: 720px; background: #F4F4F5; color: #18181B; font-family: "Courier New", monospace; display: grid; grid-template-rows: 78px 1fr 62px; }
+    .head, .foot { margin: 0 54px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #18181B; }
+    .foot { border-top: 2px solid #18181B; border-bottom: 0; color: #3F3F46; font-size: 15px; }
+    .accent { color: #059669; font-weight: 700; }
+    .body { margin: 0 54px; display: grid; grid-template-columns: .9fr 1.1fr; gap: 56px; align-items: center; }
+    .title { font-size: 46px; line-height: 1.03; letter-spacing: -2px; max-width: 510px; }
+    .meta { color: #059669; font-size: 17px; font-weight: 700; letter-spacing: 1px; margin: 18px 0 22px; }
+    .description { color: #3F3F46; font-size: 19px; line-height: 1.42; max-width: 510px; }
+    .outcomes { border-top: 2px solid #18181B; margin-top: 30px; }
+    .outcome { display: grid; grid-template-columns: 36px 1fr; gap: 12px; border-bottom: 2px solid #18181B; min-height: 42px; align-items: center; font-size: 16px; }
+    .n { color: #059669; font-weight: 700; }
+    .right { display: grid; gap: 18px; }
+    .code { border: 2px solid #18181B; }
+    .codehead { min-height: 44px; border-bottom: 2px solid #18181B; display: flex; align-items: center; justify-content: space-between; margin: 0 16px; font-size: 15px; }
+    pre { color: #18181B; font-size: 17px; line-height: 1.45; white-space: pre-wrap; margin: 18px 22px 22px; }
+    .green { color: #059669; font-weight: 700; }
+    .practice { border: 2px solid #059669; display: grid; grid-template-columns: 138px 1fr; min-height: 85px; align-items: center; }
+    .practice-label { color: #059669; font-weight: 700; text-align: center; border-right: 2px solid #059669; line-height: 40px; }
+    .practice-text { font-size: 16px; line-height: 1.35; margin: 0 18px; color: #3F3F46; }
+  </style>
+</head>
+<body>
+  <div class="slide-container">
+    <header class="head"><span class="accent">04 / PYTHON FOUNDATIONS</span><span>07 / 12</span></header>
+    <main class="body">
+      <section>
+        <h1 class="title">Python: асуудал задлах programming суурь</h1>
+        <p class="meta">6 ДОЛОО ХОНОГ · АНХАН ШАТ</p>
+        <p class="description">Python нь суралцагчийг syntax цээжлэхээс илүү өгөгдөл, нөхцөл, давталтаар асуудлыг жижиг алхамд задлахад сургана.</p>
+        <div class="outcomes">
+          <div class="outcome"><span class="n">01</span><span>Interpreter, source code, output</span></div>
+          <div class="outcome"><span class="n">02</span><span>Value, variable, data type, list</span></div>
+          <div class="outcome"><span class="n">03</span><span>if / else, loop, жижиг function</span></div>
+          <div class="outcome"><span class="n">04</span><span>Error уншиж, script-ээ турших дадал</span></div>
+        </div>
+      </section>
+      <section class="right">
+        <div class="code">
+          <div class="codehead"><span>score_evaluator.py</span><span class="accent">RUN</span></div>
+          <pre><span class="green">score</span> = 86
+
+<span class="green">if</span> score &gt;= 90:
+    print("A")
+<span class="green">elif</span> score &gt;= 80:
+    print("B")
+<span class="green">else</span>:
+    print("Keep going")</pre>
+        </div>
+        <div class="practice"><div class="practice-label">PRACTICE</div><div class="practice-text">Оноог үсгэн үнэлгээнд хөрвүүлж, өөр өөр input дээр output-оо шалга. Дараа нь list ашиглан олон оноо бодоорой.</div></div>
+      </section>
+    </main>
+    <footer class="foot"><span>Data → Logic → Output</span><span>CODECRAFT ACADEMY</span></footer>
+  </div>
+</body>
+</html>

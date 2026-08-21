@@ -77,19 +77,22 @@
       <div class="lesson-task" id="practice">
         <span class="task-number">MINI PRACTICE</span>
         <h2>{{ lesson.task }}</h2>
-        <p>Кодын лабораторид ороод өөрийн шийдлийг бич. Дууссаны дараа хадгалж, ахицдаа тэмдэглээрэй.</p>
-        <a class="button button-primary" href="{{ url_for('frontend_page', page='workspace') }}?course={{ course.id }}&lesson={{ lesson.id }}">Лабораторид нээх <span>→</span></a>
+        <p>Кодын лабораторид ороод өөрийн шийдлийг бич. Дууссаны дараа ахицдаа тэмдэглэвэл таны явц Supabase-д найдвартай хадгалагдана.</p>
+        <div class="button-row">
+          <a class="button button-primary" href="{{ url_for('frontend_page', page='workspace') }}?course={{ course.id }}&lesson={{ lesson.id }}">Лабораторид нээх <span>→</span></a>
+          <button class="button button-ghost" type="button" data-completion-button>Дууссанд тооцох</button>
+        </div>
       </div>
     </article>
 
     <aside class="lesson-aside">
       <div class="lesson-progress-card">
         <span class="eyebrow">ТАНЫ АХИЦ</span>
-        <strong>1 <small>/ {{ course.lesson_count }}</small></strong>
+        <strong data-lesson-progress-value>0 <small>/ {{ course.lesson_count }}</small></strong>
         <div class="progress-bar">
-          <i style="width:{{ (1 / course.lesson_count * 100)|round|int }}%"></i>
+          <i data-lesson-progress-bar style="width:0%"></i>
         </div>
-        <span>Энэ хичээл эхлээгүй байна</span>
+        <span data-lesson-progress-status>Ахиц ачаалж байна…</span>
       </div>
       <div class="lesson-outline">
         <span class="eyebrow">ЭНЭ ХИЧЭЭЛД</span>
@@ -110,6 +113,57 @@
 
 {% block scripts %}
 <script>
+  const courseId = {{ course.id|tojson }};
+  const lessonId = {{ lesson.id|tojson }};
+  const completionButton = document.querySelector('[data-completion-button]');
+  const progressValue = document.querySelector('[data-lesson-progress-value]');
+  const progressBar = document.querySelector('[data-lesson-progress-bar]');
+  const progressStatus = document.querySelector('[data-lesson-progress-status]');
+  let isCompleted = false;
+
+  function renderProgress(summary) {
+    const course = summary.courses?.find((item) => item.course_id === courseId);
+    const completed = summary.completed_lesson_keys?.includes(`${courseId}:${lessonId}`);
+    isCompleted = Boolean(completed);
+    if (course) {
+      progressValue.innerHTML = `${course.completed_lessons} <small>/ ${course.total_lessons}</small>`;
+      progressBar.style.width = `${course.progress_percent}%`;
+    }
+    progressStatus.textContent = isCompleted ? 'Энэ хичээл дууссан байна.' : 'Энэ хичээл дуусаагүй байна.';
+    completionButton.textContent = isCompleted ? 'Дууссан ✓' : 'Дууссанд тооцох';
+    completionButton.classList.toggle('is-complete', isCompleted);
+  }
+
+  async function loadProgress() {
+    if (!localStorage.getItem('codecraft_token')) {
+      progressStatus.textContent = 'Ахиц хадгалахын тулд нэвтэрнэ үү.';
+      completionButton.textContent = 'Нэвтэрч хадгалах';
+      return;
+    }
+    try { renderProgress(await codecraftApi('/api/progress')); }
+    catch { progressStatus.textContent = 'Ахицын мэдээллийг ачаалж чадсангүй.'; }
+  }
+
+  completionButton.addEventListener('click', async () => {
+    if (!localStorage.getItem('codecraft_token')) {
+      location.href = '{{ url_for('frontend_page', page='auth') }}?mode=login';
+      return;
+    }
+    completionButton.disabled = true;
+    try {
+      if (isCompleted) {
+        const payload = await codecraftApi(`/api/progress/lessons/${encodeURIComponent(courseId)}/${encodeURIComponent(lessonId)}`, {method: 'DELETE'});
+        renderProgress(payload.summary);
+        showToast(payload.message_mn || 'Хичээлийн тэмдэглэгээг цуцаллаа.');
+      } else {
+        const payload = await codecraftApi('/api/progress/lessons', {method: 'POST', body: JSON.stringify({course_id: courseId, lesson_id: lessonId})});
+        renderProgress(payload.summary);
+        showToast(payload.message_mn || 'Хичээлийг дууссанд тооцлоо.');
+      }
+    } catch (error) { showToast(error.message, true); }
+    finally { completionButton.disabled = false; }
+  });
+
   document.querySelector('[data-copy-code]')?.addEventListener('click', async (e) => {
     const code = document.querySelector('.code-block code')?.textContent || '';
     try {
@@ -120,5 +174,6 @@
       e.currentTarget.textContent = 'Хуулах боломжгүй';
     }
   });
+  loadProgress();
 </script>
 {% endblock %}

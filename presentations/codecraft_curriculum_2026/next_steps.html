@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8">
+  <title>Дараагийн хөгжлийн чиглэл</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; }
+    .slide-container { width: 1280px; min-height: 720px; background: #F4F4F5; color: #18181B; font-family: "Courier New", monospace; display: grid; grid-template-rows: 78px 1fr 62px; }
+    .head, .foot { margin: 0 54px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #18181B; }
+    .foot { border-top: 2px solid #18181B; border-bottom: 0; color: #3F3F46; font-size: 15px; }
+    .accent { color: #059669; font-weight: 700; }
+    .body { margin: 0 54px; display: grid; grid-template-columns: .7fr 1.55fr; gap: 50px; align-items: center; }
+    .eyebrow { color: #059669; font-size: 16px; font-weight: 700; letter-spacing: 1px; margin: 0 0 18px 0; }
+    h1 { font-size: 45px; line-height: 1.04; letter-spacing: -2px; }
+    .lead { color: #3F3F46; font-size: 19px; line-height: 1.4; margin: 22px 0 0 0; }
+    .release { border-top: 2px solid #18181B; border-bottom: 2px solid #18181B; margin-top: 31px; font-size: 16px; line-height: 48px; }
+    .roadmap { border: 2px solid #18181B; display: grid; grid-template-columns: repeat(3, 1fr); min-height: 396px; }
+    .lane { display: grid; grid-template-rows: 58px 1fr; }
+    .lane + .lane { border-left: 2px solid #18181B; }
+    .lane-head { border-bottom: 2px solid #18181B; display: flex; align-items: center; margin: 0 16px; font-size: 17px; font-weight: 700; }
+    .lane-content { display: grid; align-content: start; gap: 0; margin: 0 16px; }
+    .item { min-height: 133px; display: grid; align-content: center; gap: 10px; }
+    .item + .item { border-top: 2px solid #18181B; }
+    .item-no { color: #059669; font-size: 15px; font-weight: 700; }
+    .item h2 { font-size: 21px; line-height: 1.12; }
+    .item p { color: #3F3F46; font-size: 15px; line-height: 1.36; }
+  </style>
+</head>
+<body>
+  <div class="slide-container">
+    <header class="head"><span class="accent">PRODUCT ROADMAP</span><span>11 / 12</span></header>
+    <main class="body">
+      <section>
+        <p class="eyebrow">NEXT RELEASES</p>
+        <h1>Дараагийн хөгжлийн чиглэл</h1>
+        <p class="lead">CodeCraft-ийн дараагийн алхам нь суралцагчийн нэвтрэлт, туршилт, үнэлгээ болон бүтээлээр баталгаажих learning loop-ийг гүнзгийрүүлэхэд чиглэнэ.</p>
+        <p class="release"><span class="accent">ROADMAP</span> · enable → validate → extend</p>
+      </section>
+      <section class="roadmap" aria-label="CodeCraft development roadmap">
+        <article class="lane">
+          <div class="lane-head"><span class="accent">NOW / ENABLE</span></div>
+          <div class="lane-content">
+            <div class="item"><span class="item-no">01</span><h2>Google OAuth</h2><p>Google Cloud client credentials болон Supabase provider тохиргоог enable хийж, redirect URL-ийг live/local орчинд verify хийнэ.</p></div>
+            <div class="item"><span class="item-no">02</span><h2>Auth observability</h2><p>Sign-in, verification, session error-ийг admin-visible лог болон readiness check-тэй болгоно.</p></div>
+          </div>
+        </article>
+        <article class="lane">
+          <div class="lane-head"><span class="accent">NEXT / PRACTICE</span></div>
+          <div class="lane-content">
+            <div class="item"><span class="item-no">03</span><h2>Code evaluation</h2><p>Code Lab-ийн run/submit үйлдлийг language-aware evaluation болон бодит feedback-тэй холбоно.</p></div>
+            <div class="item"><span class="item-no">04</span><h2>Learner analytics</h2><p>Completion, streak, common errors, next action-ийг dashboard болон teacher view-д нэгтгэнэ.</p></div>
+          </div>
+        </article>
+        <article class="lane">
+          <div class="lane-head"><span class="accent">EXTEND / SHIP</span></div>
+          <div class="lane-content">
+            <div class="item"><span class="item-no">05</span><h2>Certificate</h2><p>Course completion requirements дээр суурилсан shareable learning credential нэмнэ.</p></div>
+            <div class="item"><span class="item-no">06</span><h2>Capstone pathway</h2><p>Git/GitHub, API, Flask project болон portfolio build гэсэн дараагийн practical modules нээнэ.</p></div>
+          </div>
+        </article>
+      </section>
+    </main>
+    <footer class="foot"><span>Enable → Validate → Extend</span><span>CODECRAFT ACADEMY</span></footer>
+  </div>
+</body>
+</html>

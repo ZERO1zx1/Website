@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8">
+  <title>Lesson бүр хийх алхам</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; }
+    .slide-container { width: 1280px; min-height: 720px; background: #F4F4F5; color: #18181B; font-family: "Courier New", monospace; display: grid; grid-template-rows: 78px 1fr 62px; }
+    .head, .foot { margin: 0 54px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #18181B; }
+    .foot { border-top: 2px solid #18181B; border-bottom: 0; color: #3F3F46; font-size: 15px; }
+    .accent { color: #059669; font-weight: 700; }
+    .content { margin: 0 54px; display: grid; grid-template-columns: .74fr 1.42fr; gap: 54px; align-items: center; }
+    .eyebrow { color: #059669; font-size: 17px; font-weight: 700; letter-spacing: 1.5px; margin: 0 0 18px 0; }
+    h1 { font-size: 45px; line-height: 1.04; letter-spacing: -2px; }
+    .lead { color: #3F3F46; font-size: 19px; line-height: 1.42; margin: 23px 0 0 0; }
+    .formula { border-top: 2px solid #18181B; border-bottom: 2px solid #18181B; margin: 32px 0 0 0; color: #059669; font-size: 17px; font-weight: 700; line-height: 54px; }
+    .grid { border: 2px solid #18181B; display: grid; grid-template-columns: 1fr 1fr 1fr; }
+    .block { min-height: 186px; display: grid; align-content: center; gap: 10px; margin: 0 18px; }
+    .block:nth-child(n+4) { border-top: 2px solid #18181B; }
+    .block:not(:nth-child(3n+1)) { border-left: 2px solid #18181B; padding-left: 18px; margin-left: 0; }
+    .number { color: #059669; font-size: 15px; font-weight: 700; }
+    .block h2 { font-size: 22px; line-height: 1.06; }
+    .block p { color: #3F3F46; font-size: 15px; line-height: 1.36; }
+  </style>
+</head>
+<body>
+  <div class="slide-container">
+    <header class="head"><span class="accent">LESSON DESIGN SYSTEM</span><span>08 / 12</span></header>
+    <main class="content">
+      <section>
+        <p class="eyebrow">READING THAT LEADS TO DOING</p>
+        <h1>Lesson бүр унших материал биш, хийх алхам</h1>
+        <p class="lead">CodeCraft lesson нь нэг ойлголтыг зөв тайлбарлаад зогсохгүй, суралцагчийг кодоо өөрөө өөрчилж, өөрийгөө шалгах цэг рүү хүргэнэ.</p>
+        <p class="formula">CONCEPT → TRY → VERIFY</p>
+      </section>
+      <section class="grid" aria-label="Lesson content blocks">
+        <article class="block"><span class="number">01 / CONCEPT</span><h2>Гол ойлголт</h2><p>Нэр томьёо, syntax, хэрэглэх нөхцөлийг Монгол хэлээр товч тодорхойлно.</p></article>
+        <article class="block"><span class="number">02 / MENTAL MODEL</span><h2>Тогтоох зүйрлэл</h2><p>Хийсвэр техникийн санааг өдөр тутмын жишээтэй холбож ойлгуулна.</p></article>
+        <article class="block"><span class="number">03 / CODE EXAMPLE</span><h2>Ажиллах код</h2><p>Жижиг, өөрчилж болох example-оос кодын бүтцийг шууд харна.</p></article>
+        <article class="block"><span class="number">04 / COMMON MISTAKE</span><h2>Анхаарах алдаа</h2><p>Түгээмэл syntax болон logic mistake-ийг урьдчилж таниулна.</p></article>
+        <article class="block"><span class="number">05 / PRACTICE</span><h2>Өөрөө турших</h2><p>Нэг тодорхой даалгавраар суралцагч кодоо ажиллуулж үзнэ.</p></article>
+        <article class="block"><span class="number">06 / QUIZ</span><h2>Бататгах асуулт</h2><p>Богино асуултаар ойлголтоо шалгаж, дараагийн lesson-д шилжинэ.</p></article>
+      </section>
+    </main>
+    <footer class="foot"><span>Learn the idea. Change the code. Check the result.</span><span>CODECRAFT ACADEMY</span></footer>
+  </div>
+</body>
+</html>

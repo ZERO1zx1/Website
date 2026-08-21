@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8">
+  <title>Code Lab: мэдлэгийг турших орчин</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; }
+    .slide-container { width: 1280px; min-height: 720px; background: #F4F4F5; color: #18181B; font-family: "Courier New", monospace; display: grid; grid-template-rows: 78px 1fr 62px; }
+    .head, .foot { margin: 0 54px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #18181B; }
+    .foot { border-top: 2px solid #18181B; border-bottom: 0; color: #3F3F46; font-size: 15px; }
+    .accent { color: #059669; font-weight: 700; }
+    .body { margin: 0 54px; display: grid; grid-template-columns: .73fr 1.47fr; gap: 52px; align-items: center; }
+    .eyebrow { color: #059669; font-size: 17px; font-weight: 700; letter-spacing: 1.2px; margin-bottom: 18px; }
+    h1 { font-size: 45px; line-height: 1.04; letter-spacing: -2px; }
+    .lead { color: #3F3F46; font-size: 18px; line-height: 1.42; margin-top: 22px; }
+    .steps { border-top: 2px solid #18181B; margin-top: 29px; }
+    .step { min-height: 47px; border-bottom: 2px solid #18181B; display: grid; grid-template-columns: 40px 1fr; align-items: center; font-size: 16px; }
+    .num { color: #059669; font-weight: 700; }
+    .workspace { min-height: 391px; border: 2px solid #18181B; display: grid; grid-template-rows: 46px 1fr; }
+    .toolbar { border-bottom: 2px solid #18181B; display: flex; align-items: center; justify-content: space-between; margin: 0 16px; font-size: 15px; }
+    .workarea { display: grid; grid-template-columns: 156px 1fr 202px; }
+    .sidebar { border-right: 2px solid #18181B; display: grid; align-content: start; gap: 0; }
+    .sidehead { color: #059669; font-size: 14px; font-weight: 700; line-height: 47px; margin: 0 14px; border-bottom: 2px solid #18181B; }
+    .lesson { font-size: 14px; line-height: 1.32; color: #3F3F46; margin: 14px; }
+    .lesson.active { color: #18181B; font-weight: 700; border-left: 2px solid #059669; margin-left: 0; padding-left: 12px; }
+    .editor { display: grid; grid-template-rows: 43px 1fr; }
+    .tabs { border-bottom: 2px solid #18181B; display: flex; align-items: center; justify-content: space-between; margin: 0 15px; font-size: 14px; }
+    .code { color: #3F3F46; font-size: 15px; line-height: 1.55; white-space: pre; margin: 18px; }
+    .code strong { color: #059669; }
+    .output { border-left: 2px solid #18181B; display: grid; grid-template-rows: 43px 1fr 53px; }
+    .outputhead { border-bottom: 2px solid #18181B; margin: 0 13px; display: flex; align-items: center; font-size: 14px; }
+    .result { color: #3F3F46; font-size: 14px; line-height: 1.45; margin: 16px 13px; }
+    .action { border-top: 2px solid #18181B; color: #059669; font-weight: 700; font-size: 14px; display: grid; place-items: center; }
+  </style>
+</head>
+<body>
+  <div class="slide-container">
+    <header class="head"><span class="accent">PRACTICE ENVIRONMENT</span><span>09 / 12</span></header>
+    <main class="body">
+      <section>
+        <p class="eyebrow">LESSON → WORKSPACE</p>
+        <h1>Code Lab: мэдлэгийг турших орчин</h1>
+        <p class="lead">Уншсан lesson-оосоо шууд starter code руу шилжиж, өөрийн өөрчлөлт, output, completion-оо нэг урсгалд харна.</p>
+        <div class="steps">
+          <div class="step"><span class="num">01</span><span>Course ба lesson сонгоно</span></div>
+          <div class="step"><span class="num">02</span><span>Starter code-оос туршилт эхлүүлнэ</span></div>
+          <div class="step"><span class="num">03</span><span>Run / submit үйлдэлд бэлтгэнэ</span></div>
+          <div class="step"><span class="num">04</span><span>Дасгалаа completion-той холбоно</span></div>
+        </div>
+      </section>
+      <section class="workspace" aria-label="Code Lab workspace concept">
+        <div class="toolbar"><span>workspace / python / py-start</span><span class="accent">STARTER MODE</span></div>
+        <div class="workarea">
+          <aside class="sidebar"><div class="sidehead">LESSONS</div><div class="lesson active">Python гэж юу вэ?</div><div class="lesson">Data types</div><div class="lesson">List-ийн эхлэл</div><div class="lesson">if / else</div></aside>
+          <section class="editor"><div class="tabs"><span>main.py</span><span class="accent">PYTHON</span></div><pre class="code"><strong>print</strong>("Сайн байна уу!")
+
+price = 12500
+quantity = 3
+
+<strong>print</strong>("Нийт:",
+      price * quantity)</pre></section>
+          <aside class="output"><div class="outputhead">OUTPUT</div><div class="result">Сайн байна уу!<br><br>Нийт: 37500<br><br><span class="accent">Ready for practice</span></div><div class="action">RUN / SUBMIT</div></aside>
+        </div>
+      </section>
+    </main>
+    <footer class="foot"><span>Start small. Change one line. Observe the result.</span><span>CODECRAFT ACADEMY</span></footer>
+  </div>
+</body>
+</html>

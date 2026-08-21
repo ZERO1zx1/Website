@@ -2,6 +2,120 @@
 {% set page = 'auth' %}
 {% block title %}Нэвтрэх ба бүртгүүлэх — CodeCraft Academy{% endblock %}
 {% block content %}
-<section class="auth-page container-wide"><div class="auth-brand-panel"><span class="eyebrow">CODECRAFT ACADEMY</span><h1>Өөрийн сурах орон зайгаа нээ.</h1><p>Хичээлээ хадгалж, ахицаа хараад, өдөр бүр нэг алхмаар илүү сайн код бич.</p><div class="auth-quote"><span>“</span><p>Төгс эхлэл гэж байдаггүй. Харин өнөөдөр эхлэх сонголт бий.</p></div><div class="auth-stats"><span><strong>57+</strong><small>хичээл</small></span><span><strong>4</strong><small>чиглэл</small></span><span><strong>∞</strong><small>боломж</small></span></div></div><div class="auth-card"><div class="auth-tabs"><button class="auth-tab is-active" data-auth-mode="login">Нэвтрэх</button><button class="auth-tab" data-auth-mode="register">Бүртгүүлэх</button></div><div class="auth-heading"><h2 id="auth-title">Тавтай морил.</h2><p id="auth-subtitle">Суралцах орон зайдаа үргэлжлүүлэн нэвтэр.</p></div><button class="google-button" id="google-login"><span class="google-g">G</span><span>Google-ээр үргэлжлүүлэх</span></button><div class="auth-divider"><span>эсвэл имэйлээр</span></div><form id="auth-form"><div class="field-group" id="name-field" hidden><label for="name">Нэр</label><input id="name" name="name" type="text" placeholder="Таны нэр" autocomplete="name"></div><div class="field-group"><label for="email">Имэйл</label><input id="email" name="email" type="email" placeholder="you@example.com" autocomplete="email" required></div><div class="field-group"><div class="field-label-row"><label for="password">Нууц үг</label><a href="#" id="forgot-password">Мартсан уу?</a></div><input id="password" name="password" type="password" placeholder="Хамгийн багадаа 8 тэмдэгт" autocomplete="current-password" required></div><label class="consent" id="consent-field" hidden><input type="checkbox"><span>CodeCraft-ийн нөхцөл, нууцлалын бодлогыг зөвшөөрч байна.</span></label><button class="button button-primary button-full" id="auth-submit" type="submit">Нэвтрэх <span>→</span></button><p class="form-message" id="auth-message" role="status"></p></form><p class="auth-switch" id="auth-switch-copy">Анх удаа ирж байна уу? <button data-auth-mode="register">Бүртгэл үүсгэх</button></p></div></section>
+<section class="auth-page container-wide">
+  <div class="auth-brand-panel">
+    <span class="eyebrow">CODECRAFT ACADEMY</span>
+    <h1>Өөрийн сурах орон зайгаа нээ.</h1>
+    <p>Supabase хамгаалалттай бүртгэлээр хичээлээ хадгалж, ахицаа хаанаас ч үргэлжлүүл.</p>
+    <div class="auth-quote"><span>“</span><p>Төгс эхлэл гэж байдаггүй. Харин өнөөдөр эхлэх сонголт бий.</p></div>
+    <div class="auth-stats"><span><strong>57+</strong><small>хичээл</small></span><span><strong>4</strong><small>чиглэл</small></span><span><strong>∞</strong><small>боломж</small></span></div>
+  </div>
+  <div class="auth-card">
+    <div class="auth-tabs"><button class="auth-tab is-active" data-auth-mode="login" type="button">Нэвтрэх</button><button class="auth-tab" data-auth-mode="register" type="button">Бүртгүүлэх</button></div>
+    <div class="auth-heading"><h2 id="auth-title">Тавтай морил.</h2><p id="auth-subtitle">Суралцах орон зайдаа үргэлжлүүлэн нэвтэр.</p></div>
+    <button class="google-button" id="google-login" type="button"><span class="google-g">G</span><span>Google-ээр үргэлжлүүлэх</span></button>
+    <div class="auth-divider"><span>эсвэл имэйлээр</span></div>
+    <form id="auth-form" novalidate>
+      <div class="field-group" id="name-field" hidden><label for="name">Нэр</label><input id="name" name="name" type="text" placeholder="Таны нэр" autocomplete="name"></div>
+      <div class="field-group"><label for="email">Имэйл</label><input id="email" name="email" type="email" placeholder="you@example.com" autocomplete="email" required></div>
+      <div class="field-group"><div class="field-label-row"><label for="password">Нууц үг</label><span id="password-help">Хамгийн багадаа 8 тэмдэгт</span></div><input id="password" name="password" type="password" placeholder="••••••••" autocomplete="current-password" minlength="8" required></div>
+      <label class="consent" id="consent-field" hidden><input id="consent" type="checkbox"><span>CodeCraft-ийн нөхцөл, нууцлалын бодлогыг зөвшөөрч байна.</span></label>
+      <button class="button button-primary button-full" id="auth-submit" type="submit">Нэвтрэх <span>→</span></button>
+      <p class="form-message" id="auth-message" role="status" aria-live="polite"></p>
+    </form>
+    <p class="auth-switch" id="auth-switch-copy">Анх удаа ирж байна уу? <button data-auth-mode="register" type="button">Бүртгэл үүсгэх</button></p>
+  </div>
+</section>
 {% endblock %}
-{% block scripts %}<script>const params = new URLSearchParams(location.search); let authMode = params.get('mode') === 'register' ? 'register' : 'login'; const form = document.querySelector('#auth-form'); const message = document.querySelector('#auth-message'); const title = document.querySelector('#auth-title'); const subtitle = document.querySelector('#auth-subtitle'); const submit = document.querySelector('#auth-submit'); const nameField = document.querySelector('#name-field'); const consent = document.querySelector('#consent-field'); const switchCopy = document.querySelector('#auth-switch-copy'); function setAuthMode(mode) { authMode = mode; document.querySelectorAll('[data-auth-mode]').forEach((item) => item.classList.toggle('is-active', item.dataset.authMode === mode)); const register = mode === 'register'; title.textContent = register ? 'Өөрийн замаа эхлүүл.' : 'Тавтай морил.'; subtitle.textContent = register ? 'Үнэгүй бүртгэлээр ахицаа хадгал.' : 'Суралцах орон зайдаа үргэлжлүүлэн нэвтэр.'; nameField.hidden = !register; consent.hidden = !register; submit.innerHTML = register ? 'Бүртгэл үүсгэх <span>→</span>' : 'Нэвтрэх <span>→</span>'; switchCopy.innerHTML = register ? 'Аль хэдийн бүртгэлтэй юу? <button data-auth-mode="login">Нэвтрэх</button>' : 'Анх удаа ирж байна уу? <button data-auth-mode="register">Бүртгэл үүсгэх</button>'; switchCopy.querySelector('button').addEventListener('click', () => setAuthMode(register ? 'login' : 'register')); } document.querySelectorAll('[data-auth-mode]').forEach((item) => item.addEventListener('click', () => setAuthMode(item.dataset.authMode))); setAuthMode(authMode); form.addEventListener('submit', async (event) => { event.preventDefault(); message.className = 'form-message'; message.textContent = 'Түр хүлээнэ үү…'; const body = Object.fromEntries(new FormData(form).entries()); const endpoint = authMode === 'register' ? '/api/auth/register' : '/api/auth/login'; try { const response = await fetch(`${window.CODECRAFT_CONFIG.apiBase}${endpoint}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}); const payload = await response.json(); if (!response.ok) throw new Error(payload.message_mn || payload.error || 'Нэвтрэхэд алдаа гарлаа.'); localStorage.setItem('codecraft_token', payload.token || ''); localStorage.setItem('codecraft_user', JSON.stringify(payload.user || {})); message.classList.add('success'); message.textContent = authMode === 'register' ? 'Бүртгэл амжилттай. Ахицын самбар руу шилжиж байна…' : 'Амжилттай нэвтэрлээ. Ахицын самбар руу шилжиж байна…'; setTimeout(() => location.href = '{{ url_for('frontend_page', page='dashboard') }}', 500); } catch (error) { message.classList.add('error'); message.textContent = error.message; } }); document.querySelector('#google-login').addEventListener('click', async () => { try { const response = await fetch(`${window.CODECRAFT_CONFIG.apiBase}/api/auth/google/start`); const payload = await response.json(); if (!response.ok) throw new Error(payload.message_mn || 'Google тохиргоо бэлэн биш байна.'); location.href = payload.url; } catch (error) { message.className = 'form-message error'; message.textContent = error.message; } });</script>{% endblock %}
+{% block scripts %}
+<script>
+  const params = new URLSearchParams(location.search);
+  const fragment = new URLSearchParams(location.hash.replace(/^#/, ''));
+  let authMode = params.get('mode') === 'register' ? 'register' : 'login';
+  const form = document.querySelector('#auth-form');
+  const message = document.querySelector('#auth-message');
+  const title = document.querySelector('#auth-title');
+  const subtitle = document.querySelector('#auth-subtitle');
+  const submit = document.querySelector('#auth-submit');
+  const nameField = document.querySelector('#name-field');
+  const consent = document.querySelector('#consent-field');
+  const switchCopy = document.querySelector('#auth-switch-copy');
+
+  function showMessage(text, type = '') {
+    message.className = `form-message ${type}`.trim();
+    message.textContent = text;
+  }
+  function persistSession(payload) {
+    if (!payload.token) return false;
+    localStorage.setItem('codecraft_token', payload.token);
+    if (payload.refresh_token) localStorage.setItem('codecraft_refresh_token', payload.refresh_token);
+    localStorage.setItem('codecraft_user', JSON.stringify(payload.user || {}));
+    return true;
+  }
+  function setAuthMode(mode) {
+    authMode = mode;
+    document.querySelectorAll('[data-auth-mode]').forEach((item) => item.classList.toggle('is-active', item.dataset.authMode === mode));
+    const register = mode === 'register';
+    title.textContent = register ? 'Өөрийн замаа эхлүүл.' : 'Тавтай морил.';
+    subtitle.textContent = register ? 'Үнэгүй бүртгэлээр ахицаа Supabase-д хадгал.' : 'Суралцах орон зайдаа үргэлжлүүлэн нэвтэр.';
+    nameField.hidden = !register;
+    consent.hidden = !register;
+    document.querySelector('#name').required = register;
+    document.querySelector('#consent').required = register;
+    submit.innerHTML = register ? 'Бүртгэл үүсгэх <span>→</span>' : 'Нэвтрэх <span>→</span>';
+    switchCopy.innerHTML = register ? 'Аль хэдийн бүртгэлтэй юу? <button data-auth-mode="login" type="button">Нэвтрэх</button>' : 'Анх удаа ирж байна уу? <button data-auth-mode="register" type="button">Бүртгэл үүсгэх</button>';
+    switchCopy.querySelector('button').addEventListener('click', () => setAuthMode(register ? 'login' : 'register'));
+  }
+
+  document.querySelectorAll('[data-auth-mode]').forEach((item) => item.addEventListener('click', () => setAuthMode(item.dataset.authMode)));
+  setAuthMode(authMode);
+
+  if (fragment.get('auth_token')) {
+    persistSession({token: fragment.get('auth_token'), refresh_token: fragment.get('auth_refresh_token'), user: {}});
+    history.replaceState({}, document.title, location.pathname + '?oauth=google');
+    codecraftApi('/api/auth/me').then((payload) => {
+      localStorage.setItem('codecraft_user', JSON.stringify(payload.user));
+      showMessage('Google-ээр амжилттай нэвтэрлээ. Ахицын самбар руу шилжиж байна…', 'success');
+      setTimeout(() => location.href = '{{ url_for('frontend_page', page='dashboard') }}', 500);
+    }).catch(() => showMessage('Google session баталгаажсангүй. Дахин оролдоно уу.', 'error'));
+  } else if (params.get('confirmed') === '1') {
+    showMessage('Имэйл баталгаажлаа. Одоо нэвтэрч орно уу.', 'success');
+  } else if (params.get('auth_error')) {
+    showMessage('Google-ээр нэвтрэх амжилтгүй боллоо. Provider тохиргоог шалгана уу.', 'error');
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!form.reportValidity()) return;
+    showMessage('Түр хүлээнэ үү…');
+    const body = Object.fromEntries(new FormData(form).entries());
+    const endpoint = authMode === 'register' ? '/api/auth/register' : '/api/auth/login';
+    try {
+      const response = await fetch(`${window.CODECRAFT_CONFIG.apiBase}${endpoint}`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.message_mn || payload.error || 'Нэвтрэхэд алдаа гарлаа.');
+      if (payload.verification_required) {
+        setAuthMode('login');
+        showMessage(payload.message_mn || 'Имэйлээ шалгаад бүртгэлээ баталгаажуулна уу.', 'success');
+        return;
+      }
+      if (!persistSession(payload)) throw new Error('Supabase session үүссэнгүй. Дахин оролдоно уу.');
+      showMessage(payload.message_mn || 'Амжилттай нэвтэрлээ. Ахицын самбар руу шилжиж байна…', 'success');
+      setTimeout(() => location.href = '{{ url_for('frontend_page', page='dashboard') }}', 500);
+    } catch (error) {
+      showMessage(error.message, 'error');
+    }
+  });
+
+  document.querySelector('#google-login').addEventListener('click', async () => {
+    try {
+      const response = await fetch(`${window.CODECRAFT_CONFIG.apiBase}/api/auth/google/start`);
+      const payload = await response.json();
+      if (!response.ok || !payload.url) throw new Error(payload.message_mn || 'Google тохиргоо бэлэн биш байна.');
+      location.assign(payload.url);
+    } catch (error) {
+      showMessage(error.message, 'error');
+    }
+  });
+</script>
+{% endblock %}
