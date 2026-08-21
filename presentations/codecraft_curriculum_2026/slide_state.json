@@ -1,0 +1,144 @@
+{
+  "project_info": {
+    "title": "CodeCraft Academy",
+    "created": 1787289332.575,
+    "last_updated": 1787289526.558,
+    "total_slides": 12
+  },
+  "slides": [
+    {
+      "id": "cover",
+      "state": "edited",
+      "pageNum": 1
+    },
+    {
+      "id": "learning_path",
+      "state": "edited",
+      "pageNum": 2
+    },
+    {
+      "id": "curriculum_map",
+      "state": "edited",
+      "pageNum": 3
+    },
+    {
+      "id": "html_essentials",
+      "state": "edited",
+      "pageNum": 4
+    },
+    {
+      "id": "css_styling",
+      "state": "edited",
+      "pageNum": 5
+    },
+    {
+      "id": "javascript_interaction",
+      "state": "edited",
+      "pageNum": 6
+    },
+    {
+      "id": "python_foundations",
+      "state": "edited",
+      "pageNum": 7
+    },
+    {
+      "id": "lesson_design",
+      "state": "edited",
+      "pageNum": 8
+    },
+    {
+      "id": "code_lab",
+      "state": "edited",
+      "pageNum": 9
+    },
+    {
+      "id": "learner_progress",
+      "state": "edited",
+      "pageNum": 10
+    },
+    {
+      "id": "next_steps",
+      "state": "edited",
+      "pageNum": 11
+    },
+    {
+      "id": "closing",
+      "state": "edited",
+      "pageNum": 12
+    }
+  ],
+  "outline": [
+    {
+      "id": "cover",
+      "title": "CodeCraft Academy",
+      "summary": "Frontend-ээс programming foundations хүртэлх Монгол хэл дээрх практик сургалтын платформын танилцуулга.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "learning_path",
+      "title": "Код бичиж эхлэх нэг ойлгомжтой зам",
+      "summary": "CodeCraft-ийн суралцах цикл болон анхан шатны 4 уялдаа холбоотой чиглэлийг танилцуулна.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "curriculum_map",
+      "title": "Сууриас интерфэйс рүү",
+      "summary": "HTML, CSS, JavaScript, Python гэсэн суралцах дараалал болон үндсэн үр дүнг харуулна.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "html_essentials",
+      "title": "HTML: вебийн утга ба бүтэц",
+      "summary": "Семантик structure, accessibility, document-ийн суурь ойлголт, дадлагыг танилцуулна.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "css_styling",
+      "title": "CSS: дизайн систем ба responsive сэтгэлгээ",
+      "summary": "Box model, cascade, Flexbox, Grid болон responsive layout-ын сургалтын замыг харуулна.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "javascript_interaction",
+      "title": "JavaScript: статик хуудсыг интерактив болгох",
+      "summary": "Logic, event, DOM, form interaction болон UI state дадлагыг танилцуулна.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "python_foundations",
+      "title": "Python: асуудал задлах programming суурь",
+      "summary": "Interpreter, data, logic, list, condition, loop, script practice гэсэн Python суурийг харуулна.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "lesson_design",
+      "title": "Lesson бүр хийх алхам",
+      "summary": "Concept, mental model, code example, common mistake, practice, quiz гэсэн lesson design-ийг тайлбарлана.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "code_lab",
+      "title": "Code Lab: мэдлэгийг турших орчин",
+      "summary": "Starter code, workspace болон lesson-to-practice сургалтын урсгалыг харуулна.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "learner_progress",
+      "title": "Ахиц нь хэрэглэгчтэй хамт хадгалагдана",
+      "summary": "Supabase Auth, profiles, lesson_progress, course_progress, RLS-ээр хамгаалсан learner data model-ийг харуулна.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "next_steps",
+      "title": "Дараагийн хөгжлийн чиглэл",
+      "summary": "Google OAuth provider enablement, code evaluation, analytics, сертификат болон Git/Flask projects-ийн өргөтгөлийг харуулна.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "closing",
+      "title": "Build, learn, ship.",
+      "summary": "CodeCraft Academy-ийн Монгол суралцагчдад зориулсан практик coding pathway-ийг товч дүгнэнэ.",
+      "image_plan": "Use a suitable image if needed"
+    }
+  ]
+}

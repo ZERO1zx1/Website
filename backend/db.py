@@ -16,6 +16,7 @@ class SupabaseDB:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._client = None
+            cls._instance._auth_client = None
         return cls._instance
 
     def _initialize(self):
@@ -38,9 +39,137 @@ class SupabaseDB:
             self._initialize()
         return self._client
 
+    def _initialize_auth(self):
+        """Create a least-privilege client for Supabase Auth browser-equivalent flows."""
+        supabase_url = os.getenv('SUPABASE_URL')
+        publishable_key = os.getenv('SUPABASE_KEY')
+        if not supabase_url or not publishable_key:
+            raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set for Supabase Auth")
+        self._auth_client = create_client(supabase_url, publishable_key)
+
+    @property
+    def auth_client(self) -> Client:
+        if self._auth_client is None:
+            self._initialize_auth()
+        return self._auth_client
+
+    def user_client(self, access_token: str) -> Client:
+        """Create a request-scoped client whose database queries obey the learner's RLS policies."""
+        supabase_url = os.getenv('SUPABASE_URL')
+        publishable_key = os.getenv('SUPABASE_KEY')
+        if not supabase_url or not publishable_key:
+            raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set for user-scoped queries")
+        client = create_client(supabase_url, publishable_key)
+        client.postgrest.auth(access_token)
+        return client
+
     def get_client(self) -> Client:
-        """Get Supabase client"""
+        """Get the trusted server-side database client."""
         return self.client
+
+    # ============ SUPABASE AUTH, PROFILE, AND LEARNING PROGRESS ============
+
+    @staticmethod
+    def _value(record, key, default=None):
+        if isinstance(record, dict):
+            return record.get(key, default)
+        return getattr(record, key, default)
+
+    def sign_up_with_password(self, email: str, password: str, display_name: str, redirect_to: str = None):
+        """Register an Auth user and store display-name metadata for the profile trigger."""
+        options = {'data': {'display_name': display_name}}
+        if redirect_to:
+            options['email_redirect_to'] = redirect_to
+        return self.auth_client.auth.sign_up({
+            'email': email,
+            'password': password,
+            'options': options,
+        })
+
+    def sign_in_with_password(self, email: str, password: str):
+        """Authenticate against Supabase Auth; passwords are never stored in public tables."""
+        return self.auth_client.auth.sign_in_with_password({'email': email, 'password': password})
+
+    def get_auth_user(self, access_token: str):
+        """Validate a Supabase access token and return its Auth user."""
+        response = self.auth_client.auth.get_user(access_token)
+        user = self._value(response, 'user')
+        if not user:
+            raise RuntimeError('Supabase token did not resolve to a user')
+        return user
+
+    def ensure_profile(self, auth_user, access_token: str):
+        """Return the CodeCraft profile, creating a safe default if a legacy Auth user has none."""
+        user_id = str(self._value(auth_user, 'id'))
+        email = self._value(auth_user, 'email')
+        metadata = self._value(auth_user, 'user_metadata', {}) or {}
+        display_name = metadata.get('display_name') or metadata.get('full_name') or metadata.get('name')
+        if not display_name and email:
+            display_name = email.split('@', 1)[0]
+        client = self.user_client(access_token)
+        existing = client.table('profiles').select('*').eq('id', user_id).limit(1).execute().data
+        if not existing:
+            client.table('profiles').upsert({
+                'id': user_id,
+                'email': email,
+                'display_name': display_name,
+            }, on_conflict='id').execute()
+            existing = client.table('profiles').select('*').eq('id', user_id).limit(1).execute().data
+        profile = existing[0] if existing else {'id': user_id, 'email': email, 'display_name': display_name, 'role': 'student'}
+        return {
+            'id': profile.get('id', user_id),
+            'email': profile.get('email') or email,
+            'name': profile.get('display_name') or display_name or 'суралцагч',
+            'role': profile.get('role', 'student'),
+            'locale': profile.get('locale', 'mn'),
+            'theme': profile.get('theme', 'system'),
+        }
+
+    def get_profile(self, user_id: str, access_token: str):
+        """Read the authenticated learner's own CodeCraft profile through RLS."""
+        result = self.user_client(access_token).table('profiles').select('*').eq('id', str(user_id)).limit(1).execute().data
+        return result[0] if result else None
+
+    def update_profile_preferences(self, user_id: str, access_token: str, preferences: dict):
+        """Update only presentation preferences for the authenticated learner under RLS."""
+        allowed = {key: value for key, value in preferences.items() if key in {'display_name', 'locale', 'theme'}}
+        if not allowed:
+            return self.get_profile(user_id, access_token)
+        result = self.user_client(access_token).table('profiles').update(allowed).eq('id', str(user_id)).execute().data
+        return result[0] if result else self.get_profile(user_id, access_token)
+
+    def get_lesson_progress(self, user_id: str, access_token: str):
+        """Return only the authenticated learner's completed lesson records under RLS."""
+        result = self.user_client(access_token).table('lesson_progress').select('course_id,lesson_id,completed_at').eq('user_id', str(user_id)).execute()
+        return result.data or []
+
+    def get_course_progress(self, user_id: str, access_token: str):
+        """Return only the authenticated learner's aggregate course percentages under RLS."""
+        result = self.user_client(access_token).table('course_progress').select('course_id,progress_percent,updated_at').eq('user_id', str(user_id)).execute()
+        return result.data or []
+
+    def complete_lesson(self, user_id: str, access_token: str, course_id: str, lesson_id: str):
+        """Idempotently mark one learner-owned lesson complete under RLS."""
+        result = self.user_client(access_token).table('lesson_progress').upsert({
+            'user_id': str(user_id),
+            'course_id': course_id,
+            'lesson_id': lesson_id,
+        }, on_conflict='user_id,course_id,lesson_id').execute()
+        return result.data[0] if result.data else None
+
+    def remove_lesson_completion(self, user_id: str, access_token: str, course_id: str, lesson_id: str):
+        """Remove one learner-owned completion record under RLS."""
+        self.user_client(access_token).table('lesson_progress').delete().eq('user_id', str(user_id)).eq('course_id', course_id).eq('lesson_id', lesson_id).execute()
+
+    def save_course_progress(self, user_id: str, access_token: str, course_id: str, progress_percent: int):
+        """Persist a calculated percentage after a lesson status changes under RLS."""
+        bounded_percent = max(0, min(100, int(progress_percent)))
+        result = self.user_client(access_token).table('course_progress').upsert({
+            'user_id': str(user_id),
+            'course_id': course_id,
+            'progress_percent': bounded_percent,
+        }, on_conflict='user_id,course_id').execute()
+        return result.data[0] if result.data else None
 
     # ============ USER OPERATIONS ============
     
@@ -113,15 +242,15 @@ class SupabaseDB:
         options = {'should_create_user': True}
         if redirect_to:
             options['email_redirect_to'] = redirect_to
-        return self.client.auth.sign_in_with_otp({'email': email, 'options': options})
+        return self.auth_client.auth.sign_in_with_otp({'email': email, 'options': options})
 
     def verify_email_otp(self, email: str, code: str):
         """Verify a Supabase email OTP and return the Auth session."""
-        return self.client.auth.verify_otp({'email': email, 'token': code, 'type': 'email'})
+        return self.auth_client.auth.verify_otp({'email': email, 'token': code, 'type': 'email'})
 
     def google_login_url(self, redirect_to: str):
         """Return the Supabase-hosted Google OAuth authorization URL."""
-        response = self.client.auth.sign_in_with_oauth({
+        response = self.auth_client.auth.sign_in_with_oauth({
             'provider': 'google',
             'options': {'redirect_to': redirect_to},
         })
@@ -129,7 +258,7 @@ class SupabaseDB:
 
     def exchange_google_code(self, code: str):
         """Exchange the OAuth callback code for a Supabase Auth session."""
-        return self.client.auth.exchange_code_for_session({'auth_code': code})
+        return self.auth_client.auth.exchange_code_for_session({'auth_code': code})
 
     def update_user(self, user_id: int, data: dict):
         """Update user"""

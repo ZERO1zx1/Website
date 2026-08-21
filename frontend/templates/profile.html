@@ -2,6 +2,77 @@
 {% set page = 'profile' %}
 {% block title %}Профайл — CodeCraft Academy{% endblock %}
 {% block content %}
-<section class="profile-page container-wide"><div class="page-hero simple"><div><span class="eyebrow">МИНИЙ ПРОФАЙЛ</span><h1>Суралцах орон зайгаа өөртөө тохируул.</h1><p>Таны бүртгэл, ахицын тохиргоо энд хадгалагдана.</p></div></div><div class="profile-grid"><section class="panel profile-card"><div class="profile-avatar" data-profile-initials>CC</div><div><span class="eyebrow">СУРАЛЦАГЧ</span><h2 data-profile-name>CodeCraft суралцагч</h2><p data-profile-email>Нэвтэрсний дараа таны имэйл харагдана.</p></div><button class="button button-ghost button-small" data-logout>Гарах</button></section><section class="panel settings-card"><div class="panel-header"><div><span class="eyebrow">ТОХИРГОО</span><h2>Суралцах preferences</h2></div><span class="saved-badge">Хадгалагдсан</span></div><label class="setting-row"><span><strong>Өнгөний горим</strong><small>Өдрийн турш интерфэйсийн харагдац</small></span><select data-preference-theme><option value="system">Системийн</option><option value="light">Гэрэлтэй</option><option value="dark">Бараан</option></select></label><label class="setting-row"><span><strong>Хэл</strong><small>Тайлбар болон цэсний үндсэн хэл</small></span><select><option>Монгол</option><option>English</option></select></label><label class="setting-row"><span><strong>Суралцах сануулга</strong><small>Өдөр бүрийн жижиг зорилгыг мартахгүй</small></span><input type="checkbox" class="toggle" checked></label></section><section class="panel profile-progress"><div class="panel-header"><div><span class="eyebrow">ТАНЫ СУРАЛЦАХ ЗАМ</span><h2>Дуусгасан хичээлүүд</h2></div><a href="{{ url_for('frontend_page', page='curriculum') }}">Хөтөлбөр харах →</a></div><div class="progress-course"><span class="course-icon purple">Py</span><div><strong>Python foundations</strong><small>8 / 12 хичээл</small></div><b>68%</b><div class="progress-bar"><i style="width:68%"></i></div></div><div class="progress-course"><span class="course-icon orange">&lt;&gt;</span><div><strong>HTML essentials</strong><small>4 / 12 хичээл</small></div><b>34%</b><div class="progress-bar"><i style="width:34%"></i></div></div></section><section class="panel role-card"><span class="eyebrow">COMMUNITY</span><h2>Багшаар хуваалцах уу?</h2><p>Сургалтын материал бүтээж, өөрийн ангийг удирдах багшийн эрх хүсэж болно. Хүсэлтийг администратор баталгаажуулна.</p><button class="button button-dark button-small" data-role-request>Багшийн эрх хүсэх <span>→</span></button></section></div></section>
+<section class="profile-page container-wide">
+  <div class="page-hero simple"><div><span class="eyebrow">МИНИЙ ПРОФАЙЛ</span><h1>Суралцах орон зайгаа өөртөө тохируул.</h1><p>Таны бүртгэл болон хичээлийн явц Supabase Auth-д холбогдсон байна.</p></div></div>
+  <div class="profile-grid">
+    <section class="panel profile-card"><div class="profile-avatar" data-profile-initials>CC</div><div><span class="eyebrow" data-profile-role>СУРАЛЦАГЧ</span><h2 data-profile-name>CodeCraft суралцагч</h2><p data-profile-email>Нэвтэрсний дараа таны имэйл харагдана.</p></div><button class="button button-ghost button-small" data-logout type="button">Гарах</button></section>
+    <section class="panel settings-card"><div class="panel-header"><div><span class="eyebrow">ТОХИРГОО</span><h2>Суралцах preferences</h2></div><span class="saved-badge" data-save-status>Ачаалж байна…</span></div>
+      <label class="setting-row"><span><strong>Өнгөний горим</strong><small>Энэ сонголт браузер болон profile-д хадгалагдана.</small></span><select data-preference-theme><option value="system">Системийн</option><option value="light">Гэрэлтэй</option><option value="dark">Бараан</option></select></label>
+      <label class="setting-row"><span><strong>Хэл</strong><small>Хичээлийн интерфэйсийн үндсэн хэл</small></span><select data-preference-locale><option value="mn">Монгол</option><option value="en">English</option></select></label>
+    </section>
+    <section class="panel profile-progress"><div class="panel-header"><div><span class="eyebrow">ТАНЫ СУРАЛЦАХ ЗАМ</span><h2>Дуусгасан хичээлүүд</h2></div><a href="{{ url_for('frontend_page', page='curriculum') }}">Хөтөлбөр харах →</a></div><div data-profile-courses><p class="empty-state">Ахиц ачаалж байна…</p></div></section>
+    <section class="panel role-card"><span class="eyebrow">ACCOUNT SECURITY</span><h2>Supabase Auth хамгаалалт</h2><p>Таны имэйл, нууц үг болон Google нэвтрэлтийг Supabase Auth удирдана. CodeCraft нь зөвхөн суралцах profile болон явцыг хадгална.</p><a class="button button-dark button-small" href="{{ url_for('frontend_page', page='auth') }}">Нэвтрэлтийн хуудас <span>→</span></a></section>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+  const token = localStorage.getItem('codecraft_token');
+  const storedUser = JSON.parse(localStorage.getItem('codecraft_user') || '{}');
+  const themeSelect = document.querySelector('[data-preference-theme]');
+  const localeSelect = document.querySelector('[data-preference-locale]');
+  const saveStatus = document.querySelector('[data-save-status]');
+  const courseIcons = {html: '&lt;&gt;', css: 'CSS', javascript: 'JS', python: 'Py'};
+  const courseClasses = {html: 'orange', css: 'teal', javascript: 'yellow', python: 'purple'};
+
+  function populateProfile(profile) {
+    const name = profile.name || profile.email?.split('@')[0] || 'CodeCraft суралцагч';
+    document.querySelector('[data-profile-name]').textContent = name;
+    document.querySelector('[data-profile-email]').textContent = profile.email || 'Имэйл олдсонгүй';
+    document.querySelector('[data-profile-role]').textContent = (profile.role || 'student').toUpperCase();
+    document.querySelector('[data-profile-initials]').textContent = name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
+    themeSelect.value = profile.theme || localStorage.getItem('codecraft_theme') || 'system';
+    localeSelect.value = profile.locale || 'mn';
+    localStorage.setItem('codecraft_user', JSON.stringify(profile));
+  }
+  function renderCourses(summary) {
+    document.querySelector('[data-profile-courses]').innerHTML = summary.courses.map((course) => `
+      <div class="progress-course"><span class="course-icon ${courseClasses[course.course_id] || 'purple'}">${courseIcons[course.course_id] || 'CC'}</span><div><strong>${course.title}</strong><small>${course.completed_lessons} / ${course.total_lessons} хичээл</small></div><b>${course.progress_percent}%</b><div class="progress-bar"><i style="width:${course.progress_percent}%"></i></div></div>
+    `).join('');
+  }
+  async function savePreferences() {
+    if (!token) return;
+    saveStatus.textContent = 'Хадгалж байна…';
+    try {
+      const payload = await codecraftApi('/api/progress/profile/preferences', {method: 'PATCH', body: JSON.stringify({theme: themeSelect.value, locale: localeSelect.value})});
+      localStorage.setItem('codecraft_theme', payload.profile.theme);
+      const resolved = payload.profile.theme === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : payload.profile.theme;
+      document.documentElement.dataset.theme = resolved;
+      populateProfile(payload.profile);
+      saveStatus.textContent = 'Хадгалагдсан';
+      showToast(payload.message_mn || 'Тохиргоог хадгаллаа.');
+    } catch (error) { saveStatus.textContent = 'Хадгалагдсангүй'; showToast(error.message, true); }
+  }
+  document.querySelector('[data-logout]').addEventListener('click', async () => {
+    try { await fetch(`${window.CODECRAFT_CONFIG.apiBase}/api/auth/logout`, {method: 'POST'}); } catch (_) {}
+    localStorage.removeItem('codecraft_token');
+    localStorage.removeItem('codecraft_refresh_token');
+    localStorage.removeItem('codecraft_user');
+    location.href = '{{ url_for('frontend_page', page='home') }}';
+  });
+  themeSelect.addEventListener('change', savePreferences);
+  localeSelect.addEventListener('change', savePreferences);
+  if (!token) {
+    populateProfile(storedUser);
+    saveStatus.textContent = 'Нэвтрэх шаардлагатай';
+    document.querySelector('[data-profile-courses]').innerHTML = '<p class="empty-state">Ахиц харахын тулд <a href="{{ url_for('frontend_page', page='auth') }}?mode=login">нэвтэрнэ үү</a>.</p>';
+  } else {
+    Promise.all([codecraftApi('/api/progress/profile'), codecraftApi('/api/progress')]).then(([profile, summary]) => {
+      populateProfile(profile.profile);
+      renderCourses(summary);
+      saveStatus.textContent = 'Хадгалагдсан';
+    }).catch((error) => { saveStatus.textContent = 'Синк холбогдсонгүй'; showToast(error.message, true); });
+  }
+</script>
 {% endblock %}
 {% block scripts %}<script>const profileUser = JSON.parse(localStorage.getItem('codecraft_user') || '{}'); const profileName = profileUser.name || profileUser.email?.split('@')[0] || 'CodeCraft суралцагч'; document.querySelector('[data-profile-name]').textContent = profileName; document.querySelector('[data-profile-email]').textContent = profileUser.email || 'Нэвтэрсний дараа таны имэйл харагдана.'; document.querySelector('[data-profile-initials]').textContent = profileName.split(' ').map((part) => part[0]).slice(0,2).join('').toUpperCase(); document.querySelector('[data-logout]').addEventListener('click', async () => { try { await window.codecraftApi('/api/auth/logout', {method:'POST'}); } finally { localStorage.removeItem('codecraft_user'); location.href = '{{ url_for('frontend_page', page='home') }}'; } }); document.querySelector('[data-role-request]').addEventListener('click', async () => { try { const payload = await window.codecraftApi('/api/auth/request-teacher-role', {method:'POST'}); showToast(payload.message_mn || 'Хүсэлт илгээгдлээ.'); } catch (error) { showToast(error.message, true); } }); const themeSelect = document.querySelector('[data-preference-theme]'); themeSelect.value = localStorage.getItem('codecraft_theme') || 'system'; themeSelect.addEventListener('change', () => { localStorage.setItem('codecraft_theme', themeSelect.value); document.documentElement.dataset.theme = themeSelect.value; showToast('Өнгөний тохиргоо хадгалагдлаа.'); });</script>{% endblock %}

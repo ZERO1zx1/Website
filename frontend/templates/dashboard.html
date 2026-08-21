@@ -2,6 +2,80 @@
 {% set page = 'dashboard' %}
 {% block title %}Миний ахиц — CodeCraft Academy{% endblock %}
 {% block content %}
-<section class="dashboard-page container-wide"><div class="dashboard-heading"><div><span class="eyebrow">МИНИЙ АХИЦ</span><h1>Сайн уу, <span data-user-name>суралцагч</span>.</h1><p>Жижиг, тогтвортой алхамууд бодит чадвар болдог.</p></div><a class="button button-primary" href="{{ url_for('frontend_page', page='workspace') }}">Дадлага хийх <span>→</span></a></div><div class="dashboard-stats"><article class="dash-stat dash-stat-primary"><span>Нийт ахиц</span><strong data-stat-mastery>74<small>%</small></strong><b>+8.4% <i>энэ сар</i></b></article><article class="dash-stat"><span>Бодлого бодсон</span><strong data-stat-problems>28</strong><b>+6 <i>энэ долоо хоног</i></b></article><article class="dash-stat"><span>Суралцсан цаг</span><strong data-stat-hours>12<small>ц</small> 40<small>м</small></strong><b>Зорилгын 84% <i>15 цаг</i></b></article><article class="dash-stat"><span>Тасралтгүй өдөр</span><strong data-stat-streak>5<small> өдөр</small></strong><b>Шилдэг: 12 өдөр</b></article></div><div class="dashboard-columns"><section class="panel continue-panel"><div class="panel-header"><div><span class="eyebrow">ДАРААГИЙН АЛХАМ</span><h2>Python foundations</h2></div><span class="status-badge">68% дууссан</span></div><p>Functions, data structures болон цэвэр код бичихэд хэрэгтэй хэв маяг.</p><div class="progress-bar progress-bar-large"><i style="width:68%"></i></div><div class="panel-footer"><span>Дараагийнх: <strong>List comprehensions</strong></span><a class="button button-dark button-small" href="{{ url_for('frontend_page', page='lesson') }}?course=python&lesson=py-list">Үргэлжлүүлэх <span>→</span></a></div></section><section class="panel focus-panel"><div class="panel-header"><div><span class="eyebrow">ӨНӨӨДРИЙН ЗОРИЛГО</span><h2>Нэг тодорхой алхам</h2></div><span class="focus-count">2 / 3</span></div><div class="focus-list"><button class="focus-item is-done"><i>✓</i><span><strong>Function scope давтах</strong><small>10 минутын өмнө дууссан</small></span></button><button class="focus-item"><i></i><span><strong>List comprehensions дуусгах</strong><small>18 минут</small></span><b>→</b></button><button class="focus-item"><i></i><span><strong>Нэг дунд түвшний бодлого</strong><small>Чиний түвшинд санал болгов</small></span><b>→</b></button></div></section></div><div class="dashboard-columns dashboard-columns-lower"><section class="panel activity-panel"><div class="panel-header"><div><span class="eyebrow">СУРАЛЦАХ ИДЭВХ</span><h2>Сүүлийн 7 өдөр</h2></div><span class="trend-pill">+18%</span></div><div class="activity-summary"><strong>6ц 25м</strong><span>өмнөх долоо хоногоос илүү</span></div><div class="bar-chart"><span style="height:44%"><i>Дав</i></span><span style="height:72%"><i>Мяг</i></span><span style="height:56%"><i>Лха</i></span><span style="height:88%"><i>Пүр</i></span><span style="height:32%"><i>Баа</i></span><span style="height:68%"><i>Бям</i></span><span style="height:9%"><i>Ням</i></span></div></section><section class="panel skill-panel"><div class="panel-header"><div><span class="eyebrow">SKILL MAP</span><h2>Чи хаана өсөж байна?</h2></div><a href="{{ url_for('frontend_page', page='profile') }}">↗</a></div><div class="skill-line"><span><i class="skill-dot purple"></i>Python</span><b>82%</b><div><i style="width:82%"></i></div></div><div class="skill-line"><span><i class="skill-dot teal"></i>Problem solving</span><b>68%</b><div><i style="width:68%"></i></div></div><div class="skill-line"><span><i class="skill-dot orange"></i>HTML/CSS</span><b>54%</b><div><i style="width:54%"></i></div></div></section></div></section>
+<section class="dashboard-page container-wide">
+  <div class="dashboard-heading"><div><span class="eyebrow">МИНИЙ АХИЦ</span><h1>Сайн уу, <span data-user-name>суралцагч</span>.</h1><p>Таны дуусгасан хичээл бүр Supabase дээр таны бүртгэлтэй хамт хадгалагдана.</p></div><a class="button button-primary" href="{{ url_for('frontend_page', page='curriculum') }}">Хичээл сонгох <span>→</span></a></div>
+  <div class="dashboard-stats">
+    <article class="dash-stat dash-stat-primary"><span>Нийт ахиц</span><strong data-stat-overall>0<small>%</small></strong><b data-stat-overall-caption>Эхлэхэд бэлэн</b></article>
+    <article class="dash-stat"><span>Дуусгасан хичээл</span><strong data-stat-completed>0</strong><b data-stat-completed-caption>0 хичээлээс</b></article>
+    <article class="dash-stat"><span>Идэвхтэй чиглэл</span><strong data-stat-courses>0</strong><b>HTML · CSS · JS · Python</b></article>
+    <article class="dash-stat"><span>Хадгалалт</span><strong>✓</strong><b data-sync-status>Supabase руу синк хийнэ</b></article>
+  </div>
+  <div class="dashboard-columns">
+    <section class="panel continue-panel">
+      <div class="panel-header"><div><span class="eyebrow">ДАРААГИЙН АЛХАМ</span><h2 data-next-course>Хичээлийг сонгоно уу</h2></div><span class="status-badge" data-next-percent>0% дууссан</span></div>
+      <p data-next-description>Сургалтын замаас эхний хичээлээ сонгоод ахицаа хадгалж эхлээрэй.</p>
+      <div class="progress-bar progress-bar-large"><i data-next-bar style="width:0%"></i></div>
+      <div class="panel-footer"><span data-next-meta>CodeCraft-ийн хичээлүүд таны хурданд тохирно.</span><a class="button button-dark button-small" data-next-link href="{{ url_for('frontend_page', page='curriculum') }}">Үргэлжлүүлэх <span>→</span></a></div>
+    </section>
+    <section class="panel focus-panel">
+      <div class="panel-header"><div><span class="eyebrow">ӨНӨӨДРИЙН ЗОРИЛГО</span><h2>Жижиг алхам, бодит ахиц</h2></div><span class="focus-count" data-focus-count>0 / 1</span></div>
+      <div class="focus-list">
+        <a class="focus-item" href="{{ url_for('frontend_page', page='curriculum') }}"><i></i><span><strong>Нэг lesson уншиж дуусгах</strong><small>Тайлбар, жишээ код, review-г ашиглаарай.</small></span><b>→</b></a>
+        <a class="focus-item" href="{{ url_for('frontend_page', page='workspace') }}"><i></i><span><strong>Кодын лабораторид дадлага хийх</strong><small>Өөрийн санаагаар жишээ кодыг өөрчилж үзээрэй.</small></span><b>→</b></a>
+      </div>
+    </section>
+  </div>
+  <div class="dashboard-columns dashboard-columns-lower">
+    <section class="panel activity-panel">
+      <div class="panel-header"><div><span class="eyebrow">COURSE PROGRESS</span><h2>Чиглэл тус бүрээр</h2></div><a href="{{ url_for('frontend_page', page='curriculum') }}">Хөтөлбөр харах →</a></div>
+      <div data-course-progress-list class="progress-course-list"><p class="empty-state">Ахиц ачаалж байна…</p></div>
+    </section>
+    <section class="panel skill-panel">
+      <div class="panel-header"><div><span class="eyebrow">DATA PRIVACY</span><h2>Таны явц хамгаалагдсан</h2></div><a href="{{ url_for('frontend_page', page='profile') }}">↗</a></div>
+      <p class="lesson-intro">Та зөвхөн өөрийн Supabase Auth бүртгэлээрээ явцаа уншиж, өөрчилж чадна. Нууц үг website-ийн database-д хадгалагддаггүй.</p>
+      <div class="lesson-note success"><strong>RLS хамгаалалттай</strong><span>Lesson completion болон course percentage нь хэрэглэгчийн UUID-гаар тусгаарлагдана.</span></div>
+    </section>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+  const user = JSON.parse(localStorage.getItem('codecraft_user') || '{}');
+  document.querySelector('[data-user-name]').textContent = user.name || user.email?.split('@')[0] || 'суралцагч';
+  const courseIcons = {html: '&lt;&gt;', css: 'CSS', javascript: 'JS', python: 'Py'};
+  const courseClasses = {html: 'orange', css: 'teal', javascript: 'yellow', python: 'purple'};
+
+  function renderSummary(summary) {
+    document.querySelector('[data-stat-overall]').innerHTML = `${summary.overall_percent}<small>%</small>`;
+    document.querySelector('[data-stat-completed]').textContent = summary.completed_lessons;
+    document.querySelector('[data-stat-completed-caption]').textContent = `${summary.total_lessons} хичээлээс`;
+    document.querySelector('[data-stat-courses]').textContent = summary.courses.length;
+    document.querySelector('[data-stat-overall-caption]').textContent = summary.completed_lessons ? 'Таны хадгалсан бодит ахиц' : 'Эхний хичээлээ эхлүүлээрэй';
+    document.querySelector('[data-sync-status]').textContent = 'Supabase-д синк хийгдсэн';
+    document.querySelector('[data-focus-count]').textContent = `${Math.min(summary.completed_lessons, 1)} / 1`;
+    const next = summary.courses.find((course) => course.progress_percent < 100) || summary.courses[0];
+    if (next) {
+      document.querySelector('[data-next-course]').textContent = next.title;
+      document.querySelector('[data-next-percent]').textContent = `${next.progress_percent}% дууссан`;
+      document.querySelector('[data-next-description]').textContent = `${next.completed_lessons} / ${next.total_lessons} хичээл дууссан. Дараагийн lesson-ээ сонгоод үргэлжлүүлээрэй.`;
+      document.querySelector('[data-next-bar]').style.width = `${next.progress_percent}%`;
+      document.querySelector('[data-next-meta]').textContent = `${next.total_lessons - next.completed_lessons} lesson үлдлээ`;
+      document.querySelector('[data-next-link]').href = `{{ url_for('frontend_page', page='course') }}?id=${encodeURIComponent(next.course_id)}`;
+    }
+    document.querySelector('[data-course-progress-list]').innerHTML = summary.courses.map((course) => `
+      <div class="progress-course"><span class="course-icon ${courseClasses[course.course_id] || 'purple'}">${courseIcons[course.course_id] || 'CC'}</span><div><strong>${course.title}</strong><small>${course.completed_lessons} / ${course.total_lessons} хичээл</small></div><b>${course.progress_percent}%</b><div class="progress-bar"><i style="width:${course.progress_percent}%"></i></div></div>
+    `).join('');
+  }
+
+  if (!localStorage.getItem('codecraft_token')) {
+    document.querySelector('[data-sync-status]').textContent = 'Нэвтэрч хадгална';
+    document.querySelector('[data-course-progress-list]').innerHTML = '<p class="empty-state">Ахиц хадгалахын тулд эхлээд <a href="{{ url_for('frontend_page', page='auth') }}?mode=login">нэвтэрнэ үү</a>.</p>';
+  } else {
+    codecraftApi('/api/progress').then(renderSummary).catch((error) => {
+      document.querySelector('[data-sync-status]').textContent = 'Синк холбогдсонгүй';
+      document.querySelector('[data-course-progress-list]').innerHTML = `<p class="empty-state">${error.message}</p>`;
+    });
+  }
+</script>
 {% endblock %}
 {% block scripts %}<script>const user = JSON.parse(localStorage.getItem('codecraft_user') || '{}'); const name = user.name || user.email?.split('@')[0] || 'суралцагч'; document.querySelector('[data-user-name]').textContent = name; if (window.CODECRAFT_CONFIG.backendEnabled) { window.codecraftApi('/api/analytics/dashboard').then(data => { const summary = data.summary || data.dashboard || {}; const mastery = document.querySelector('[data-stat-mastery]'); if (summary.mastery != null && mastery) { mastery.textContent = `${Math.round(Number(summary.mastery))}%`; } }).catch(() => {}); }</script>{% endblock %}
