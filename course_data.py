@@ -1,5 +1,5 @@
 # CodeCraft Academy Course Data
-# Contains the detailed Python curriculum extracted from the PDF and the HTML placeholder
+# Contains the detailed curriculum for Python, HTML, CSS, and JavaScript
 
 COURSE_CATALOG = {
     'python': {
@@ -99,12 +99,109 @@ COURSE_CATALOG = {
         ]
     },
     'html': {
-        'id': 'html', 'title': 'HTML essentials', 'icon': '<>', 'color': 'orange', 'eyebrow': 'Вэбийн утга ба бүтэц', 'duration': '4 долоо хоног', 'level': 'Анхан шат', 'description': 'Хүртээмжтэй, хайлтын системд ойлгомжтой веб хуудсыг зөв бүтцээр байгуулна.',
+        'id': 'html',
+        'title': 'HTML essentials',
+        'icon': '<>',
+        'color': 'orange',
+        'eyebrow': 'Вэбийн утга ба бүтэц',
+        'duration': '4 долоо хоног',
+        'level': 'Анхан шат',
+        'description': 'Хүртээмжтэй, хайлтын системд ойлгомжтой веб хуудсыг зөв бүтцээр байгуулна.',
         'modules': [
             {
-                'title': '01 · Вэбийн суурь', 'summary': 'Browser ба document',
+                'title': '01 · Вэбийн суурь',
+                'summary': 'Browser ба document',
                 'lessons': [
-                    {'id': 'html-web', 'title': 'Вэб хэрхэн ажилладаг вэ?', 'outcome': 'Browser, server, URL, request-ийн үүргийг ойлгоно.', 'task': 'Нэг web request-ийн урсгалыг зур.', 'minutes': 18, 'language': 'html', 'unit': 'HTML 01', 'code': '<main>\n  <h1>Миний анхны вэб</h1>\n  <p>Semantic HTML ашиглаж байна.</p>\n</main>'}
+                    {
+                        'id': 'html-web',
+                        'title': 'Вэб хэрхэн ажилладаг вэ?',
+                        'outcome': 'Browser, server, URL, request-ийн үүргийг ойлгоно.',
+                        'task': 'Нэг web request-ийн урсгалыг зур.',
+                        'minutes': 18,
+                        'language': 'html',
+                        'unit': 'HTML 01',
+                        'concept': '<p>HTML (HyperText Markup Language) нь вэб хуудасны араг ясыг бүрдүүлдэг. Browser (Chrome, Safari гэх мэт) нь HTML файлыг уншиж, хэрэглэгчид харагдахуйц вэб хуудас болгон хувиргадаг.</p>',
+                        'mental_model': 'HTML бол барилгын тоосго, цемент юм. Ямар ч гоёл чимэглэлгүй зөвхөн хана, хаалга, цонх хаана байхыг заана.',
+                        'code': '<main>\n  <h1>Миний анхны вэб</h1>\n  <p>Semantic HTML ашиглаж байна.</p>\n</main>',
+                        'mistake': 'HTML-ийг програмчлалын хэл гэж андуурах. Энэ бол зөвхөн тэмдэглэгээт (markup) хэл юм.',
+                        'best_practice': 'Үргэлж semantic буюу утга төгөлдөр tag ашиглахыг хичээгээрэй (жишээ нь div-ийн оронд main эсвэл article).',
+                        'quiz': {
+                            'question': 'HTML юуны товчлол вэ?',
+                            'answer': 'HyperText Markup Language'
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    'css': {
+        'id': 'css',
+        'title': 'CSS styling',
+        'icon': '#',
+        'color': 'pink',
+        'eyebrow': 'Өнгө төрх ба байрлал',
+        'duration': '4 долоо хоног',
+        'level': 'Анхан шат',
+        'description': 'Дизайн систем, responsive layout, animation ашиглан үзэмжтэй вэб бүтээнэ.',
+        'modules': [
+            {
+                'title': '01 · CSS Үндэс',
+                'summary': 'Өнгө, фонт, хэмжээ',
+                'lessons': [
+                    {
+                        'id': 'css-intro',
+                        'title': 'CSS гэж юу вэ?',
+                        'outcome': 'Selector, property, value гурвыг ялгана.',
+                        'task': 'h1 гарчгийн өнгийг цэнхэр болго.',
+                        'minutes': 15,
+                        'language': 'css',
+                        'unit': 'CSS 01',
+                        'concept': '<p>CSS (Cascading Style Sheets) нь HTML-ээр барьсан араг ясыг гоёж чимэглэх зориулалттай. Өнгө, фонт, байрлал, хөдөлгөөн зэргийг CSS-ээр тохируулдаг.</p>',
+                        'mental_model': 'Хэрэв HTML нь барилгын хана бол CSS нь тэр ханыг будах будаг, обой, дотоод засал чимэглэл юм.',
+                        'code': 'h1 {\n  color: blue;\n  font-size: 24px;\n  text-align: center;\n}',
+                        'mistake': 'Бүх элементэд inline style буюу HTML дотор нь шууд style бичих.',
+                        'best_practice': 'CSS кодыг үргэлж тусдаа .css файлд бичиж HTML-тэйгээ холбох нь цэгцтэй байдаг.',
+                        'quiz': {
+                            'question': 'CSS-д элементийг хэрхэн сонгож авдаг вэ?',
+                            'answer': 'Selector ашиглаж сонгоно (жишээ нь: tag name, .class, #id).'
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    'javascript': {
+        'id': 'javascript',
+        'title': 'JavaScript basics',
+        'icon': 'JS',
+        'color': 'blue',
+        'eyebrow': 'Динамик үйлдэл',
+        'duration': '6 долоо хоног',
+        'level': 'Дунд шат',
+        'description': 'Вэб хуудсыг амьд болгож, хэрэглэгчтэй харилцах логик бичиж сурна.',
+        'modules': [
+            {
+                'title': '01 · JS Үндэс',
+                'summary': 'DOM ба хувьсагч',
+                'lessons': [
+                    {
+                        'id': 'js-intro',
+                        'title': 'JavaScript-ийн үүрэг',
+                        'outcome': 'Вэб хуудсанд интерактив үйлдэл нэмнэ.',
+                        'task': 'Товч дарахад alert гаргадаг код бич.',
+                        'minutes': 25,
+                        'language': 'javascript',
+                        'unit': 'JS 01',
+                        'concept': '<p>JavaScript бол вэб хуудсыг амьд, интерактив болгодог програмчлалын хэл юм. Хэрэглэгчийн үйлдэлд (товч дарах, хулгана хөдөлгөх) хариу үйлдэл үзүүлэхэд ашиглана.</p>',
+                        'mental_model': 'HTML барилга, CSS засал чимэглэл бол JavaScript нь тэр барилгын цахилгаан, ус, гэрлийн унтраалга зэрэг амьд систем нь юм.',
+                        'code': 'const button = document.querySelector("button");\n\nbutton.addEventListener("click", () => {\n  alert("Сайн байна уу!");\n});',
+                        'mistake': 'var ашиглан хувьсагч зарлах. Орчин үед let болон const ашигладаг болсон.',
+                        'best_practice': 'Өөрчлөгдөхгүй утгад үргэлж const ашиглах.',
+                        'quiz': {
+                            'question': 'HTML элементийг JS-ээр хэрхэн барьж авдаг вэ?',
+                            'answer': 'document.querySelector() эсвэл document.getElementById() ашиглан.'
+                        }
+                    }
                 ]
             }
         ]
