@@ -13,7 +13,8 @@ server:
 security:
   secret_key_env: SECRET_KEY
   supabase_url_env: SUPABASE_URL
-  supabase_key_env: SUPABASE_KEY
+  supabase_publishable_key_env: SUPABASE_PUBLISHABLE_KEY
+  supabase_service_role_key_env: SUPABASE_SERVICE_ROLE_KEY
   cors_origins_env: CORS_ORIGINS
   jwt_expiry_hours: 24
 services:

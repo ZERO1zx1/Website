@@ -4,10 +4,14 @@ Flask Application Factory
 """
 
 import os
+
+import requests
+from dotenv import load_dotenv
 from flask import Flask, render_template, request
 from flask_cors import CORS
 from flask_login import LoginManager
-from dotenv import load_dotenv
+
+from course_data import COURSE_CATALOG
 
 
 class FlaskSessionUser:
@@ -38,9 +42,6 @@ class FlaskSessionUser:
 # Load environment variables
 load_dotenv()
 
-from course_data import COURSE_CATALOG
-
-
 def create_app(config_name='development'):
     """Application factory function"""
     app = Flask(
@@ -59,6 +60,9 @@ def create_app(config_name='development'):
     app.config['JSON_SORT_KEYS'] = False
     app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
     app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('MAX_CONTENT_LENGTH', 256 * 1024))
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SECURE'] = environment == 'production'
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     frontend_only = os.getenv('FRONTEND_ONLY', 'false').lower() == 'true'
     app.config['FRONTEND_ONLY'] = frontend_only
     
@@ -76,6 +80,15 @@ def create_app(config_name='development'):
             "allow_headers": ["Content-Type", "Authorization", "Accept-Language"]
         }
     })
+
+    @app.before_request
+    def protect_cookie_authenticated_writes():
+        """Reject cross-site state changes when a browser sends the session cookie."""
+        if request.method in {'POST', 'PUT', 'PATCH', 'DELETE'} and request.cookies.get('codecraft_session'):
+            origin = request.headers.get('Origin')
+            allowed = {value.rstrip('/') for value in cors_origins}
+            if origin and origin.rstrip('/') not in allowed:
+                return {'error': {'code': 'csrf_origin_rejected', 'message': 'Request origin is not allowed.'}}, 403
     
     if not frontend_only:
         # Initialize Flask-Login and register backend blueprints only when
@@ -94,13 +107,13 @@ def create_app(config_name='development'):
                 return None
             return FlaskSessionUser(record) if record else None
 
+        from backend.api.analytics import analytics_bp
         from backend.api.auth import auth_bp
         from backend.api.courses import courses_bp
+        from backend.api.learning import learning_bp
         from backend.api.problems import problems_bp
         from backend.api.submissions import submissions_bp
         from backend.api.teacher import teacher_bp
-        from backend.api.analytics import analytics_bp
-        from backend.api.progress import progress_bp
 
         app.register_blueprint(auth_bp, url_prefix='/api/auth')
         app.register_blueprint(courses_bp, url_prefix='/api/courses')
@@ -108,7 +121,7 @@ def create_app(config_name='development'):
         app.register_blueprint(submissions_bp, url_prefix='/api/submissions')
         app.register_blueprint(teacher_bp, url_prefix='/api/teacher')
         app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
-        app.register_blueprint(progress_bp, url_prefix='/api/progress')
+        app.register_blueprint(learning_bp, url_prefix='/api/learning')
     
     # Multi-page CodeCraft frontend. Each learning surface has a dedicated template.
     @app.context_processor
@@ -142,7 +155,10 @@ def create_app(config_name='development'):
 
     @app.route('/api/public-config', methods=['GET'])
     def public_config():
-        return {'supabase_url': os.getenv('SUPABASE_URL', ''), 'supabase_publishable_key': os.getenv('SUPABASE_KEY', '')}, 200
+        return {
+            'supabase_url': os.getenv('SUPABASE_URL', ''),
+            'supabase_publishable_key': os.getenv('SUPABASE_PUBLISHABLE_KEY', ''),
+        }, 200
 
     # Health check endpoint
     @app.route('/api/health', methods=['GET'])
@@ -153,7 +169,10 @@ def create_app(config_name='development'):
     def readiness_check():
         if frontend_only:
             return {'status': 'ready', 'mode': 'frontend-only'}, 200
-        required = ['SECRET_KEY', 'SUPABASE_URL', 'SUPABASE_KEY', 'SUPABASE_SERVICE_ROLE_KEY']
+        required = [
+            'SECRET_KEY', 'SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY',
+            'SUPABASE_SERVICE_ROLE_KEY',
+        ]
         queue_mode = os.getenv('SUBMISSION_QUEUE_MODE', 'thread').lower()
         if queue_mode == 'redis':
             required.append('REDIS_URL')
@@ -162,6 +181,19 @@ def create_app(config_name='development'):
         missing = [name for name in required if not os.getenv(name)]
         if missing:
             return {'status': 'not_ready', 'missing': missing}, 503
+        try:
+            response = requests.get(
+                f"{os.environ['SUPABASE_URL'].rstrip('/')}/rest/v1/",
+                headers={
+                    'apikey': os.environ['SUPABASE_SERVICE_ROLE_KEY'],
+                    'Authorization': f"Bearer {os.environ['SUPABASE_SERVICE_ROLE_KEY']}",
+                },
+                timeout=2,
+            )
+            response.raise_for_status()
+        except requests.RequestException:
+            app.logger.warning('Supabase readiness probe failed', exc_info=True)
+            return {'status': 'not_ready', 'dependency': 'supabase'}, 503
         return {'status': 'ready', 'mode': 'backend'}, 200
     
     @app.after_request
@@ -189,7 +221,7 @@ def create_app(config_name='development'):
 if __name__ == '__main__':
     app = create_app()
     app.run(
-        host=os.getenv('HOST', '0.0.0.0'),
+        host=os.getenv('HOST', '127.0.0.1'),
         port=int(os.getenv('PORT', 5000)),
         debug=os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
     )

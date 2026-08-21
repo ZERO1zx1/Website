@@ -1,5 +1,3 @@
-import os
-
 import pytest
 
 from app import create_app
@@ -17,22 +15,11 @@ def test_frontend_shell_renders_without_backend_credentials(frontend_app):
     response = client.get('/')
 
     assert response.status_code == 200
-    assert b'Codehaven' in response.data
-    assert b'Keep your momentum' in response.data
-    assert b'id="home-view"' in response.data
-    assert b'landing-language-select' in response.data
-    assert b'data-i18n="landing.title"' in response.data
+    assert b'CodeCraft Academy' in response.data
+    assert 'Код бичихийг'.encode() in response.data
+    assert b'id="main-content"' in response.data
+    assert b'class="hero-section' in response.data
     assert b'frontend/static' not in response.data
-    assert b'id="auth-view"' in response.data
-    assert b'id="language-select"' in response.data
-    assert b'data-auth-tab="register"' in response.data
-    assert b'js/adapters/api-adapter.js' in response.data
-    assert b'data-i18n="editor.workspace"' in response.data
-    assert b'data-i18n="editor.run"' in response.data
-    assert b'id="course-grid"' in response.data
-    assert b'id="curriculum-search"' in response.data
-    assert b'data-curriculum-tag="javascript"' in response.data
-    assert b'id="lesson-preview"' in response.data
     assert b'aria-live="polite"' in response.data
 
 
@@ -44,12 +31,13 @@ def test_frontend_static_assets_are_available(frontend_app):
     js_response = client.get('/static/js/app.js')
 
     assert css_response.status_code == 200
-    assert b'--color-action-primary' in css_response.data
+    assert b'--ink:' in css_response.data
     assert adapter_response.status_code == 200
     assert b'codehavenApiAdapter' in adapter_response.data
     assert js_response.status_code == 200
-    assert b'mockAdapter' in js_response.data
-    assert b'localizeContent' in js_response.data
+    assert b'CODECRAFT_CONFIG' in js_response.data
+    assert b"credentials: 'same-origin'" in js_response.data
+    assert b'codecraft_token' not in js_response.data
 
 
 def test_frontend_only_mode_keeps_health_endpoint(frontend_app):

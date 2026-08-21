@@ -3,13 +3,14 @@ Code Executor Service
 Manages Docker containers for secure code execution
 """
 
-import docker
 import json
-import os
-import requests
 import logging
-from typing import Dict, List, Optional
+import os
 from datetime import datetime, timezone
+from typing import Dict, List
+
+import docker
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,15 @@ class CodeExecutor:
             image_name: Docker image name for sandbox
         """
         self.image_name = image_name
+        self.client = None
+
+    def _docker_client(self):
+        if self.client is not None:
+            return self.client
+        if os.getenv('ALLOW_LOCAL_DOCKER_SANDBOX', 'false').lower() != 'true':
+            raise RuntimeError('Code execution is disabled because no sandbox service is configured.')
         self.client = docker.from_env()
+        return self.client
     
     def build_image(self, dockerfile_path: str = 'sandbox/Dockerfile') -> bool:
         """
@@ -55,7 +64,7 @@ class CodeExecutor:
         """
         try:
             logger.info(f"Building Docker image: {self.image_name}")
-            self.client.images.build(
+            self._docker_client().images.build(
                 path='.',
                 dockerfile=dockerfile_path,
                 tag=self.image_name
@@ -119,7 +128,8 @@ class CodeExecutor:
                 sandbox_token = os.getenv('SANDBOX_TOKEN')
                 if sandbox_token:
                     headers['X-Sandbox-Token'] = sandbox_token
-                response = requests.post(
+                # The request has a bounded connect/read timeout below.
+                response = requests.post(  # nosec B113
                     f"{sandbox_url.rstrip('/')}/execute",
                     json=input_data,
                     headers=headers,
@@ -131,7 +141,7 @@ class CodeExecutor:
                 return result
             
             # Run container
-            container = self.client.containers.run(
+            container = self._docker_client().containers.run(
                 self.image_name,
                 json.dumps(input_data),
                 mem_limit=f'{memory_limit_mb}m',
@@ -143,7 +153,7 @@ class CodeExecutor:
                 security_opt=['no-new-privileges:true'],
                 pids_limit=64,
                 read_only=True,
-                tmpfs={'/tmp': 'rw,noexec,nosuid,size=16m'},
+                tmpfs={'/tmp': 'rw,noexec,nosuid,size=16m'},  # nosec B108
                 timeout=timeout + 5,  # Add buffer
                 remove=True
             )
@@ -158,13 +168,9 @@ class CodeExecutor:
             logger.error(f"Docker image not found: {self.image_name}")
             return _error_result('Sandbox image not found. Please build it first.')
         
-        except Exception as e:
-            logger.error(f"Code execution failed: {str(e)}")
-            return {
-                'status': 'error',
-                'error': str(e),
-                'timestamp': datetime.now(timezone.utc).isoformat()
-            }
+        except Exception:
+            logger.exception("Code execution failed")
+            return _error_result('Sandbox execution is temporarily unavailable.')
     
     def execute_test_cases(self, code: str, language: str, test_cases: List[Dict],
                           timeout: int = 5, memory_limit_mb: int = 256) -> Dict:
@@ -228,7 +234,7 @@ class CodeExecutor:
         """Clean up Docker resources"""
         try:
             # Remove dangling containers
-            containers = self.client.containers.list(all=True, filters={'status': 'exited'})
+            containers = self._docker_client().containers.list(all=True, filters={'status': 'exited'})
             for container in containers:
                 if self.image_name in container.image.tags:
                     container.remove()

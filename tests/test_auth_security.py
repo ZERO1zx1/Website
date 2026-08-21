@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import jwt
 from flask import Flask
-from werkzeug.security import generate_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 import backend.api.auth as auth_module
 from backend.api.auth import auth_bp
@@ -39,6 +40,20 @@ class FakeDB:
             'teacher_approval_status': 'approved',
         }
         self.users[user['id']] = user
+        return user
+
+    def sign_in_with_password(self, email, password):
+        user = self.get_user_by_email(email)
+        if not user or not check_password_hash(user['password_hash'], password):
+            raise RuntimeError('invalid credentials')
+        return SimpleNamespace(user=SimpleNamespace(
+            id=f"auth-{user['id']}", email=user['email'], user_metadata={'full_name': user['name']}
+        ))
+
+    def ensure_external_user(self, auth_user_id, email, name, provider, avatar_url=None):
+        user = self.get_user_by_email(email)
+        user['auth_user_id'] = auth_user_id
+        user['auth_provider'] = provider
         return user
 
     def update_user(self, user_id, data):
@@ -88,6 +103,8 @@ def test_login_returns_jwt_and_rejects_wrong_password(monkeypatch):
         'password': 'OwnerPass123',
     })
     assert success.status_code == 200
+    assert 'codecraft_session=' in success.headers['Set-Cookie']
+    assert 'HttpOnly' in success.headers['Set-Cookie']
     token = success.get_json()['token']
     payload = jwt.decode(token, 'test-secret-key-with-at-least-32-bytes', algorithms=['HS256'])
     assert payload['role'] == 'owner'

@@ -6,7 +6,6 @@ from backend.api.auth import token_required
 from backend.db import db
 from backend.rbac import permission_required
 
-
 teacher_bp = Blueprint("teacher", __name__)
 
 

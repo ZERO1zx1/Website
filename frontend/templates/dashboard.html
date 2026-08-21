@@ -78,3 +78,4 @@
   }
 </script>
 {% endblock %}
+{% block scripts %}<script>const user = JSON.parse(localStorage.getItem('codecraft_user') || '{}'); const name = user.name || user.email?.split('@')[0] || 'суралцагч'; document.querySelector('[data-user-name]').textContent = name; if (window.CODECRAFT_CONFIG.backendEnabled) { window.codecraftApi('/api/analytics/dashboard').then(data => { const summary = data.summary || data.dashboard || {}; const mastery = document.querySelector('[data-stat-mastery]'); if (summary.mastery != null && mastery) { mastery.textContent = `${Math.round(Number(summary.mastery))}%`; } }).catch(() => {}); }</script>{% endblock %}

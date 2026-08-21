@@ -3,7 +3,8 @@ Analytics Routes
 Learning analytics and progress tracking
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint
+
 from backend.api.auth import token_required
 from backend.db import db
 from backend.rbac import permission_required

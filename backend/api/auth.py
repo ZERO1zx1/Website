@@ -1,15 +1,15 @@
 """Supabase Auth endpoints for CodeCraft Academy."""
 
-from functools import wraps
 import os
 import re
-from urllib.parse import urlencode
+from datetime import datetime, timedelta, timezone
+from functools import wraps
 
-from flask import Blueprint, redirect, request, url_for
+import jwt
+from flask import Blueprint, current_app, make_response, redirect, request, url_for
 
 from backend.db import db
 from backend.rbac import error_response
-
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -41,8 +41,9 @@ def token_required(function):
     @wraps(function)
     def decorated(*args, **kwargs):
         header = request.headers.get("Authorization", "")
-        scheme, _, token = header.partition(" ")
-        if scheme.lower() != "bearer" or not token:
+        parts = header.split()
+        token = parts[1] if len(parts) == 2 and parts[0].lower() == "bearer" else request.cookies.get("codecraft_session")
+        if not token:
             return error_response(
                 "missing_token",
                 "A valid Supabase access token is required.",
@@ -50,10 +51,23 @@ def token_required(function):
                 401,
             )
         try:
-            auth_user = db.get_auth_user(token)
-            profile = db.ensure_profile(auth_user, token)
-            profile["_access_token"] = token
-        except Exception:
+            payload = jwt.decode(token, _secret_key(), algorithms=["HS256"])
+            current_user = db.get_user(payload["user_id"])
+            if not current_user:
+                return error_response(
+                    "user_not_found",
+                    "The authenticated user was not found.",
+                    "Нэвтэрсэн хэрэглэгч олдсонгүй.",
+                    401,
+                )
+        except jwt.ExpiredSignatureError:
+            return error_response(
+                "token_expired",
+                "The authentication token has expired.",
+                "Нэвтрэлтийн token-ийн хугацаа дууссан байна.",
+                401,
+            )
+        except (jwt.InvalidTokenError, KeyError, RuntimeError):
             return error_response(
                 "invalid_token",
                 "The Supabase session is invalid or has expired.",
@@ -107,8 +121,26 @@ def _email_confirmation_url() -> str:
     return f"{_frontend_url().rstrip('/')}/auth?confirmed=1"
 
 
-def _google_callback_url() -> str:
-    return os.getenv("GOOGLE_OAUTH_REDIRECT_URL") or url_for("auth.google_callback", _external=True)
+def _session_response(payload: dict, status: int = 200):
+    response = make_response(payload, status)
+    token = payload.get("token")
+    if token:
+        response.set_cookie(
+            "codecraft_session",
+            token,
+            max_age=24 * 60 * 60,
+            httponly=True,
+            secure=current_app.config.get("ENVIRONMENT") == "production",
+            samesite="Lax",
+            path="/",
+        )
+    return response
+
+
+def _auth_user_value(auth_user, key, default=None):
+    if isinstance(auth_user, dict):
+        return auth_user.get(key, default)
+    return getattr(auth_user, key, default)
 
 
 def _session_payload(auth_response, provider: str = "password") -> dict:
@@ -246,8 +278,11 @@ def verify_email_otp():
     if not _valid_email(email) or not re.fullmatch(r"\d{6}", code):
         return error_response("invalid_otp", "Enter an email and six-digit code.", "Имэйл болон зургаан оронтой код оруулна уу.", 400)
     try:
-        payload = _session_payload(db.verify_email_otp(email, code), "email")
-        return {"message": "Email verified.", "message_mn": "Имэйл баталгаажлаа.", **payload}, 200
+        auth_response = db.verify_email_otp(email, code)
+        return _session_response(_external_auth_payload(auth_response, "email") | {
+            "message": "Email verification completed.",
+            "message_mn": "Имэйл баталгаажуулалт амжилттай боллоо.",
+        })
     except Exception:
         return error_response("otp_verification_failed", "The code is invalid or expired.", "Код буруу эсвэл хугацаа нь дууссан байна.", 401)
 
@@ -269,19 +304,95 @@ def google_start():
 def google_callback():
     code = request.args.get("code", "").strip()
     if not code:
-        return redirect(f"{_frontend_url().rstrip('/')}/auth?auth_error=google_oauth_failed")
+        return redirect(f"{_frontend_url()}?auth_error=google_oauth_failed")
     try:
-        payload = _session_payload(db.exchange_google_code(code), "google")
-        if not payload.get("token"):
-            raise RuntimeError("Google callback returned no session")
-        fragment = urlencode({
-            "auth_token": payload["token"],
-            "auth_refresh_token": payload.get("refresh_token", ""),
-            "auth_provider": "google",
-        })
-        return redirect(f"{_frontend_url().rstrip('/')}/auth?oauth=google#{fragment}")
+        auth_response = db.exchange_google_code(code)
+        payload = _external_auth_payload(auth_response, "google")
+        response = redirect(f"{_frontend_url()}?auth_provider=google")
+        response.set_cookie("codecraft_session", payload["token"], max_age=86400, httponly=True,
+                            secure=current_app.config.get("ENVIRONMENT") == "production",
+                            samesite="Lax", path="/")
+        return response
     except Exception:
-        return redirect(f"{_frontend_url().rstrip('/')}/auth?auth_error=google_oauth_failed")
+        return redirect(f"{_frontend_url()}?auth_error=google_oauth_failed")
+
+
+@auth_bp.route("/register", methods=["POST"])
+def register():
+    data = request.get_json(silent=True) or {}
+    if not data.get("email") or not data.get("password") or not data.get("name"):
+        return error_response(
+            "missing_fields",
+            "Email, password and name are required.",
+            "Имэйл, нууц үг болон нэр заавал шаардлагатай.",
+            400,
+        )
+    if len(data["password"]) < 8:
+        return error_response(
+            "weak_password",
+            "Password must contain at least 8 characters.",
+            "Нууц үг хамгийн багадаа 8 тэмдэгттэй байна.",
+            400,
+        )
+    if db.get_user_by_email(data["email"].strip().lower()):
+        return error_response(
+            "email_registered",
+            "This email is already registered.",
+            "Энэ имэйл аль хэдийн бүртгэгдсэн байна.",
+            409,
+        )
+    try:
+        user = db.create_user(
+            email=data["email"].strip().lower(),
+            password=data["password"],
+            name=data["name"].strip(),
+            role="student",
+        )
+        return _session_response({
+            "message": "User registered successfully.",
+            "message_mn": "Хэрэглэгч амжилттай бүртгэгдлээ.",
+            "token": _issue_token(user),
+            "user": _public_user(user),
+        }, 201)
+    except Exception:
+        return error_response(
+            "registration_failed",
+            "The account could not be created.",
+            "Бүртгэл үүсгэхэд алдаа гарлаа.",
+            500,
+        )
+
+
+@auth_bp.route("/login", methods=["POST"])
+def login():
+    data = request.get_json(silent=True) or {}
+    if not data.get("email") or not data.get("password"):
+        return error_response(
+            "missing_credentials",
+            "Email and password are required.",
+            "Имэйл болон нууц үг заавал шаардлагатай.",
+            400,
+        )
+    try:
+        auth_response = db.sign_in_with_password(
+            data["email"].strip().lower(), data["password"]
+        )
+        payload = _external_auth_payload(auth_response, "email")
+    except Exception:
+        return error_response(
+            "invalid_credentials",
+            "Invalid email or password.",
+            "Имэйл эсвэл нууц үг буруу байна.",
+            401,
+        )
+    return _session_response(payload)
+
+
+@auth_bp.route("/logout", methods=["POST"])
+def logout():
+    response = make_response({"message": "Signed out."}, 200)
+    response.delete_cookie("codecraft_session", path="/", samesite="Lax")
+    return response
 
 
 @auth_bp.route("/me", methods=["GET"])

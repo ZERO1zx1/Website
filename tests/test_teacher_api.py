@@ -7,7 +7,6 @@ import backend.api.auth as auth_module
 import backend.api.teacher as teacher_module
 from backend.api.teacher import teacher_bp
 
-
 SECRET = 'teacher-test-secret-with-at-least-32-bytes'
 
 

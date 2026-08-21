@@ -6,7 +6,6 @@ from flask import Flask
 import backend.api.auth as auth_module
 from backend.api.auth import auth_bp
 
-
 SECRET = 'provider-test-secret-with-at-least-32-bytes'
 
 
@@ -111,5 +110,8 @@ def test_google_callback_exchanges_code_and_redirects_with_app_token(monkeypatch
     response = client.get('/api/auth/google/callback?code=oauth-code')
 
     assert response.status_code == 302
-    assert 'auth_token=' in response.headers['Location']
+    assert 'auth_token=' not in response.headers['Location']
+    assert 'auth_provider=google' in response.headers['Location']
+    assert 'codecraft_session=' in response.headers['Set-Cookie']
+    assert 'HttpOnly' in response.headers['Set-Cookie']
     assert 'auth_provider=google' in response.headers['Location']

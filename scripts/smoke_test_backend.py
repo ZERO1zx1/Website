@@ -1,5 +1,6 @@
 import os
 import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 os.environ['FRONTEND_ONLY'] = 'false'
 from app import create_app

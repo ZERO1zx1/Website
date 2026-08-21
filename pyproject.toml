@@ -1,0 +1,21 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["work"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "S"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105"]
+"backend/services/code_executor.py" = ["S108"]
+"sandbox/runner.py" = ["S603", "S607"]
+"sandbox/service.py" = ["S104"]
+
+[tool.bandit]
+exclude_dirs = ["tests"]

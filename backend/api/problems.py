@@ -3,10 +3,12 @@ Problems Routes
 Problem bank management with test cases and hints
 """
 
-from flask import Blueprint, request, jsonify
-from backend.api.auth import token_required, teacher_required
-from backend.db import db
 import hashlib
+
+from flask import Blueprint, request
+
+from backend.api.auth import teacher_required, token_required
+from backend.db import db
 
 problems_bp = Blueprint('problems', __name__)
 

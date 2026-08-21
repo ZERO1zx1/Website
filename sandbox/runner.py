@@ -4,13 +4,12 @@ Secure Code Runner
 Executes code in isolated environment with resource limits
 """
 
-import sys
 import json
-import subprocess
 import resource
-import signal
-import time
-from typing import Dict, List, Tuple
+import subprocess  # nosec B404
+import sys
+from typing import Dict
+
 
 class CodeRunner:
     """Execute code with resource limits and timeout"""
@@ -51,7 +50,7 @@ class CodeRunner:
         """
         try:
             # Create subprocess with resource limits
-            process = subprocess.Popen(
+            process = subprocess.Popen(  # nosec B603
                 [sys.executable, "-c", code],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
@@ -104,7 +103,7 @@ class CodeRunner:
             Dictionary with status, output, and error information
         """
         try:
-            process = subprocess.Popen(
+            process = subprocess.Popen(  # nosec B603 B607
                 ["node", "-e", code],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
