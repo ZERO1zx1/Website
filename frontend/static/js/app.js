@@ -43,10 +43,12 @@
     window.__toastTimer = window.setTimeout(() => toast.classList.remove('is-visible'), 3200);
   };
   window.codecraftApi = async (path, options = {}) => {
-    const token = localStorage.getItem('codecraft_token');
     const headers = {'Content-Type': 'application/json', ...(options.headers || {})};
-    if (token) headers.Authorization = `Bearer ${token}`;
-    const response = await fetch(`${config.apiBase || ''}${path}`, {...options, headers});
+    const response = await fetch(`${config.apiBase || ''}${path}`, {
+      ...options,
+      credentials: 'same-origin',
+      headers,
+    });
     let payload = {};
     try { payload = await response.json(); } catch { payload = {error: await response.text()}; }
     if (!response.ok) throw new Error(payload.message_mn || payload.error || 'Хүсэлтийг гүйцэтгэх боломжгүй байна.');

@@ -1,18 +1,15 @@
 """Authentication, session and role-management API routes."""
 
-from datetime import datetime, timedelta, timezone
-from functools import wraps
 import os
 import re
-from urllib.parse import urlencode
+from datetime import datetime, timedelta, timezone
+from functools import wraps
 
 import jwt
-from flask import Blueprint, current_app, redirect, request, url_for
-from werkzeug.security import check_password_hash
+from flask import Blueprint, current_app, make_response, redirect, request, url_for
 
 from backend.db import db
 from backend.rbac import error_response, permission_required
-
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -31,7 +28,8 @@ def token_required(function):
     def decorated(*args, **kwargs):
         header = request.headers.get("Authorization", "")
         parts = header.split()
-        if len(parts) != 2 or parts[0].lower() != "bearer":
+        token = parts[1] if len(parts) == 2 and parts[0].lower() == "bearer" else request.cookies.get("codecraft_session")
+        if not token:
             return error_response(
                 "missing_token",
                 "A valid Bearer token is required.",
@@ -39,7 +37,7 @@ def token_required(function):
                 401,
             )
         try:
-            payload = jwt.decode(parts[1], _secret_key(), algorithms=["HS256"])
+            payload = jwt.decode(token, _secret_key(), algorithms=["HS256"])
             current_user = db.get_user(payload["user_id"])
             if not current_user:
                 return error_response(
@@ -125,6 +123,22 @@ def _issue_token(user: dict) -> str:
     )
 
 
+def _session_response(payload: dict, status: int = 200):
+    response = make_response(payload, status)
+    token = payload.get("token")
+    if token:
+        response.set_cookie(
+            "codecraft_session",
+            token,
+            max_age=24 * 60 * 60,
+            httponly=True,
+            secure=current_app.config.get("ENVIRONMENT") == "production",
+            samesite="Lax",
+            path="/",
+        )
+    return response
+
+
 def _auth_user_value(auth_user, key, default=None):
     if isinstance(auth_user, dict):
         return auth_user.get(key, default)
@@ -203,10 +217,10 @@ def verify_email_otp():
         )
     try:
         auth_response = db.verify_email_otp(email, code)
-        return _external_auth_payload(auth_response, "email") | {
+        return _session_response(_external_auth_payload(auth_response, "email") | {
             "message": "Email verification completed.",
             "message_mn": "Имэйл баталгаажуулалт амжилттай боллоо.",
-        }, 200
+        })
     except Exception:
         return error_response(
             "otp_verification_failed",
@@ -237,8 +251,11 @@ def google_callback():
     try:
         auth_response = db.exchange_google_code(code)
         payload = _external_auth_payload(auth_response, "google")
-        fragment = urlencode({"auth_token": payload["token"], "auth_provider": "google"})
-        return redirect(f"{_frontend_url()}#{fragment}")
+        response = redirect(f"{_frontend_url()}?auth_provider=google")
+        response.set_cookie("codecraft_session", payload["token"], max_age=86400, httponly=True,
+                            secure=current_app.config.get("ENVIRONMENT") == "production",
+                            samesite="Lax", path="/")
+        return response
     except Exception:
         return redirect(f"{_frontend_url()}?auth_error=google_oauth_failed")
 
@@ -274,12 +291,12 @@ def register():
             name=data["name"].strip(),
             role="student",
         )
-        return {
+        return _session_response({
             "message": "User registered successfully.",
             "message_mn": "Хэрэглэгч амжилттай бүртгэгдлээ.",
             "token": _issue_token(user),
             "user": _public_user(user),
-        }, 201
+        }, 201)
     except Exception:
         return error_response(
             "registration_failed",
@@ -299,16 +316,26 @@ def login():
             "Имэйл болон нууц үг заавал шаардлагатай.",
             400,
         )
-    user = db.get_user_by_email(data["email"].strip().lower())
-    password_hash = user.get("password_hash") if user else None
-    if not user or not password_hash or not check_password_hash(password_hash, data["password"]):
+    try:
+        auth_response = db.sign_in_with_password(
+            data["email"].strip().lower(), data["password"]
+        )
+        payload = _external_auth_payload(auth_response, "email")
+    except Exception:
         return error_response(
             "invalid_credentials",
             "Invalid email or password.",
             "Имэйл эсвэл нууц үг буруу байна.",
             401,
         )
-    return {"token": _issue_token(user), "user": _public_user(user)}, 200
+    return _session_response(payload)
+
+
+@auth_bp.route("/logout", methods=["POST"])
+def logout():
+    response = make_response({"message": "Signed out."}, 200)
+    response.delete_cookie("codecraft_session", path="/", samesite="Lax")
+    return response
 
 
 @auth_bp.route("/me", methods=["GET"])

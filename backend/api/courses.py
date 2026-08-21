@@ -3,18 +3,20 @@ Courses Routes
 Course and class management with teacher authorization
 """
 
-from flask import Blueprint, request, jsonify
-from backend.api.auth import token_required, teacher_required, admin_required
-from backend.db import db
+import secrets
 import string
-import random
+
+from flask import Blueprint, request
+
+from backend.api.auth import teacher_required, token_required
+from backend.db import db
 
 courses_bp = Blueprint('courses', __name__)
 
 def generate_enrollment_code(length=8):
     """Generate a random enrollment code"""
     characters = string.ascii_uppercase + string.digits
-    return ''.join(random.choice(characters) for _ in range(length))
+    return ''.join(secrets.choice(characters) for _ in range(length))
 
 # ============ COURSE ENDPOINTS ============
 

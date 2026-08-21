@@ -4,9 +4,9 @@ The service is intended to be reachable only on the compose internal network.
 It does not expose the sandbox directly to the public host.
 """
 
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from runner import CodeRunner
 
@@ -61,7 +61,7 @@ class SandboxHandler(BaseHTTPRequestHandler):
             self._send(200, result)
         except (ValueError, TypeError, json.JSONDecodeError) as error:
             self._send(400, {"error": f"Invalid execution request: {error}"})
-        except Exception as error:  # pragma: no cover - final service guard
+        except Exception:  # pragma: no cover - final service guard
             self._send(500, {"error": "Sandbox execution failed"})
 
     def log_message(self, format, *args):  # noqa: A003
@@ -70,7 +70,7 @@ class SandboxHandler(BaseHTTPRequestHandler):
 
 def main() -> None:
     port = int(os.getenv("SANDBOX_PORT", "8080"))
-    server = ThreadingHTTPServer(("0.0.0.0", port), SandboxHandler)
+    server = ThreadingHTTPServer((os.getenv("SANDBOX_HOST", "0.0.0.0"), port), SandboxHandler)  # nosec B104
     server.serve_forever()
 
 

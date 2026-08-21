@@ -3,17 +3,37 @@ Submissions Routes
 Code submission and evaluation management
 """
 
-from flask import Blueprint, Response, request, jsonify, stream_with_context
 import json
+import os
 import time
 
-from backend.api.auth import token_required, teacher_required
+from flask import Blueprint, Response, request, stream_with_context
+
+from backend.api.auth import token_required
 from backend.db import db
-from backend.services.submission_queue import enqueue_submission
 from backend.services.code_executor import get_executor
-from datetime import datetime
+from backend.services.submission_queue import enqueue_submission
 
 submissions_bp = Blueprint('submissions', __name__)
+
+
+def _execution_enabled():
+    return bool(os.getenv('SANDBOX_URL')) or os.getenv(
+        'ALLOW_LOCAL_DOCKER_SANDBOX', 'false'
+    ).lower() == 'true'
+
+
+def _visible_results(results, current_user):
+    if current_user.get('role') in {'teacher', 'admin', 'owner'}:
+        return results
+    visible = []
+    for result in results:
+        item = dict(result)
+        if item.get('is_hidden'):
+            for key in ('expected_output', 'input', 'error'):
+                item.pop(key, None)
+        visible.append(item)
+    return visible
 
 # ============ SUBMISSION ENDPOINTS ============
 
@@ -23,6 +43,8 @@ def create_submission(current_user):
     """Submit code for evaluation"""
     if current_user['role'] != 'student':
         return {'error': 'Only students can submit code'}, 403
+    if not _execution_enabled():
+        return {'error': 'Code execution is disabled until the sandbox is configured'}, 503
     
     data = request.get_json()
     
@@ -80,6 +102,8 @@ def run_code(current_user):
     """Execute code against visible test cases without creating a graded submission."""
     if current_user['role'] != 'student':
         return {'error': 'Only students can run code'}, 403
+    if not _execution_enabled():
+        return {'error': 'Code execution is disabled until the sandbox is configured'}, 503
     data = request.get_json(silent=True) or {}
     if not data.get('problem_id') or not isinstance(data.get('code'), str) or not data['code'].strip():
         return {'error': 'Missing required fields: problem_id, code'}, 400
@@ -122,7 +146,7 @@ def get_submission(current_user, submission_id):
         
         return {
             'submission': submission,
-            'results': results.data if results.data else []
+            'results': _visible_results(results.data or [], current_user)
         }, 200
     except Exception:
         return {'error': 'Submission result unavailable'}, 503
@@ -146,7 +170,7 @@ def stream_submission(current_user, submission_id):
             results = db.client.table('submission_results').select('*').eq('submission_id', submission_id).execute()
             payload = {
                 'submission': current,
-                'results': results.data if results.data else [],
+                'results': _visible_results(results.data or [], current_user),
             }
             signature = json.dumps(payload, sort_keys=True, default=str)
             if signature != last_signature:

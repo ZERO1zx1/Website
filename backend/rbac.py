@@ -7,7 +7,6 @@ from typing import Iterable
 import yaml
 from flask import request
 
-
 _CONFIG_PATH = Path(__file__).resolve().parents[1] / "config" / "roles.yml"
 
 
@@ -43,15 +42,23 @@ def has_permission(user: dict, permission: str) -> bool:
     return any(grant.startswith(f"{permission}.") for grant in permissions)
 
 
-def error_response(code: str, message: str, message_mn: str, status: int):
+def error_response(
+    code: str,
+    message: str,
+    message_mn: str,
+    status: int,
+    *,
+    details: list[dict] | None = None,
+):
     locale = normalize_locale(request.headers.get("Accept-Language"))
-    return {
-        "error": {
-            "code": code,
-            "message": message_mn if locale == "mn" else message,
-            "message_mn": message_mn,
-        }
-    }, status
+    error = {
+        "code": code,
+        "message": message_mn if locale == "mn" else message,
+        "message_mn": message_mn,
+    }
+    if details:
+        error["details"] = details
+    return {"error": error}, status
 
 
 def permission_required(permission: str):
