@@ -135,8 +135,7 @@ def create_app(config_name='development'):
             lesson['unit'] = next((module['title'] for module in course['modules'] if any(item['id'] == lesson['id'] for item in module['lessons'])), 'Module')
             return render_template('lesson.html', page='lesson', course=course, lesson=lesson, backend_enabled=not frontend_only)
         if page == 'workspace':
-            starters = {'python': "name = 'CodeCraft'\\nfor step in range(1, 4):\\n    print(f'{step}. Сайн уу, {name}!')", 'html': '<main>\\n  <h1>Миний анхны вэб</h1>\\n  <p>Semantic HTML ашиглаж байна.</p>\\n</main>', 'css': ':root {\\n  --brand: #6d5dfc;\\n}\\n.card {\\n  padding: 24px;\\n  border-radius: 18px;\\n  background: var(--brand);\\n}', 'javascript': "const button = document.querySelector('button');\\nlet count = 0;\\nbutton?.addEventListener('click', () => {\\n  count += 1;\\n  button.textContent = `Даралт: ${count}`;\\n});"}
-            return render_template('workspace.html', page='workspace', starters=starters, backend_enabled=not frontend_only)
+            return render_template('workspace.html', page='workspace', course_catalog=COURSE_CATALOG, backend_enabled=not frontend_only)
         return render_template(f'{page}.html', page=page, backend_enabled=not frontend_only)
 
     @app.route('/api/public-config', methods=['GET'])

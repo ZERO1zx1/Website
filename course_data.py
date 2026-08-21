@@ -1,5 +1,5 @@
 # CodeCraft Academy Course Data
-# Contains the detailed curriculum for Python, HTML, CSS, and JavaScript
+# Contains the detailed curriculum for Python, HTML, CSS, and JavaScript based on the provided PDF materials.
 
 COURSE_CATALOG = {
     'python': {
@@ -120,14 +120,32 @@ COURSE_CATALOG = {
                         'minutes': 18,
                         'language': 'html',
                         'unit': 'HTML 01',
-                        'concept': '<p>HTML (HyperText Markup Language) нь вэб хуудасны араг ясыг бүрдүүлдэг. Browser (Chrome, Safari гэх мэт) нь HTML файлыг уншиж, хэрэглэгчид харагдахуйц вэб хуудас болгон хувиргадаг.</p>',
+                        'concept': '<p>HTML (HyperText Markup Language) нь вэб хуудасны араг ясыг бүрдүүлдэг. Browser (Chrome, Safari гэх мэт) нь HTML файлыг уншиж, хэрэглэгчид харагдахуйц вэб хуудас болгон хувиргадаг. Вэб хуудас бол баримт бичиг (document) юм.</p>',
                         'mental_model': 'HTML бол барилгын тоосго, цемент юм. Ямар ч гоёл чимэглэлгүй зөвхөн хана, хаалга, цонх хаана байхыг заана.',
-                        'code': '<main>\n  <h1>Миний анхны вэб</h1>\n  <p>Semantic HTML ашиглаж байна.</p>\n</main>',
+                        'code': '<!DOCTYPE html>\n<html>\n  <head>\n    <title>Миний анхны вэб</title>\n  </head>\n  <body>\n    <h1>Сайн уу!</h1>\n  </body>\n</html>',
                         'mistake': 'HTML-ийг програмчлалын хэл гэж андуурах. Энэ бол зөвхөн тэмдэглэгээт (markup) хэл юм.',
                         'best_practice': 'Үргэлж semantic буюу утга төгөлдөр tag ашиглахыг хичээгээрэй (жишээ нь div-ийн оронд main эсвэл article).',
                         'quiz': {
                             'question': 'HTML юуны товчлол вэ?',
                             'answer': 'HyperText Markup Language'
+                        }
+                    },
+                    {
+                        'id': 'html-tags',
+                        'title': 'Tags ба Elements',
+                        'outcome': 'HTML tag-уудыг зөв нээж, хааж сурна.',
+                        'task': 'Гарчиг, догол мөр, холбоос бүхий энгийн хуудас үүсгэ.',
+                        'minutes': 20,
+                        'language': 'html',
+                        'unit': 'HTML 01',
+                        'concept': '<p>HTML element нь ихэвчлэн нээх tag, агуулга, хаах tag-аас бүрдэнэ. Жишээ нь: <code>&lt;p&gt;Догол мөр&lt;/p&gt;</code>. Зарим tag-ууд хаах tag-гүй (empty elements) байдаг, жишээ нь <code>&lt;br&gt;</code> эсвэл <code>&lt;img&gt;</code>.</p>',
+                        'mental_model': 'Tag-ууд бол хайрцагнууд. Хайрцаг дотор өөр хайрцаг хийж (nested) болно.',
+                        'code': '<h1>Том гарчиг</h1>\n<p>Энэ бол догол мөр. <br> Энэ бол шинэ мөр.</p>\n<a href="https://google.com">Google рүү очих</a>',
+                        'mistake': 'Хаах tag-ийг мартах (жишээ нь <code>&lt;p&gt;Текст</code> гээд орхих).',
+                        'best_practice': 'Кодоо үргэлж зөв догол мөрөөр (indentation) бичиж, уншихад хялбар болго.',
+                        'quiz': {
+                            'question': 'Холбоос үүсгэдэг tag юу вэ?',
+                            'answer': '<a> tag (anchor).'
                         }
                     }
                 ]
@@ -165,6 +183,24 @@ COURSE_CATALOG = {
                             'question': 'CSS-д элементийг хэрхэн сонгож авдаг вэ?',
                             'answer': 'Selector ашиглаж сонгоно (жишээ нь: tag name, .class, #id).'
                         }
+                    },
+                    {
+                        'id': 'css-box-model',
+                        'title': 'Box Model (Хайрцгийн загвар)',
+                        'outcome': 'Margin, padding, border-ийн ялгааг ойлгоно.',
+                        'task': 'Хайрцаг үүсгээд padding, border, margin өг.',
+                        'minutes': 25,
+                        'language': 'css',
+                        'unit': 'CSS 01',
+                        'concept': '<p>HTML элемент бүр хайрцаг хэлбэртэй байдаг. Энэ хайрцаг нь Content (агуулга), Padding (дотор зай), Border (хүрээ), Margin (гадна зай) гэсэн 4 хэсгээс бүрдэнэ.</p>',
+                        'mental_model': 'Зураг өлгөхтэй адил: Зураг (Content), жаазны шил хүртэлх зай (Padding), жааз өөрөө (Border), бусад зураг хүртэлх зай (Margin).',
+                        'code': '.box {\n  width: 200px;\n  padding: 20px;\n  border: 2px solid black;\n  margin: 15px;\n}',
+                        'mistake': 'Width-д padding болон border ордоггүйг мартах (box-sizing: border-box ашиглахгүй байх).',
+                        'best_practice': 'Бүх элементэд `box-sizing: border-box;` тохируулж хэмжээ тооцоолохыг хялбар болго.',
+                        'quiz': {
+                            'question': 'Элементийн дотор талын зайг юу гэж нэрлэдэг вэ?',
+                            'answer': 'Padding.'
+                        }
                     }
                 ]
             }
@@ -200,6 +236,24 @@ COURSE_CATALOG = {
                         'quiz': {
                             'question': 'HTML элементийг JS-ээр хэрхэн барьж авдаг вэ?',
                             'answer': 'document.querySelector() эсвэл document.getElementById() ашиглан.'
+                        }
+                    },
+                    {
+                        'id': 'js-dom-p5',
+                        'title': 'DOM ба Интерактив',
+                        'outcome': 'DOM элементүүдийг өөрчилж, event сонсож сурна.',
+                        'task': 'Оноо нэмдэг энгийн тоглоомын логик бич.',
+                        'minutes': 30,
+                        'language': 'javascript',
+                        'unit': 'JS 01',
+                        'concept': '<p>DOM (Document Object Model) нь HTML хуудсыг JavaScript-аас удирдах боломжтой мод (tree) бүтэц юм. Бид DOM-ийг ашиглан текстийг өөрчлөх, товч дарахыг мэдрэх, шинэ элемент нэмэх боломжтой.</p>',
+                        'mental_model': 'DOM бол вэб хуудасны "алсын удирдлага". JS-ээр товч дарж хуудсыг өөрчилнө.',
+                        'code': 'let score = 0;\nconst scoreElement = document.querySelector("#score-value");\nconst target = document.querySelector("#target");\n\ntarget.addEventListener("click", () => {\n  score++;\n  scoreElement.innerText = score;\n});',
+                        'mistake': 'Event listener-ийг элемент нь ачаалагдахаас өмнө нэмэх.',
+                        'best_practice': 'DOM элементүүдийг хувьсагчид хадгалж аваад дараа нь ашиглах.',
+                        'quiz': {
+                            'question': 'Товч дарах үйлдлийг хэрхэн барьж авах вэ?',
+                            'answer': 'addEventListener("click", ...) ашиглан.'
                         }
                     }
                 ]
