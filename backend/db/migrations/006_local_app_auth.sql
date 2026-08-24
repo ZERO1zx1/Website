@@ -1,5 +1,12 @@
 -- CodeCraft-owned authentication identity. Apply after 003_external_auth_identities.sql.
 -- Supabase remains the database only; auth.users is no longer required for new users.
+alter table public.users
+    add column if not exists password_hash text;
+alter table public.users
+    add column if not exists auth_user_id uuid;
+alter table public.users
+    add column if not exists auth_provider text;
+
 create table if not exists public.app_auth_identities (
     id uuid primary key,
     email text not null unique,
@@ -10,8 +17,29 @@ create table if not exists public.app_auth_identities (
     unique (provider, provider_subject)
 );
 
+-- Preserve existing UUID-backed learner rows before changing their foreign keys.
+insert into public.app_auth_identities (id, email, provider)
+select p.id,
+       coalesce(nullif(p.email, ''), 'legacy-' || p.id::text || '@local.invalid'),
+       'password'
+from public.profiles p
+on conflict (id) do nothing;
+
+insert into public.app_auth_identities (id, email, provider)
+select u.auth_user_id,
+       coalesce(nullif(u.email, ''), 'legacy-' || u.auth_user_id::text || '@local.invalid'),
+       case when u.auth_provider = 'google' then 'google' else 'password' end
+from public.users u
+where u.auth_user_id is not null
+on conflict (id) do nothing;
+
 alter table public.users
     drop constraint if exists users_auth_user_id_fkey;
+alter table public.users
+    drop constraint if exists users_auth_provider_check;
+alter table public.users
+    add constraint users_auth_provider_check
+    check (auth_provider is null or auth_provider in ('email', 'google'));
 alter table public.users
     add constraint users_auth_user_id_app_fkey
     foreign key (auth_user_id) references public.app_auth_identities(id) on delete set null;

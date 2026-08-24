@@ -89,8 +89,9 @@ class SupabaseDB:
         if not identity:
             raise RuntimeError('Could not create app identity')
         user = self.client.table('users').insert({
+            'username': f"{email.split('@', 1)[0]}_{identity_id[:8]}",
             'email': email,
-            'name': display_name,
+            'display_name': display_name,
             'password_hash': generate_password_hash(password),
             'auth_user_id': identity_id,
             'auth_provider': 'email',
@@ -130,13 +131,14 @@ class SupabaseDB:
         if user:
             updated = self.client.table('users').update({
                 'auth_user_id': identity['id'], 'auth_provider': 'google',
-                'name': display_name or user.get('name') or email.split('@', 1)[0],
+                'display_name': display_name or user.get('display_name') or user.get('name') or email.split('@', 1)[0],
                 'avatar_url': avatar_url,
             }).eq('id', user['id']).execute().data
             user = updated[0] if updated else {**user, 'auth_user_id': identity['id'], 'auth_provider': 'google'}
         else:
             created = self.client.table('users').insert({
-                'email': email, 'name': display_name or email.split('@', 1)[0],
+                'username': f"{email.split('@', 1)[0]}_{identity['id'][:8]}",
+                'email': email, 'display_name': display_name or email.split('@', 1)[0],
                 'auth_user_id': identity['id'], 'auth_provider': 'google', 'avatar_url': avatar_url,
                 'role': 'student',
             }).execute().data
@@ -145,7 +147,7 @@ class SupabaseDB:
             user = created[0]
         self.client.table('profiles').upsert({
             'id': identity['id'], 'email': email,
-            'display_name': user.get('name') or display_name, 'role': user.get('role', 'student'),
+            'display_name': user.get('display_name') or user.get('name') or display_name, 'role': user.get('role', 'student'),
         }, on_conflict='id').execute()
         return user
 
