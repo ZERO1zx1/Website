@@ -1,0 +1,6 @@
+{% extends 'layouts/base.html' %}
+{% set page = 'auth' %}
+{% set auth_mode = 'register' %}
+{% block title %}Бүртгүүлэх — CodeCraft Academy{% endblock %}
+{% block content %}{% include 'components/auth_form.html' %}{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/auth.js') }}" defer></script>{% endblock %}
