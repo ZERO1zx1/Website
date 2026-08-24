@@ -12,6 +12,7 @@ from flask import Blueprint, Response, request, stream_with_context
 from backend.api.auth import token_required
 from backend.db import db
 from backend.services.code_executor import get_executor
+from backend.services.gamification import award_xp, record_activity
 from backend.services.submission_queue import enqueue_submission
 from learning_experiences import get_challenge
 
@@ -142,6 +143,49 @@ def run_code(current_user):
         return {'mode': 'runtime', 'problem_id': data['problem_id'], **result}, 200
     except Exception:
         return {'error': 'Runtime execution is temporarily unavailable'}, 503
+
+
+@submissions_bp.route('/catalog', methods=['POST'])
+@token_required
+def submit_catalog_challenge(current_user):
+    """Evaluate and persist a static/published catalog challenge attempt."""
+    if current_user['role'] != 'student':
+        return {'error': 'Only students can submit code'}, 403
+    if not _execution_enabled():
+        return {'error': 'Code execution is disabled until the sandbox is configured'}, 503
+    data = request.get_json(silent=True) or {}
+    challenge_id = str(data.get('challenge_id') or '')
+    code = data.get('code')
+    if not challenge_id or not isinstance(code, str) or not code.strip():
+        return {'error': 'Missing required fields: challenge_id, code'}, 400
+    challenge = get_challenge(challenge_id)
+    if not challenge:
+        return {'error': 'Challenge not found'}, 404
+    app_user_id = current_user.get('auth_user_id')
+    if not app_user_id:
+        return {'error': 'Local app identity is required'}, 409
+    language = str(data.get('language') or challenge.get('course_id') or 'python').lower()
+    if language not in {'python', 'javascript', 'html', 'css'}:
+        return {'error': 'Unsupported language'}, 400
+    test_cases = challenge.get('tests') or []
+    if not test_cases and challenge.get('expected_output'):
+        test_cases = [{'input': '', 'expected_output': challenge['expected_output'], 'is_hidden': False}]
+    if not test_cases:
+        return {'error': 'No test cases are available'}, 409
+    try:
+        results = get_executor().execute_test_cases(code=code, language=language, test_cases=test_cases)
+        visible_results = _visible_results(results.get('test_results', []), current_user)
+        results = {**results, 'test_results': visible_results}
+        attempt = db.create_catalog_attempt(app_user_id, challenge_id, language, code, results)
+        reward = None
+        if results.get('status') == 'accepted':
+            xp = int(challenge.get('xp') or 80)
+            xp_result = award_xp(int(current_user['id']), f'catalog:{challenge_id}', 'accepted_catalog_challenge', xp, None, {'challenge_id': challenge_id})
+            streak = record_activity(int(current_user['id']), 'accepted_catalog_challenge')
+            reward = {'xp': xp_result, 'streak': streak}
+        return {'mode': 'catalog', 'challenge_id': challenge_id, 'attempt': attempt, 'results': results, 'reward': reward}, 201
+    except Exception:
+        return {'error': 'Catalog challenge submission is temporarily unavailable'}, 503
 
 
 @submissions_bp.route('/<int:submission_id>', methods=['GET'])

@@ -102,4 +102,41 @@
       window.showToast?.(error.message, true);
     }
   });
+
+  document.querySelector('#submit-code')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    const rewardStatus = document.querySelector('#reward-status');
+    if (!window.CODECRAFT_CONFIG.backendEnabled || !active?.dataset.id) {
+      status.textContent = 'Backend шаардлагатай';
+      output.textContent = 'Шалгуулахын тулд backend болон sandbox тохиргоотой орчинд ажиллана уу.';
+      return;
+    }
+    button.disabled = true;
+    status.textContent = 'Шалгаж байна…';
+    if (rewardStatus) rewardStatus.textContent = '';
+    try {
+      const response = await fetch(`${window.CODECRAFT_CONFIG.apiBase}/api/submissions/catalog`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        credentials: 'same-origin',
+        body: JSON.stringify({challenge_id: active.dataset.id, language: language.value, code: editor.value}),
+      });
+      const payload = await readPayload(response);
+      if (!response.ok) throw new Error(payload.error?.message_mn || payload.error || 'Шалгалт хийх боломжгүй байна.');
+      const results = payload.results || {};
+      const passed = Number(results.passed_tests) || 0;
+      const total = Number(results.total_tests) || 0;
+      output.textContent = `${passed}/${total} test pass\n\n${JSON.stringify(results.test_results || [], null, 2)}`;
+      status.textContent = results.status === 'accepted' ? 'Accepted' : 'Дахин оролдоорой';
+      const xpReward = payload.reward?.xp?.xp_amount || 0;
+      if (rewardStatus) rewardStatus.textContent = results.status === 'accepted' ? `+${xpReward} XP` : 'XP авахын тулд бүх test-ийг pass болгоно.';
+      window.showToast?.(results.status === 'accepted' ? 'Challenge амжилттай. XP нэмэгдлээ.' : 'Зарим test зөрж байна.', results.status !== 'accepted');
+    } catch (error) {
+      status.textContent = 'Алдаа';
+      output.textContent = error.message;
+      window.showToast?.(error.message, true);
+    } finally {
+      button.disabled = false;
+    }
+  });
 })();

@@ -490,6 +490,28 @@ class SupabaseDB:
         }).execute()
         return response.data[0] if response.data else None
     
+    def create_catalog_attempt(self, app_user_id: str, challenge_id: str, language: str, code: str, results: dict):
+        """Persist a catalog challenge evaluation under the CodeCraft app identity."""
+        payload = {
+            'app_user_id': str(app_user_id),
+            'challenge_id': challenge_id,
+            'language': language,
+            'code': code,
+            'status': results.get('status', 'error'),
+            'total_tests': int(results.get('total_tests') or 0),
+            'passed_tests': int(results.get('passed_tests') or 0),
+            'results': results,
+        }
+        response = self.client.table('catalog_challenge_attempts').insert(payload).execute()
+        return response.data[0] if response.data else None
+
+    def get_catalog_attempts(self, app_user_id: str, challenge_id: str | None = None, limit: int = 50):
+        """Return a learner's own catalog attempts, newest first."""
+        query = self.client.table('catalog_challenge_attempts').select('*').eq('app_user_id', str(app_user_id))
+        if challenge_id:
+            query = query.eq('challenge_id', challenge_id)
+        return query.order('created_at', desc=True).limit(min(max(int(limit), 1), 100)).execute().data or []
+
     def get_submission(self, submission_id: int):
         """Get submission by ID"""
         response = self.client.table('submissions').select('*').eq('id', submission_id).execute()
