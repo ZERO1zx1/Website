@@ -63,6 +63,17 @@ def test_profile_update_is_scoped_to_authenticated_identity(client):
     assert response.get_json()["profile"]["role"] == "student"
 
 
+def test_canonical_summary_returns_catalog_shape(client):
+    response = client.get('/api/learning/summary')
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload['completed_lessons'] == 0
+    assert payload['overall_percent'] == 0
+    assert {course['course_id'] for course in payload['courses']} == {'python', 'html', 'css', 'javascript'}
+    assert payload['completed_lesson_keys'] == []
+
+
 def test_course_progress_validation_and_identity_scope(client):
     invalid = client.put("/api/learning/progress", json={"course_slug": "python", "progress_percent": 101})
     valid = client.put("/api/learning/progress", json={"course_slug": "python", "progress_percent": 45})
