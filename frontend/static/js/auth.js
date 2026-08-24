@@ -22,15 +22,28 @@
 
   document.querySelectorAll('[data-auth-mode]').forEach((item) => item.addEventListener('click', () => setMode(item.dataset.authMode)));
   setMode(mode);
+  async function readPayload(response) {
+    const raw = await response.text();
+    try { return raw ? JSON.parse(raw) : {}; } catch { return {error: {message_mn: `Сервер JSON биш response буцаалаа (HTTP ${response.status}).`}}; }
+  }
+  function backendUnavailable() {
+    return window.CODECRAFT_CONFIG?.backendEnabled === false;
+  }
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
+    message.className = 'form-message';
     message.textContent = 'Түр хүлээнэ үү…';
+    if (backendUnavailable()) {
+      message.className = 'form-message error';
+      message.textContent = 'Local preview горимд auth backend асаагүй байна. Supabase тохируулсны дараа нэвтрэлт ажиллана.';
+      return;
+    }
     try {
       const response = await fetch(`/api/auth/${mode === 'register' ? 'register' : 'login'}`, {
         method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(Object.fromEntries(new FormData(form).entries())),
       });
-      const payload = await response.json();
+      const payload = await readPayload(response);
       if (!response.ok) throw new Error(payload.error?.message_mn || payload.error?.message || 'Нэвтрэхэд алдаа гарлаа.');
       localStorage.setItem('codecraft_user', JSON.stringify(payload.user || {}));
       location.assign('/dashboard');
@@ -40,9 +53,19 @@
     }
   });
   document.querySelector('#google-login').addEventListener('click', async () => {
-    const response = await fetch('/api/auth/google/start', {credentials: 'same-origin'});
-    const payload = await response.json();
-    if (response.ok) location.assign(payload.url);
-    else message.textContent = payload.error?.message_mn || 'Google тохиргоо бэлэн биш байна.';
+    if (backendUnavailable()) {
+      message.className = 'form-message error';
+      message.textContent = 'Local preview горимд Google auth backend асаагүй байна.';
+      return;
+    }
+    try {
+      const response = await fetch('/api/auth/google/start', {credentials: 'same-origin'});
+      const payload = await readPayload(response);
+      if (response.ok) location.assign(payload.url);
+      else message.textContent = payload.error?.message_mn || 'Google тохиргоо бэлэн биш байна.';
+    } catch (error) {
+      message.className = 'form-message error';
+      message.textContent = error.message;
+    }
   });
 })();

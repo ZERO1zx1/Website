@@ -49,9 +49,16 @@
       credentials: 'same-origin',
       headers,
     });
+    const raw = await response.text();
     let payload = {};
-    try { payload = await response.json(); } catch { payload = {error: await response.text()}; }
-    if (!response.ok) throw new Error(payload.message_mn || payload.error || 'Хүсэлтийг гүйцэтгэх боломжгүй байна.');
+    try {
+      payload = raw ? JSON.parse(raw) : {};
+    } catch {
+      payload = {message_mn: `Сервер JSON биш response буцаалаа (HTTP ${response.status}).`};
+    }
+    if (!response.ok) {
+      throw new Error(payload.message_mn || payload.error?.message_mn || payload.error || 'Хүсэлтийг гүйцэтгэх боломжгүй байна.');
+    }
     return payload;
   };
   const user = JSON.parse(localStorage.getItem('codecraft_user') || '{}');
