@@ -109,6 +109,7 @@ def create_app(config_name='development'):
             return FlaskSessionUser(record) if record else None
 
         from backend.api.analytics import analytics_bp
+        from backend.api.admin_content import admin_content_bp
         from backend.api.auth import auth_bp
         from backend.api.courses import courses_bp
         from backend.api.learning import learning_bp
@@ -122,6 +123,7 @@ def create_app(config_name='development'):
         app.register_blueprint(submissions_bp, url_prefix='/api/submissions')
         app.register_blueprint(teacher_bp, url_prefix='/api/teacher')
         app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
+        app.register_blueprint(admin_content_bp, url_prefix='/api/admin/content')
         app.register_blueprint(learning_bp, url_prefix='/api/learning')
     
     # Multi-page CodeCraft frontend. Each learning surface has a dedicated template.
@@ -135,7 +137,7 @@ def create_app(config_name='development'):
 
     @app.route('/<page>', methods=['GET'])
     def frontend_page(page):
-        allowed = {'home', 'dashboard', 'curriculum', 'course', 'lesson', 'workspace', 'auth', 'profile', 'practice', 'project'}
+        allowed = {'home', 'dashboard', 'curriculum', 'course', 'lesson', 'workspace', 'auth', 'profile', 'practice', 'project', 'admin'}
         if page not in allowed:
             return {'error': 'Not found'}, 404
         if page == 'home':
@@ -145,6 +147,8 @@ def create_app(config_name='development'):
             return render_template('course.html', page='course', course=course, backend_enabled=not frontend_only)
         if page == 'curriculum':
             return render_template('curriculum.html', page='curriculum', path_nodes=LEARNING_PATH_NODES, backend_enabled=not frontend_only)
+        if page == 'admin':
+            return render_template('admin.html', page='admin', backend_enabled=not frontend_only)
         if page == 'lesson':
             course = COURSE_CATALOG.get(request.args.get('course', 'python'), COURSE_CATALOG['python'])
             lesson_id = request.args.get('lesson', course['first_lesson'])
