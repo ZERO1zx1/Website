@@ -4,7 +4,12 @@ CodeCraft Academy нь Монгол хэл дээрх Flask + Jinja олон х�
 
 ## Гол боломж
 
+- Domain-based frontend: `layouts`, `pages`, `account`, `learning`, `admin`, `components` template folder-ууд
 - Нүүр, хөтөлбөр, курс, хичээл, workspace, dashboard, auth, profile гэсэн responsive Jinja хуудсууд
+- `Practice Grounds`, `Bug Lab`, `Guided Project`, `Portfolio Project` бүхий learning path; Python, HTML, CSS, JavaScript-ийн 15 challenge
+- Admin Content Studio-оор lesson/challenge, starter code, automated test, hidden test, hint, XP болон draft metadata үүсгэнэ
+- Python/JavaScript sandbox grading, HTML/CSS static requirement grading, submission queue ба accepted result feedback
+- Server-side XP event ledger, current/longest streak, badge evaluator болон dashboard summary
 - Supabase PostgreSQL/Auth/Realtime дээрх UUID profile, хичээл ба курсийн ахиц, quiz attempt
 - Student/teacher/admin/owner RBAC болон суралцагчийн өгөгдлийг тусгаарласан RLS
 - Redis queue болон тусгаарласан Docker sandbox; байхгүй үед execute API аюулгүйгаар `503` буцаана
@@ -22,6 +27,8 @@ python -m venv .venv
 # macOS/Linux: source .venv/bin/activate
 python -m pip install -r requirements.txt
 cp .env.example .env
+python run.py
+# эсвэл compatibility хэлбэрээр:
 python -m flask --app app:create_app run
 ```
 
@@ -40,7 +47,15 @@ Credential бэлэн биш бол `.env`-д `FRONTEND_ONLY=true` тавьж UI
 
 ## Supabase
 
-Шинэ project дээр `supabase/migrations`-ийн файлуудыг нэрийн дарааллаар ажиллуулна. Google redirect URL нь `/api/auth/google/callback`. Дэлгэрэнгүй: [docs/supabase-setup.md](docs/supabase-setup.md).
+Шинэ project дээр `backend/db/migrations` файлуудыг дараах дарааллаар ажиллуулна: `001_auth_roles.sql`, `002_learning_platform.sql`, `003_external_auth_identities.sql`, `004_content_studio.sql`, `005_gamification.sql`. Google redirect URL нь `/api/auth/google/callback`. Дэлгэрэнгүй: [docs/supabase-setup.md](docs/supabase-setup.md).
+
+`005_gamification.sql` нь XP ledger, learning day, streak profile, badge definition болон user badge хүснэгтүүдийг үүсгэнэ. Migration apply хийгдээгүй үед frontend-only preview ажиллах боловч live XP persistence ажиллахгүй.
+
+## Content Studio
+
+Админ UI нь `/admin` дээр байрлана. Backend mode-д `admin` эсвэл `owner` эрхтэй session шаардлагатай. Шинэ content-ийн дараалал нь Basic info → explanation/starter code → automated tests → hints → draft хадгалах → test хийж publish хийх байна. API contract нь `POST /api/admin/content`; test болон hint-үүдийг нэг payload дотор үүсгэнэ.
+
+Frontend template-ийн domain бүтэц болон backend-ийн mapping-ийг [docs/architecture.md](docs/architecture.md)-д баримтжуулна.
 
 ## Sandbox ба queue
 
