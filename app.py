@@ -12,7 +12,7 @@ from flask_cors import CORS
 from flask_login import LoginManager
 
 from course_data import COURSE_CATALOG
-from learning_experiences import PROJECT_CATALOG, PRACTICE_CHALLENGES, get_challenge, get_project
+from learning_experiences import LEARNING_PATH_NODES, PROJECT_CATALOG, PRACTICE_CHALLENGES, get_challenge, get_project
 
 
 class FlaskSessionUser:
@@ -143,6 +143,8 @@ def create_app(config_name='development'):
         if page == 'course':
             course = COURSE_CATALOG.get(request.args.get('id', 'python'), COURSE_CATALOG['python'])
             return render_template('course.html', page='course', course=course, backend_enabled=not frontend_only)
+        if page == 'curriculum':
+            return render_template('curriculum.html', page='curriculum', path_nodes=LEARNING_PATH_NODES, backend_enabled=not frontend_only)
         if page == 'lesson':
             course = COURSE_CATALOG.get(request.args.get('course', 'python'), COURSE_CATALOG['python'])
             lesson_id = request.args.get('lesson', course['first_lesson'])

@@ -203,3 +203,13 @@ def get_challenge(challenge_id: str):
 
 def get_project(project_id: str):
     return next((item for item in PROJECT_CATALOG if item["id"] == project_id), None)
+
+
+LEARNING_PATH_NODES = [
+    {"id": "path-python-intro", "course_id": "python", "order": 1, "type": "lesson", "title": "Python-ийн суурь", "description": "Source code, variable, data type, list-ийг ойлго.", "href": "/course?id=python", "status": "start"},
+    {"id": "path-python-practice", "course_id": "python", "order": 2, "type": "practice", "title": "Python Training Grounds", "description": "Онооны нөхцөл болон функцийн challenge-уудаар чадвараа шалга.", "href": "/practice?course=python", "status": "practice"},
+    {"id": "path-python-project", "course_id": "python", "order": 3, "type": "guided_project", "title": "Expense Tracker", "description": "Өгөгдөл, нөхцөл, function ашигласан жижиг бодит app бүтээ.", "href": "/project?id=expense-tracker", "status": "build"},
+    {"id": "path-frontend-foundation", "course_id": "frontend", "order": 4, "type": "lesson", "title": "HTML + CSS foundation", "description": "Semantic бүтэц, box model, responsive layout-ийг нэг замд сур.", "href": "/course?id=html", "status": "next"},
+    {"id": "path-frontend-practice", "course_id": "frontend", "order": 5, "type": "practice", "title": "Frontend UI Lab", "description": "Semantic card, design token, DOM interaction challenge-уудыг хий.", "href": "/practice?course=html", "status": "practice"},
+    {"id": "path-frontend-project", "course_id": "frontend", "order": 6, "type": "portfolio_project", "title": "Interactive Portfolio", "description": "Өөрийн танилцуулгыг responsive, filter-тэй бодит portfolio болго.", "href": "/project?id=frontend-portfolio", "status": "build"},
+]
