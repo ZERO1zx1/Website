@@ -131,7 +131,7 @@
     showUnauthenticated();
     return;
   }
-  Promise.all([window.codecraftApi('/api/progress'), window.codecraftApi('/api/learning/gamification')])
+  Promise.all([window.codecraftApi('/api/learning/summary'), window.codecraftApi('/api/learning/gamification')])
     .then(([summary, gamification]) => { renderSummary(summary); renderGamification(gamification); })
     .catch(showError);
 })();

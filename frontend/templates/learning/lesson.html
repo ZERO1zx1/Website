@@ -3,7 +3,7 @@
 {% block title %}{{ lesson.title }} — CodeCraft Academy{% endblock %}
 
 {% block content %}
-<section class="lesson-shell container-wide">
+<section class="lesson-shell container-wide" data-lesson-page data-course-slug="{{ course.id }}" data-lesson-slug="{{ lesson.id }}" data-login-url="{{ url_for('frontend_page', page='auth') }}?mode=login">
   <div class="lesson-breadcrumb">
     <a href="{{ url_for('frontend_page', page='curriculum') }}">Сурах зам</a><span>/</span><a href="{{ url_for('frontend_page', page='course') }}?id={{ course.id }}">{{ course.title }}</a><span>/</span><strong>Хичээл</strong>
   </div>
@@ -119,68 +119,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-  const courseId = {{ course.id|tojson }};
-  const lessonId = {{ lesson.id|tojson }};
-  const completionButton = document.querySelector('[data-completion-button]');
-  const progressValue = document.querySelector('[data-lesson-progress-value]');
-  const progressBar = document.querySelector('[data-lesson-progress-bar]');
-  const progressStatus = document.querySelector('[data-lesson-progress-status]');
-  let isCompleted = false;
-
-  function renderProgress(summary) {
-    const course = summary.courses?.find((item) => item.course_id === courseId);
-    const completed = summary.completed_lesson_keys?.includes(`${courseId}:${lessonId}`);
-    isCompleted = Boolean(completed);
-    if (course) {
-      progressValue.innerHTML = `${course.completed_lessons} <small>/ ${course.total_lessons}</small>`;
-      progressBar.style.width = `${course.progress_percent}%`;
-    }
-    progressStatus.textContent = isCompleted ? 'Энэ хичээл дууссан байна.' : 'Энэ хичээл дуусаагүй байна.';
-    completionButton.textContent = isCompleted ? 'Дууссан ✓' : 'Дууссанд тооцох';
-    completionButton.classList.toggle('is-complete', isCompleted);
-  }
-
-  async function loadProgress() {
-    if (!localStorage.getItem('codecraft_token')) {
-      progressStatus.textContent = 'Ахиц хадгалахын тулд нэвтэрнэ үү.';
-      completionButton.textContent = 'Нэвтэрч хадгалах';
-      return;
-    }
-    try { renderProgress(await codecraftApi('/api/progress')); }
-    catch { progressStatus.textContent = 'Ахицын мэдээллийг ачаалж чадсангүй.'; }
-  }
-
-  completionButton.addEventListener('click', async () => {
-    if (!localStorage.getItem('codecraft_token')) {
-      location.href = '{{ url_for('frontend_page', page='auth') }}?mode=login';
-      return;
-    }
-    completionButton.disabled = true;
-    try {
-      if (isCompleted) {
-        const payload = await codecraftApi(`/api/progress/lessons/${encodeURIComponent(courseId)}/${encodeURIComponent(lessonId)}`, {method: 'DELETE'});
-        renderProgress(payload.summary);
-        showToast(payload.message_mn || 'Хичээлийн тэмдэглэгээг цуцаллаа.');
-      } else {
-        const payload = await codecraftApi('/api/progress/lessons', {method: 'POST', body: JSON.stringify({course_id: courseId, lesson_id: lessonId})});
-        renderProgress(payload.summary);
-        showToast(payload.message_mn || 'Хичээлийг дууссанд тооцлоо.');
-      }
-    } catch (error) { showToast(error.message, true); }
-    finally { completionButton.disabled = false; }
-  });
-
-  document.querySelector('[data-copy-code]')?.addEventListener('click', async (e) => {
-    const code = document.querySelector('.code-block code')?.textContent || '';
-    try {
-      await navigator.clipboard.writeText(code);
-      e.currentTarget.textContent = 'Хууллаа ✓';
-      setTimeout(() => e.currentTarget.textContent = 'Хуулах', 2000);
-    } catch {
-      e.currentTarget.textContent = 'Хуулах боломжгүй';
-    }
-  });
-  loadProgress();
-</script>
+<script src="{{ url_for('static', filename='js/pages/lesson.js') }}" defer></script>
 {% endblock %}

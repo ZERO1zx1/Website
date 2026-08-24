@@ -9,6 +9,7 @@ from backend.api.auth import token_required
 from backend.db import db
 from backend.services.gamification import get_summary
 from backend.rbac import error_response
+from course_data import COURSE_CATALOG
 
 learning_bp = Blueprint("learning", __name__)
 
@@ -79,6 +80,54 @@ def profile(current_user):
     if not changes:
         return error_response("empty_update", "No profile changes were supplied.", "Өөрчлөх мэдээлэл ирсэнгүй.", 400)
     return {"profile": db.update_profile(user_id, changes)}, 200
+
+
+def _catalog_summary(progress):
+    """Adapt canonical UUID progress rows to the learner-facing catalog contract."""
+    lesson_rows = progress.get("lesson_progress", []) if isinstance(progress, dict) else []
+    completed = {
+        (str(row.get("course_slug")), str(row.get("lesson_slug")))
+        for row in lesson_rows
+        if row.get("course_slug") and row.get("lesson_slug")
+    }
+    courses = []
+    for course_slug, course in COURSE_CATALOG.items():
+        lessons = [lesson for module in course.get("modules", []) for lesson in module.get("lessons", [])]
+        course_completed = sum((course_slug, str(lesson.get("id"))) in completed for lesson in lessons)
+        total = len(lessons)
+        courses.append({
+            "course_id": course_slug,
+            "title": course.get("title", course_slug),
+            "total_lessons": total,
+            "completed_lessons": course_completed,
+            "progress_percent": round((course_completed / total) * 100) if total else 0,
+        })
+    total_lessons = sum(item["total_lessons"] for item in courses)
+    completed_lessons = sum(item["completed_lessons"] for item in courses)
+    return {
+        "courses": courses,
+        "completed_lessons": completed_lessons,
+        "total_lessons": total_lessons,
+        "overall_percent": round((completed_lessons / total_lessons) * 100) if total_lessons else 0,
+        "completed_lesson_keys": [f"{course}:{lesson}" for course, lesson in sorted(completed)],
+    }
+
+
+@learning_bp.route("/summary", methods=["GET"])
+@token_required
+def summary(current_user):
+    user_id, error = _identity(current_user)
+    if error:
+        return error
+    try:
+        return _catalog_summary(db.get_learning_progress(user_id)), 200
+    except Exception:
+        return error_response(
+            "progress_unavailable",
+            "Learning progress is temporarily unavailable.",
+            "Сургалтын ахиц түр боломжгүй байна.",
+            503,
+        )
 
 
 @learning_bp.route("/progress", methods=["GET", "PUT"])

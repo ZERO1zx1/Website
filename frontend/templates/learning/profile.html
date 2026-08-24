@@ -2,7 +2,7 @@
 {% set page = 'profile' %}
 {% block title %}Профайл — CodeCraft Academy{% endblock %}
 {% block content %}
-<section class="profile-page container-wide">
+<section class="profile-page container-wide" data-profile-page data-home-url="{{ url_for('frontend_page', page='home') }}" data-login-url="{{ url_for('frontend_page', page='auth') }}?mode=login">
   <div class="page-hero simple"><div><span class="eyebrow">МИНИЙ ПРОФАЙЛ</span><h1>Суралцах орон зайгаа өөртөө тохируул.</h1><p>Таны бүртгэл болон хичээлийн явц Supabase Auth-д холбогдсон байна.</p></div></div>
   <div class="profile-grid">
     <section class="panel profile-card"><div class="profile-avatar" data-profile-initials>CC</div><div><span class="eyebrow" data-profile-role>СУРАЛЦАГЧ</span><h2 data-profile-name>CodeCraft суралцагч</h2><p data-profile-email>Нэвтэрсний дараа таны имэйл харагдана.</p></div><button class="button button-ghost button-small" data-logout type="button">Гарах</button></section>
@@ -16,63 +16,6 @@
 </section>
 {% endblock %}
 {% block scripts %}
-<script>
-  const token = localStorage.getItem('codecraft_token');
-  const storedUser = JSON.parse(localStorage.getItem('codecraft_user') || '{}');
-  const themeSelect = document.querySelector('[data-preference-theme]');
-  const localeSelect = document.querySelector('[data-preference-locale]');
-  const saveStatus = document.querySelector('[data-save-status]');
-  const courseIcons = {html: '&lt;&gt;', css: 'CSS', javascript: 'JS', python: 'Py'};
-  const courseClasses = {html: 'orange', css: 'teal', javascript: 'yellow', python: 'purple'};
-
-  function populateProfile(profile) {
-    const name = profile.name || profile.email?.split('@')[0] || 'CodeCraft суралцагч';
-    document.querySelector('[data-profile-name]').textContent = name;
-    document.querySelector('[data-profile-email]').textContent = profile.email || 'Имэйл олдсонгүй';
-    document.querySelector('[data-profile-role]').textContent = (profile.role || 'student').toUpperCase();
-    document.querySelector('[data-profile-initials]').textContent = name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
-    themeSelect.value = profile.theme || localStorage.getItem('codecraft_theme') || 'system';
-    localeSelect.value = profile.locale || 'mn';
-    localStorage.setItem('codecraft_user', JSON.stringify(profile));
-  }
-  function renderCourses(summary) {
-    document.querySelector('[data-profile-courses]').innerHTML = summary.courses.map((course) => `
-      <div class="progress-course"><span class="course-icon ${courseClasses[course.course_id] || 'purple'}">${courseIcons[course.course_id] || 'CC'}</span><div><strong>${course.title}</strong><small>${course.completed_lessons} / ${course.total_lessons} хичээл</small></div><b>${course.progress_percent}%</b><div class="progress-bar"><i style="width:${course.progress_percent}%"></i></div></div>
-    `).join('');
-  }
-  async function savePreferences() {
-    if (!token) return;
-    saveStatus.textContent = 'Хадгалж байна…';
-    try {
-      const payload = await codecraftApi('/api/progress/profile/preferences', {method: 'PATCH', body: JSON.stringify({theme: themeSelect.value, locale: localeSelect.value})});
-      localStorage.setItem('codecraft_theme', payload.profile.theme);
-      const resolved = payload.profile.theme === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : payload.profile.theme;
-      document.documentElement.dataset.theme = resolved;
-      populateProfile(payload.profile);
-      saveStatus.textContent = 'Хадгалагдсан';
-      showToast(payload.message_mn || 'Тохиргоог хадгаллаа.');
-    } catch (error) { saveStatus.textContent = 'Хадгалагдсангүй'; showToast(error.message, true); }
-  }
-  document.querySelector('[data-logout]').addEventListener('click', async () => {
-    try { await fetch(`${window.CODECRAFT_CONFIG.apiBase}/api/auth/logout`, {method: 'POST'}); } catch (_) {}
-    localStorage.removeItem('codecraft_token');
-    localStorage.removeItem('codecraft_refresh_token');
-    localStorage.removeItem('codecraft_user');
-    location.href = '{{ url_for('frontend_page', page='home') }}';
-  });
-  themeSelect.addEventListener('change', savePreferences);
-  localeSelect.addEventListener('change', savePreferences);
-  if (!token) {
-    populateProfile(storedUser);
-    saveStatus.textContent = 'Нэвтрэх шаардлагатай';
-    document.querySelector('[data-profile-courses]').innerHTML = '<p class="empty-state">Ахиц харахын тулд <a href="{{ url_for('frontend_page', page='auth') }}?mode=login">нэвтэрнэ үү</a>.</p>';
-  } else {
-    Promise.all([codecraftApi('/api/progress/profile'), codecraftApi('/api/progress')]).then(([profile, summary]) => {
-      populateProfile(profile.profile);
-      renderCourses(summary);
-      saveStatus.textContent = 'Хадгалагдсан';
-    }).catch((error) => { saveStatus.textContent = 'Синк холбогдсонгүй'; showToast(error.message, true); });
-  }
-</script>
+<script src="{{ url_for('static', filename='js/pages/profile.js') }}" defer></script>
 {% endblock %}
 
