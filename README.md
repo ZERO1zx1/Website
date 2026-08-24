@@ -89,3 +89,5 @@ Production-д `FLASK_ENV=production`, HTTPS, managed secrets, migration backup, 
 - Progress хадгалагдахгүй: migration ажилласан, хэрэглэгч Supabase Auth identity-тай эсэхийг шалга.
 
 Нэгтгэлийн mapping: [docs/repository-consolidation-audit.md](docs/repository-consolidation-audit.md).
+
+Production migration, secret, sandbox, queue, rollback checklist: [docs/production-runbook-mn.md](docs/production-runbook-mn.md).
