@@ -10,6 +10,11 @@
     <article class="dash-stat"><span>Идэвхтэй чиглэл</span><strong data-stat-courses>0</strong><b>HTML · CSS · JS · Python</b></article>
     <article class="dash-stat"><span>Хадгалалт</span><strong>✓</strong><b data-sync-status>Supabase руу синк хийнэ</b></article>
   </div>
+  <section class="dashboard-gamification panel">
+    <div class="gamification-main"><span class="gamification-orbit">✦</span><div><span class="eyebrow">YOUR LEARNING ENERGY</span><h2><span data-gamification-level>Level 1</span> · <span data-gamification-xp>0 XP</span></h2><p data-gamification-message>Өнөөдөр нэг жижиг challenge хийж хэмнэлээ эхлүүл.</p></div></div>
+    <div class="gamification-streak"><span class="streak-flame">◒</span><div><strong data-gamification-streak>0 өдөр</strong><small>одоогийн streak</small></div><div><strong data-gamification-longest>0 өдөр</strong><small>хамгийн урт</small></div></div>
+    <div class="gamification-badges"><span class="eyebrow">BADGES</span><div data-gamification-badges><span class="badge-placeholder">Эхний badge-ээ аваарай</span></div></div>
+  </section>
   <div class="dashboard-columns">
     <section class="panel continue-panel">
       <div class="panel-header"><div><span class="eyebrow">ДАРААГИЙН АЛХАМ</span><h2 data-next-course>Хичээлийг сонгоно уу</h2></div><span class="status-badge" data-next-percent>0% дууссан</span></div>
@@ -67,11 +72,22 @@
     `).join('');
   }
 
+  function renderGamification(payload) {
+    const profile = payload.profile || {};
+    document.querySelector('[data-gamification-level]').textContent = `Level ${profile.level || 1}`;
+    document.querySelector('[data-gamification-xp]').textContent = `${profile.total_xp || 0} XP`;
+    document.querySelector('[data-gamification-streak]').textContent = `${profile.current_streak || 0} өдөр`;
+    document.querySelector('[data-gamification-longest]').textContent = `${profile.longest_streak || 0} өдөр`;
+    document.querySelector('[data-gamification-message]').textContent = profile.current_streak ? 'Сайн байна. Өнөөдрийн хэмнэлээ үргэлжлүүлээрэй.' : 'Өнөөдөр нэг жижиг challenge хийж хэмнэлээ эхлүүл.';
+    const badges = payload.badges || [];
+    document.querySelector('[data-gamification-badges]').innerHTML = badges.length ? badges.map((item) => `<span class="earned-badge" title="${item.badges?.description || ''}">${item.badges?.title || 'Badge'}</span>`).join('') : '<span class="badge-placeholder">Эхний badge-ээ аваарай</span>';
+  }
+
   if (!localStorage.getItem('codecraft_token')) {
     document.querySelector('[data-sync-status]').textContent = 'Нэвтэрч хадгална';
     document.querySelector('[data-course-progress-list]').innerHTML = '<p class="empty-state">Ахиц хадгалахын тулд эхлээд <a href="{{ url_for('frontend_page', page='auth') }}?mode=login">нэвтэрнэ үү</a>.</p>';
   } else {
-    codecraftApi('/api/progress').then(renderSummary).catch((error) => {
+    Promise.all([codecraftApi('/api/progress'), codecraftApi('/api/learning/gamification')]).then(([summary, gamification]) => { renderSummary(summary); renderGamification(gamification); }).catch((error) => {
       document.querySelector('[data-sync-status]').textContent = 'Синк холбогдсонгүй';
       document.querySelector('[data-course-progress-list]').innerHTML = `<p class="empty-state">${error.message}</p>`;
     });
