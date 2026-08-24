@@ -33,7 +33,13 @@
       if (bar) bar.style.width = `${percent}%`;
       text('[data-next-meta]', `${Math.max(0, (Number(next.total_lessons) || 0) - (Number(next.completed_lessons) || 0))} lesson үлдлээ`);
       const link = query('[data-next-link]');
-      if (link) link.href = `${dashboard.dataset.courseUrl}?id=${encodeURIComponent(next.course_id || '')}`;
+      if (link) {
+        const nextLesson = next.next_lesson_slug;
+        link.href = nextLesson
+          ? `${dashboard.dataset.lessonUrl}?course=${encodeURIComponent(next.course_id || '')}&lesson=${encodeURIComponent(nextLesson)}`
+          : `${dashboard.dataset.courseUrl}?id=${encodeURIComponent(next.course_id || '')}`;
+        link.textContent = nextLesson ? 'Дараагийн lesson →' : 'Course харах →';
+      }
     }
 
     const list = query('[data-course-progress-list]');

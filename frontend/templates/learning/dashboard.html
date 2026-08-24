@@ -2,7 +2,7 @@
 {% set page = 'dashboard' %}
 {% block title %}Миний ахиц — CodeCraft Academy{% endblock %}
 {% block content %}
-<section class="dashboard-page container-wide" data-dashboard data-login-url="{{ url_for('frontend_page', page='auth') }}?mode=login" data-course-url="{{ url_for('frontend_page', page='course') }}">
+<section class="dashboard-page container-wide" data-dashboard data-login-url="{{ url_for('frontend_page', page='auth') }}?mode=login" data-course-url="{{ url_for('frontend_page', page='course') }}" data-lesson-url="{{ url_for('frontend_page', page='lesson') }}">
   <div class="dashboard-heading"><div><span class="eyebrow">МИНИЙ АХИЦ</span><h1>Сайн уу, <span data-user-name>суралцагч</span>.</h1><p>Таны дуусгасан хичээл бүр CodeCraft-ийн өөрийн бүртгэлтэй хамт аюулгүй хадгалагдана.</p></div><a class="button button-primary" href="{{ url_for('frontend_page', page='curriculum') }}">Хичээл сонгох <span>→</span></a></div>
   <div class="dashboard-stats">
     <article class="dash-stat dash-stat-primary"><span>Нийт ахиц</span><strong data-stat-overall>0<small>%</small></strong><b data-stat-overall-caption>Эхлэхэд бэлэн</b></article>
