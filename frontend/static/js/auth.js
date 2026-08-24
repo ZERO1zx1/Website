@@ -29,6 +29,23 @@
   function backendUnavailable() {
     return window.CODECRAFT_CONFIG?.backendEnabled === false;
   }
+  document.querySelector('#google-login')?.addEventListener('click', async () => {
+    if (backendUnavailable()) {
+      message.className = 'form-message error';
+      message.textContent = 'Local preview горимд auth backend асаагүй байна.';
+      return;
+    }
+    try {
+      const response = await fetch('/api/auth/google/start', {credentials: 'same-origin'});
+      const payload = await readPayload(response);
+      if (!response.ok) throw new Error(payload.error?.message_mn || 'Google login тохиргоо бэлэн биш байна.');
+      window.location.assign(payload.url);
+    } catch (error) {
+      message.className = 'form-message error';
+      message.textContent = error.message;
+    }
+  });
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     message.className = 'form-message';
@@ -47,22 +64,6 @@
       if (!response.ok) throw new Error(payload.error?.message_mn || payload.error?.message || 'Нэвтрэхэд алдаа гарлаа.');
       localStorage.setItem('codecraft_user', JSON.stringify(payload.user || {}));
       location.assign('/dashboard');
-    } catch (error) {
-      message.className = 'form-message error';
-      message.textContent = error.message;
-    }
-  });
-  document.querySelector('#google-login').addEventListener('click', async () => {
-    if (backendUnavailable()) {
-      message.className = 'form-message error';
-      message.textContent = 'Local preview горимд Google auth backend асаагүй байна.';
-      return;
-    }
-    try {
-      const response = await fetch('/api/auth/google/start', {credentials: 'same-origin'});
-      const payload = await readPayload(response);
-      if (response.ok) location.assign(payload.url);
-      else message.textContent = payload.error?.message_mn || 'Google тохиргоо бэлэн биш байна.';
     } catch (error) {
       message.className = 'form-message error';
       message.textContent = error.message;

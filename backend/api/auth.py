@@ -1,8 +1,12 @@
-"""Supabase Auth endpoints for CodeCraft Academy."""
+"""CodeCraft-owned authentication endpoints for CodeCraft Academy."""
 
 import os
 import re
+import secrets
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlencode
+
+import requests
 from functools import wraps
 
 import jwt
@@ -87,8 +91,8 @@ def token_required(function):
         if not token:
             return error_response(
                 "missing_token",
-                "A valid Supabase access token is required.",
-                "Supabase нэвтрэлтийн хүчинтэй token шаардлагатай.",
+                "A valid CodeCraft session token is required.",
+                "CodeCraft-ийн хүчинтэй session token шаардлагатай.",
                 401,
             )
         try:
@@ -111,8 +115,8 @@ def token_required(function):
         except (jwt.InvalidTokenError, KeyError, RuntimeError):
             return error_response(
                 "invalid_token",
-                "The Supabase session is invalid or has expired.",
-                "Supabase нэвтрэлтийн session хүчингүй эсвэл хугацаа нь дууссан байна.",
+                "The CodeCraft session is invalid or has expired.",
+                "CodeCraft-ийн session хүчингүй эсвэл хугацаа нь дууссан байна.",
                 401,
             )
         return function(current_user, *args, **kwargs)
@@ -166,6 +170,51 @@ def _google_callback_url() -> str:
     return f"{_frontend_url().rstrip('/')}/api/auth/google/callback"
 
 
+def _google_authorization_url() -> str:
+    client_id = os.getenv("GOOGLE_CLIENT_ID")
+    if not client_id:
+        raise RuntimeError("GOOGLE_CLIENT_ID is not configured")
+    state = jwt.encode(
+        {"nonce": secrets.token_urlsafe(24), "iat": int(datetime.now(timezone.utc).timestamp()), "exp": int((datetime.now(timezone.utc) + timedelta(minutes=10)).timestamp())},
+        _secret_key(), algorithm="HS256",
+    )
+    return "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode({
+        "client_id": client_id,
+        "redirect_uri": _google_callback_url(),
+        "response_type": "code",
+        "scope": "openid email profile",
+        "state": state,
+        "access_type": "online",
+        "prompt": "select_account",
+    })
+
+
+def _google_identity(code: str) -> dict:
+    client_id = os.getenv("GOOGLE_CLIENT_ID")
+    client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        raise RuntimeError("Google OAuth credentials are not configured")
+    token_response = requests.post("https://oauth2.googleapis.com/token", data={
+        "code": code,
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "redirect_uri": _google_callback_url(),
+        "grant_type": "authorization_code",
+    }, timeout=8)
+    token_response.raise_for_status()
+    id_token = token_response.json().get("id_token")
+    if not id_token:
+        raise RuntimeError("Google token response did not include id_token")
+    identity_response = requests.get("https://oauth2.googleapis.com/tokeninfo", params={"id_token": id_token}, timeout=8)
+    identity_response.raise_for_status()
+    identity = identity_response.json()
+    if identity.get("aud") != client_id or identity.get("iss") not in {"accounts.google.com", "https://accounts.google.com"}:
+        raise RuntimeError("Google identity verification failed")
+    if identity.get("email_verified") not in {True, "true", "True"}:
+        raise RuntimeError("Google email is not verified")
+    return identity
+
+
 def _session_response(payload: dict, status: int = 200):
     response = make_response(payload, status)
     token = payload.get("token")
@@ -189,8 +238,15 @@ def _auth_user_value(auth_user, key, default=None):
 
 
 def _session_payload(auth_response, provider: str = "password") -> dict:
-    """Turn a provider response into the app's stable local-session contract."""
+    """Turn a legacy provider response into the app's stable local-session contract."""
     return _external_auth_payload(auth_response, provider)
+
+
+def _local_session_payload(user: dict | object) -> dict:
+    """Issue an app session from a local user, retaining provider compatibility for older adapters."""
+    if isinstance(user, dict) and user.get("id") is not None:
+        return {"provider": "password", "token": _issue_token(user), "user": _public_user(user)}
+    return _session_payload(user, "password")
 
 
 @auth_bp.route("/register", methods=["POST"])
@@ -214,19 +270,8 @@ def register():
             400,
         )
     try:
-        if hasattr(db, "sign_up_with_password"):
-            response = db.sign_up_with_password(email, password, name, _email_confirmation_url())
-            payload = _session_payload(response, "password")
-            if not payload.get("token"):
-                return {
-                    "message": "Check your email to confirm your CodeCraft account.",
-                    "message_mn": "Имэйлээ шалгаад CodeCraft бүртгэлээ баталгаажуулна уу.",
-                    "verification_required": True,
-                    "user": payload["user"],
-                }, 202
-        else:
-            user = db.create_user(email=email, password=password, name=name, role="student")
-            payload = {"provider": "password", "token": _issue_token(user), "user": _public_user(user)}
+        user = db.create_user(email=email, password=password, name=name, role="student")
+        payload = {"provider": "password", "token": _issue_token(user), "user": _public_user(user)}
         return {
             "message": "Account created successfully.",
             "message_mn": "Бүртгэл амжилттай үүслээ.",
@@ -240,8 +285,8 @@ def register():
             return error_response("email_registered", "This email is already registered.", "Энэ имэйл аль хэдийн бүртгэгдсэн байна.", 409)
         return error_response(
             "registration_failed",
-            "The Supabase account could not be created.",
-            "Supabase бүртгэл үүсгэхэд алдаа гарлаа.",
+            "The CodeCraft account could not be created.",
+            "CodeCraft бүртгэл үүсгэхэд алдаа гарлаа.",
             502,
         )
 
@@ -259,7 +304,8 @@ def login():
             400,
         )
     try:
-        payload = _session_payload(db.sign_in_with_password(email, password), "password")
+        user = db.sign_in_with_password(email, password)
+        payload = _local_session_payload(user)
         return _session_response({"message": "Signed in.", "message_mn": "Амжилттай нэвтэрлээ.", **payload}, 200)
     except Exception:
         return error_response(
@@ -312,7 +358,7 @@ def verify_email_otp():
 @auth_bp.route("/google/start", methods=["GET"])
 def google_start():
     try:
-        return {"url": db.google_login_url(_google_callback_url())}, 200
+        return {"url": _google_authorization_url()}, 200
     except Exception:
         return error_response(
             "google_oauth_unavailable",
@@ -325,11 +371,19 @@ def google_start():
 @auth_bp.route("/google/callback", methods=["GET"])
 def google_callback():
     code = request.args.get("code", "").strip()
-    if not code:
+    state = request.args.get("state", "").strip()
+    if not code or not state:
         return redirect(f"{_frontend_url()}?auth_error=google_oauth_failed")
     try:
-        auth_response = db.exchange_google_code(code)
-        payload = _external_auth_payload(auth_response, "google")
+        jwt.decode(state, _secret_key(), algorithms=["HS256"])
+        identity = _google_identity(code)
+        user = db.ensure_google_user(
+            subject=str(identity["sub"]),
+            email=str(identity["email"]),
+            display_name=str(identity.get("name") or identity["email"].split("@", 1)[0]),
+            avatar_url=identity.get("picture"),
+        )
+        payload = {"provider": "google", "token": _issue_token(user), "user": _public_user(user)}
         response = redirect(f"{_frontend_url()}?auth_provider=google")
         response.set_cookie("codecraft_session", payload["token"], max_age=86400, httponly=True,
                             secure=current_app.config.get("ENVIRONMENT") == "production",
