@@ -416,6 +416,18 @@ class SupabaseDB:
         """Get all problems"""
         response = self.client.table('problems').select('*').range(offset, offset + limit - 1).execute()
         return response.data
+
+    def get_published_content(self, limit: int = 200):
+        """Return learner-visible Content Studio rows only."""
+        response = (
+            self.client.table('problems')
+            .select('id,title,description,difficulty,starter_code,language,slug,content_type,course_slug,lesson_slug,xp_reward,status,explanation')
+            .eq('status', 'published')
+            .order('created_at', desc=False)
+            .limit(max(1, min(limit, 500)))
+            .execute()
+        )
+        return response.data or []
     
     # ============ SUBMISSION OPERATIONS ============
     

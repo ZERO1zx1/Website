@@ -13,6 +13,7 @@ from flask_login import LoginManager
 
 from course_data import COURSE_CATALOG
 from learning_experiences import LEARNING_PATH_NODES, PROJECT_CATALOG, PRACTICE_CHALLENGES, get_challenge, get_project
+from backend.services.content_catalog import load_challenges
 
 
 class FlaskSessionUser:
@@ -91,6 +92,7 @@ def create_app(config_name='development'):
             if origin and origin.rstrip('/') not in allowed:
                 return {'error': {'code': 'csrf_origin_rejected', 'message': 'Request origin is not allowed.'}}, 403
     
+    db_gateway = None
     if not frontend_only:
         # Initialize Flask-Login and register backend blueprints only when
         # backend credentials are intentionally available.
@@ -99,6 +101,7 @@ def create_app(config_name='development'):
         login_manager.login_view = 'auth.login'
 
         from backend.db import db
+        db_gateway = db
 
         @login_manager.user_loader
         def load_user(user_id):
@@ -161,15 +164,19 @@ def create_app(config_name='development'):
             lesson = next((item for module in course['modules'] for item in module['lessons'] if item['id'] == lesson_id), course['modules'][0]['lessons'][0])
             lesson = dict(lesson)
             lesson['unit'] = next((module['title'] for module in course['modules'] if any(item['id'] == lesson['id'] for item in module['lessons'])), 'Module')
-            lesson_challenges = [item for item in PRACTICE_CHALLENGES if item['course_id'] == course['id'] and item['lesson_id'] == lesson_id]
+            challenge_catalog = load_challenges(db_gateway, PRACTICE_CHALLENGES) if db_gateway else PRACTICE_CHALLENGES
+            lesson_challenges = [item for item in challenge_catalog if item['course_id'] == course['id'] and item['lesson_id'] == lesson_id]
             return render_template('learning/lesson.html', page='lesson', course=course, lesson=lesson, lesson_challenges=lesson_challenges, backend_enabled=not frontend_only)
         if page == 'workspace':
-            selected_challenge = get_challenge(request.args.get('challenge', ''))
-            return render_template('learning/workspace.html', page='workspace', course_catalog=COURSE_CATALOG, practice_challenges=PRACTICE_CHALLENGES, selected_challenge=selected_challenge, backend_enabled=not frontend_only)
+            challenge_catalog = load_challenges(db_gateway, PRACTICE_CHALLENGES) if db_gateway else PRACTICE_CHALLENGES
+            selected_id = request.args.get('challenge', '')
+            selected_challenge = next((item for item in challenge_catalog if item.get('id') == selected_id), None)
+            return render_template('learning/workspace.html', page='workspace', course_catalog=COURSE_CATALOG, practice_challenges=challenge_catalog, selected_challenge=selected_challenge, backend_enabled=not frontend_only)
         if page == 'practice':
             course_id = request.args.get('course', 'all')
             difficulty = request.args.get('difficulty', 'all')
-            challenges = [item for item in PRACTICE_CHALLENGES if course_id in {'all', item['course_id']} and difficulty in {'all', item['difficulty']}]
+            challenge_catalog = load_challenges(db_gateway, PRACTICE_CHALLENGES) if db_gateway else PRACTICE_CHALLENGES
+            challenges = [item for item in challenge_catalog if course_id in {'all', item['course_id']} and difficulty in {'all', item['difficulty']}]
             return render_template('learning/practice.html', page='practice', challenges=challenges, projects=PROJECT_CATALOG, selected_course=course_id, selected_difficulty=difficulty, backend_enabled=not frontend_only)
         if page == 'project':
             project = get_project(request.args.get('id', PROJECT_CATALOG[0]['id']))
