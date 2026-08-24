@@ -39,13 +39,22 @@ Credential бэлэн биш бол `.env`-д `FRONTEND_ONLY=true` тавьж UI
 - `SECRET_KEY`: production-д заавал урт, санамсаргүй утга; CodeCraft app JWT/session signing-д ашиглана
 - `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`: Supabase database connection болон public configuration
 - `SUPABASE_SERVICE_ROLE_KEY`: зөвхөн Flask server-ийн database key; browser болон build argument-д хийж болохгүй
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`: CodeCraft-ийн шууд Google OAuth; Supabase Auth provider биш
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`: CodeCraft-ийн optional шууд Google OAuth; Gmail security code-д ашиглахгүй
+- `SMTP_HOST`, `SMTP_PORT`: Gmail SMTP server; default нь `smtp.gmail.com:587`
+- `SMTP_USER`, `SMTP_PASSWORD`: security code илгээх Gmail болон Gmail App Password; энгийн Gmail password ашиглахгүй
+- `SMTP_FROM`: хэрэглэгчид харагдах sender address/name
 - `GOOGLE_OAUTH_REDIRECT_URL`: Google Cloud Console-д бүртгүүлэх callback URL
 - `CORS_ORIGINS`: comma-аар тусгаарласан яг зөвшөөрөх origin
 - `SANDBOX_URL`, `SANDBOX_TOKEN`: internal code runner
 - `SUBMISSION_QUEUE_MODE=redis`, `REDIS_URL`: distributed queue сонголт
 
 Бүрэн жагсаалтыг [.env.example](.env.example)-ээс харна уу. Browser public config-оо зөвхөн `/api/public-config` endpoint-оос авна.
+
+## Gmail security code
+
+CodeCraft нь Google OAuth ашиглахгүйгээр Gmail SMTP-ийг зөвхөн security code илгээх суваг болгон ашиглана. Login хуудсан дээрх `Gmail security code-оор нэвтрэх` сонголт нь `/api/auth/otp/request` endpoint-ээр зургаан оронтой код илгээж, `/api/auth/otp/verify` endpoint-ээр код шалгасны дараа CodeCraft-ийн өөрийн JWT болон HttpOnly session cookie үүсгэнэ. Код 10 минут хүчинтэй, таван буруу оролдлогын дараа challenge хүчингүй болно.
+
+Gmail account дээр эхлээд **2-Step Verification** асааж, дараа нь Google Account → Security → App passwords хэсгээс тусгай **16 тэмдэгттэй App Password** үүсгэнэ. Тэр утгыг `.env` дотор `SMTP_PASSWORD`-т хийнэ. Энгийн Gmail нууц үг, OAuth client secret эсвэл App Password-ийг GitHub-д хэзээ ч commit хийхгүй. `SMTP_USER` нь илгээх Gmail хаяг, `SMTP_FROM` нь ихэвчлэн тухайн хаяг байна.
 
 ## Supabase
 
@@ -91,6 +100,8 @@ Production-д `FLASK_ENV=production`, HTTPS, managed secrets, migration backup, 
 - Execute 503: sandbox URL/token тохируулаагүй; host execution руу fallback хийхгүй.
 - Google login буцахгүй: Supabase redirect URL болон `GOOGLE_OAUTH_REDIRECT_URL` ижил эсэхийг шалга.
 - Progress хадгалагдахгүй: `006_local_app_auth.sql` migration ажилласан, хэрэглэгчийн CodeCraft app identity болон database connection-ийг шалга.
+- Gmail code ирэхгүй: `.env` дотор `SMTP_USER`, `SMTP_PASSWORD` байгаа эсэх, Gmail 2-Step Verification болон App Password-ийг шалга. `SMTP_PASSWORD`-т энгийн Gmail password хийж болохгүй.
+- OTP verify 401: Gmail-ээс ирсэн хамгийн сүүлийн зургаан оронтой код, тухайн request-ийн browser tab, 10 минутын хугацаа болон challenge-ийг шалга.
 - Windows дээр `ModuleNotFoundError: No module named 'yaml'`: PowerShell дээр `.venv\\Scripts\\Activate.ps1` идэвхжүүлээд `python -m pip install -r requirements.txt` ажиллуул. `requirements.txt` дотор `PyYAML` байгаа.
 - `RequestsDependencyWarning`: global Python package-уудыг холихгүйгээр шинэ virtual environment үүсгэж, `python -m pip install --upgrade pip` дараа `python -m pip install -r requirements.txt` ажиллуул.
 

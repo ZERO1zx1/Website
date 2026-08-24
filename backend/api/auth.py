@@ -13,6 +13,13 @@ import jwt
 from flask import Blueprint, current_app, make_response, redirect, request, url_for
 
 from backend.db import db
+from backend.email_service import (
+    EmailDeliveryFailed,
+    EmailDeliveryNotConfigured,
+    InvalidEmailCode,
+    issue_email_code,
+    verify_email_code,
+)
 from backend.rbac import error_response
 
 auth_bp = Blueprint("auth", __name__)
@@ -326,17 +333,33 @@ def request_email_otp():
     if not _valid_email(email):
         return error_response("invalid_email", "Enter a valid email address.", "Хүчинтэй имэйл хаяг оруулна уу.", 400)
     try:
-        db.request_email_otp(email, redirect_to=_email_confirmation_url())
+        challenge = issue_email_code(email)
         return {
             "message": "A one-time code was sent to your email.",
-            "message_mn": "Нэг удаагийн кодыг таны имэйл рүү илгээлээ.",
+            "message_mn": "Нэг удаагийн security code таны Gmail рүү илгээгдлээ.",
             "email": email,
+            "challenge": challenge,
+            "expires_in_minutes": 10,
         }, 200
+    except EmailDeliveryNotConfigured:
+        return error_response(
+            "email_delivery_not_configured",
+            "Email delivery is not configured.",
+            "Gmail SMTP тохиргоо хийгдээгүй байна. .env дотор SMTP_USER, SMTP_PASSWORD тохируулна уу.",
+            503,
+        )
+    except EmailDeliveryFailed:
+        return error_response(
+            "otp_request_failed",
+            "The security code could not be sent.",
+            "Security code имэйлээр илгээгдсэнгүй. Gmail App Password болон SMTP тохиргоог шалгана уу.",
+            502,
+        )
     except Exception:
         return error_response(
             "otp_request_failed",
-            "The email code could not be sent. Check Supabase email settings.",
-            "Имэйлийн код илгээгдсэнгүй. Supabase-ийн email тохиргоог шалгана уу.",
+            "The security code could not be sent.",
+            "Security code имэйлээр илгээгдсэнгүй.",
             502,
         )
 
@@ -345,17 +368,24 @@ def request_email_otp():
 def verify_email_otp():
     data = request.get_json(silent=True) or {}
     email = str(data.get("email", "")).strip().lower()
+    challenge = str(data.get("challenge", "")).strip()
     code = str(data.get("code", "")).strip()
-    if not _valid_email(email) or not re.fullmatch(r"\d{6}", code):
-        return error_response("invalid_otp", "Enter an email and six-digit code.", "Имэйл болон зургаан оронтой код оруулна уу.", 400)
+    if not _valid_email(email) or not challenge or not re.fullmatch(r"\d{6}", code):
+        return error_response("invalid_otp", "Enter an email, challenge, and six-digit code.", "Имэйл, challenge болон зургаан оронтой код оруулна уу.", 400)
     try:
-        auth_response = db.verify_email_otp(email, code)
-        return _session_response(_external_auth_payload(auth_response, "email") | {
+        verify_email_code(email, challenge, code)
+        user = db.get_user_by_email(email)
+        if not user:
+            return error_response("user_not_found", "No CodeCraft account exists for this email.", "Энэ имэйлээр CodeCraft бүртгэл олдсонгүй.", 404)
+        return _session_response({
+            **_local_session_payload(user),
             "message": "Email verification completed.",
-            "message_mn": "Имэйл баталгаажуулалт амжилттай боллоо.",
+            "message_mn": "Gmail security code баталгаажлаа. Амжилттай нэвтэрлээ.",
         })
-    except Exception:
+    except InvalidEmailCode:
         return error_response("otp_verification_failed", "The code is invalid or expired.", "Код буруу эсвэл хугацаа нь дууссан байна.", 401)
+    except Exception:
+        return error_response("otp_verification_failed", "The email code could not be verified.", "Security code баталгаажуулахад алдаа гарлаа.", 401)
 
 
 @auth_bp.route("/google/start", methods=["GET"])

@@ -11,6 +11,7 @@
     <div class="auth-heading"><h2 id="auth-title">{% if auth_mode == 'register' %}Өөрийн замаа эхлүүл.{% else %}Тавтай морил.{% endif %}</h2><p id="auth-subtitle">{% if auth_mode == 'register' %}Үнэгүй бүртгэлээр ахицаа аюулгүй хадгал.{% else %}Суралцах орон зайдаа үргэлжлүүлэн нэвтэр.{% endif %}</p></div>
     <button class="google-button" id="google-login" type="button"><span class="google-g">G</span><span>Google-ээр үргэлжлүүлэх</span></button>
     <div class="auth-divider"><span>эсвэл имэйлээр</span></div>
+    <button class="button button-secondary button-full" id="email-code-toggle" type="button">Gmail security code-оор нэвтрэх</button>
     <form id="auth-form" novalidate>
       <div class="field-group" id="name-field"{% if auth_mode != 'register' %} hidden{% endif %}><label for="name">Нэр</label><input id="name" name="name" type="text" placeholder="Таны нэр" autocomplete="name"{% if auth_mode == 'register' %} required{% endif %}></div>
       <div class="field-group"><label for="email">Имэйл</label><input id="email" name="email" type="email" placeholder="you@example.com" autocomplete="email" required></div>
@@ -19,6 +20,19 @@
       <button class="button button-primary button-full" id="auth-submit" type="submit">{% if auth_mode == 'register' %}Бүртгэл үүсгэх{% else %}Нэвтрэх{% endif %} <span>→</span></button>
       <p class="form-message" id="auth-message" role="status" aria-live="polite"></p>
     </form>
+    <section id="email-code-panel" class="email-code-panel" hidden aria-labelledby="email-code-title">
+      <h3 id="email-code-title">Gmail security code</h3>
+      <p>Таны Gmail рүү зургаан оронтой нэг удаагийн код илгээнэ.</p>
+      <form id="email-code-request-form" novalidate>
+        <div class="field-group"><label for="otp-email">Имэйл</label><input id="otp-email" name="email" type="email" placeholder="you@gmail.com" autocomplete="email" required></div>
+        <button class="button button-secondary button-full" id="otp-request" type="submit">Код илгээх</button>
+      </form>
+      <form id="email-code-verify-form" novalidate hidden>
+        <div class="field-group"><label for="otp-code">Gmail дээр ирсэн код</label><input id="otp-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></div>
+        <button class="button button-primary button-full" id="otp-verify" type="submit">Код баталгаажуулах</button>
+      </form>
+      <p class="form-message" id="otp-message" role="status" aria-live="polite"></p>
+    </section>
     <p class="auth-switch" id="auth-switch-copy">{% if auth_mode == 'register' %}Аль хэдийн бүртгэлтэй юу? <a href="{{ url_for('frontend_page', page='account/login') }}">Нэвтрэх</a>{% else %}Анх удаа ирж байна уу? <a href="{{ url_for('frontend_page', page='account/register') }}">Бүртгэл үүсгэх</a>{% endif %}</p>
   </div>
 </section>

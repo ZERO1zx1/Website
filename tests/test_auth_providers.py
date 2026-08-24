@@ -24,20 +24,8 @@ class FakeProviderDB:
             }
         }
 
-    def request_email_otp(self, email, redirect_to=None):
-        self.otp_requests.append((email, redirect_to))
-        return SimpleNamespace(message_id='message-1')
-
-    def verify_email_otp(self, email, code):
-        assert email == 'student@gmail.com'
-        assert code == '123456'
-        return SimpleNamespace(
-            user=SimpleNamespace(
-                id='supabase-user-7',
-                email=email,
-                user_metadata={'full_name': 'Student'},
-            )
-        )
+    def get_user_by_email(self, email):
+        return next((user for user in self.users.values() if user['email'] == email), None)
 
     def ensure_external_user(self, **kwargs):
         assert kwargs['provider'] in {'email', 'google'}
@@ -62,28 +50,37 @@ def make_app(monkeypatch):
     return app, fake_db
 
 
-def test_otp_request_validates_email_and_delegates(monkeypatch):
-    app, fake_db = make_app(monkeypatch)
+def test_otp_request_returns_opaque_challenge(monkeypatch):
+    app, _ = make_app(monkeypatch)
+    monkeypatch.setattr(auth_module, 'issue_email_code', lambda email: 'challenge-1')
     client = app.test_client()
 
     response = client.post('/api/auth/otp/request', json={'email': 'student@gmail.com'})
 
     assert response.status_code == 200
-    assert fake_db.otp_requests[0][0] == 'student@gmail.com'
-    assert fake_db.otp_requests[0][1].endswith('/')
-    assert 'six-digit' not in response.get_json()['message_mn']
+    assert response.get_json()['challenge'] == 'challenge-1'
+    assert 'Gmail' in response.get_json()['message_mn']
 
 
-def test_otp_verify_returns_app_jwt_and_preserves_student_role(monkeypatch):
+def test_otp_verify_returns_app_jwt_and_sets_cookie(monkeypatch):
     app, _ = make_app(monkeypatch)
+    calls = []
+
+    def fake_verify(email, challenge, code):
+        calls.append((email, challenge, code))
+
+    monkeypatch.setattr(auth_module, 'verify_email_code', fake_verify)
     client = app.test_client()
 
     response = client.post('/api/auth/otp/verify', json={
         'email': 'student@gmail.com',
+        'challenge': 'challenge-1',
         'code': '123456',
     })
 
     assert response.status_code == 200
+    assert calls == [('student@gmail.com', 'challenge-1', '123456')]
+    assert 'codecraft_session=' in response.headers['Set-Cookie']
     payload = response.get_json()
     claims = jwt.decode(payload['token'], SECRET, algorithms=['HS256'])
     assert claims['user_id'] == 7
