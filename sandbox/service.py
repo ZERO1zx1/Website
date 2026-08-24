@@ -11,6 +11,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from runner import CodeRunner
 
 
+SUPPORTED_LANGUAGES = {"python", "javascript"}
+MAX_CODE_LENGTH = 100_000
+MIN_TIMEOUT = 1
+MAX_TIMEOUT = 15
+MIN_MEMORY_MB = 64
+MAX_MEMORY_MB = 512
+
+
 class SandboxHandler(BaseHTTPRequestHandler):
     server_version = "CodehavenSandbox/1.0"
 
@@ -45,11 +53,23 @@ class SandboxHandler(BaseHTTPRequestHandler):
                 return
             payload = json.loads(self.rfile.read(content_length))
             code = payload.get("code")
-            language = payload.get("language", "python")
+            language = str(payload.get("language", "python")).lower()
             timeout = int(payload.get("timeout", 5))
             memory_limit = int(payload.get("memory_limit_mb", 256))
             if not isinstance(code, str) or not code.strip():
                 self._send(400, {"error": "Code must be a non-empty string"})
+                return
+            if len(code) > MAX_CODE_LENGTH:
+                self._send(400, {"error": "Code exceeds the maximum length"})
+                return
+            if language not in SUPPORTED_LANGUAGES:
+                self._send(400, {"error": "Unsupported sandbox language"})
+                return
+            if not MIN_TIMEOUT <= timeout <= MAX_TIMEOUT:
+                self._send(400, {"error": "Timeout is outside the allowed range"})
+                return
+            if not MIN_MEMORY_MB <= memory_limit <= MAX_MEMORY_MB:
+                self._send(400, {"error": "Memory limit is outside the allowed range"})
                 return
             runner = CodeRunner(timeout=timeout, memory_limit_mb=memory_limit)
             result = runner.run_test_case(
@@ -71,6 +91,7 @@ class SandboxHandler(BaseHTTPRequestHandler):
 def main() -> None:
     port = int(os.getenv("SANDBOX_PORT", "8080"))
     server = ThreadingHTTPServer((os.getenv("SANDBOX_HOST", "0.0.0.0"), port), SandboxHandler)  # nosec B104
+    server.daemon_threads = True
     server.serve_forever()
 
 

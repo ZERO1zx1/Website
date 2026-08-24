@@ -4,8 +4,13 @@ CodeCraft Academy нь Монгол хэл дээрх Flask + Jinja олон х�
 
 ## Гол боломж
 
+- Domain-based frontend: `layouts`, `pages`, `account`, `learning`, `admin`, `components` template folder-ууд
 - Нүүр, хөтөлбөр, курс, хичээл, workspace, dashboard, auth, profile гэсэн responsive Jinja хуудсууд
-- Supabase PostgreSQL/Auth/Realtime дээрх UUID profile, хичээл ба курсийн ахиц, quiz attempt
+- `Practice Grounds`, `Bug Lab`, `Guided Project`, `Portfolio Project` бүхий learning path; Python, HTML, CSS, JavaScript-ийн 15 challenge
+- Admin Content Studio-оор lesson/challenge, starter code, automated test, hidden test, hint, XP болон draft metadata үүсгэнэ
+- Python/JavaScript sandbox grading, HTML/CSS static requirement grading, submission queue ба accepted result feedback
+- Server-side XP event ledger, current/longest streak, badge evaluator болон dashboard summary
+- Supabase PostgreSQL дээрх profile, хичээл ба курсийн ахиц, quiz attempt persistence; authentication нь CodeCraft app-owned
 - Student/teacher/admin/owner RBAC болон суралцагчийн өгөгдлийг тусгаарласан RLS
 - Redis queue болон тусгаарласан Docker sandbox; байхгүй үед execute API аюулгүйгаар `503` буцаана
 - Pytest, Ruff, Bandit, pip-audit, Docker build бүхий CI
@@ -22,6 +27,8 @@ python -m venv .venv
 # macOS/Linux: source .venv/bin/activate
 python -m pip install -r requirements.txt
 cp .env.example .env
+python run.py
+# эсвэл compatibility хэлбэрээр:
 python -m flask --app app:create_app run
 ```
 
@@ -29,9 +36,11 @@ Credential бэлэн биш бол `.env`-д `FRONTEND_ONLY=true` тавьж UI
 
 ## Environment variable
 
-- `SECRET_KEY`: production-д заавал урт, санамсаргүй утга
-- `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`: public Supabase тохиргоо
-- `SUPABASE_SERVICE_ROLE_KEY`: зөвхөн Flask server secret; browser болон build argument-д хийж болохгүй
+- `SECRET_KEY`: production-д заавал урт, санамсаргүй утга; CodeCraft app JWT/session signing-д ашиглана
+- `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`: Supabase database connection болон public configuration
+- `SUPABASE_SERVICE_ROLE_KEY`: зөвхөн Flask server-ийн database key; browser болон build argument-д хийж болохгүй
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`: CodeCraft-ийн шууд Google OAuth; Supabase Auth provider биш
+- `GOOGLE_OAUTH_REDIRECT_URL`: Google Cloud Console-д бүртгүүлэх callback URL
 - `CORS_ORIGINS`: comma-аар тусгаарласан яг зөвшөөрөх origin
 - `SANDBOX_URL`, `SANDBOX_TOKEN`: internal code runner
 - `SUBMISSION_QUEUE_MODE=redis`, `REDIS_URL`: distributed queue сонголт
@@ -40,7 +49,17 @@ Credential бэлэн биш бол `.env`-д `FRONTEND_ONLY=true` тавьж UI
 
 ## Supabase
 
-Шинэ project дээр `supabase/migrations`-ийн файлуудыг нэрийн дарааллаар ажиллуулна. Google redirect URL нь `/api/auth/google/callback`. Дэлгэрэнгүй: [docs/supabase-setup.md](docs/supabase-setup.md).
+Шинэ project дээр `backend/db/migrations` файлуудыг дараах дарааллаар ажиллуулна: `001_auth_roles.sql`, `002_learning_platform.sql`, `003_external_auth_identities.sql`, `004_content_studio.sql`, `005_gamification.sql`, `006_local_app_auth.sql`. `006_local_app_auth.sql` нь CodeCraft-ийн `app_auth_identities` хүснэгт үүсгэж, password hash болон local app UUID-г learning persistence-тэй холбодог. Supabase Auth хэрэглэгч үүсгэхгүй.
+
+`005_gamification.sql` нь XP ledger, learning day, streak profile, badge definition болон user badge хүснэгтүүдийг үүсгэнэ. `006_local_app_auth.sql` apply хийгдээгүй үед local Login/Register database auth ажиллахгүй.
+
+Google ашиглах бол Google Cloud Console-д `/api/auth/google/callback` callback-ийг бүртгэж `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` тохируулна. Google OAuth flow нь Supabase Auth provider ашиглахгүй.
+
+## Content Studio
+
+Админ UI нь `/admin` дээр байрлана. Backend mode-д `admin` эсвэл `owner` эрхтэй session шаардлагатай. Шинэ content-ийн дараалал нь Basic info → explanation/starter code → automated tests → hints → draft хадгалах → test хийж publish хийх байна. API contract нь `POST /api/admin/content`; test болон hint-үүдийг нэг payload дотор үүсгэнэ.
+
+Frontend template-ийн domain бүтэц болон backend-ийн mapping-ийг [docs/architecture.md](docs/architecture.md)-д баримтжуулна.
 
 ## Sandbox ба queue
 
@@ -71,6 +90,8 @@ Production-д `FLASK_ENV=production`, HTTPS, managed secrets, migration backup, 
 - `/api/ready` 503: response дахь `missing` эсвэл `dependency`-г шалга.
 - Execute 503: sandbox URL/token тохируулаагүй; host execution руу fallback хийхгүй.
 - Google login буцахгүй: Supabase redirect URL болон `GOOGLE_OAUTH_REDIRECT_URL` ижил эсэхийг шалга.
-- Progress хадгалагдахгүй: migration ажилласан, хэрэглэгч Supabase Auth identity-тай эсэхийг шалга.
+- Progress хадгалагдахгүй: `006_local_app_auth.sql` migration ажилласан, хэрэглэгчийн CodeCraft app identity болон database connection-ийг шалга.
 
 Нэгтгэлийн mapping: [docs/repository-consolidation-audit.md](docs/repository-consolidation-audit.md).
+
+Production migration, secret, sandbox, queue, rollback checklist: [docs/production-runbook-mn.md](docs/production-runbook-mn.md).

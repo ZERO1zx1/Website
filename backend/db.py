@@ -3,8 +3,10 @@ Supabase Database Client
 """
 
 import os
+from uuid import uuid4
 
 from supabase import Client, create_client
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 class SupabaseDB:
@@ -76,19 +78,79 @@ class SupabaseDB:
         return getattr(record, key, default)
 
     def sign_up_with_password(self, email: str, password: str, display_name: str, redirect_to: str = None):
-        """Register an Auth user and store display-name metadata for the profile trigger."""
-        options = {'data': {'display_name': display_name}}
-        if redirect_to:
-            options['email_redirect_to'] = redirect_to
-        return self.auth_client.auth.sign_up({
+        """Create a CodeCraft-owned identity; Supabase is used only as the database."""
+        email = email.strip().lower()
+        if self.get_user_by_email(email):
+            raise RuntimeError('email already registered')
+        identity_id = str(uuid4())
+        identity = self.client.table('app_auth_identities').insert({
+            'id': identity_id, 'email': email, 'provider': 'password',
+        }).execute().data
+        if not identity:
+            raise RuntimeError('Could not create app identity')
+        user = self.client.table('users').insert({
+            'username': f"{email.split('@', 1)[0]}_{identity_id[:8]}",
             'email': email,
-            'password': password,
-            'options': options,
-        })
+            'display_name': display_name,
+            'password_hash': generate_password_hash(password),
+            'auth_user_id': identity_id,
+            'auth_provider': 'email',
+            'role': 'student',
+        }).execute().data
+        if not user:
+            raise RuntimeError('Could not create local user')
+        self.client.table('profiles').upsert({
+            'id': identity_id, 'email': email, 'display_name': display_name, 'role': 'student',
+        }, on_conflict='id').execute()
+        return user[0]
 
     def sign_in_with_password(self, email: str, password: str):
-        """Authenticate against Supabase Auth; passwords are never stored in public tables."""
-        return self.auth_client.auth.sign_in_with_password({'email': email, 'password': password})
+        """Authenticate against CodeCraft's password hash in public.users."""
+        user = self.get_user_by_email(email.strip().lower())
+        if not user or not user.get('password_hash') or not check_password_hash(user['password_hash'], password):
+            raise RuntimeError('invalid credentials')
+        return user
+
+    def ensure_google_user(self, *, subject: str, email: str, display_name: str, avatar_url: str | None = None):
+        """Link a verified Google identity to a CodeCraft-owned user without Supabase Auth."""
+        email = email.strip().lower()
+        identity_rows = self.client.table('app_auth_identities').select('*').eq(
+            'provider', 'google'
+        ).eq('provider_subject', subject).limit(1).execute().data or []
+        identity = identity_rows[0] if identity_rows else None
+        user = self.get_user_by_email(email)
+        if identity:
+            user_rows = self.client.table('users').select('*').eq('auth_user_id', identity['id']).limit(1).execute().data or []
+            user = user_rows[0] if user_rows else user
+        if not identity:
+            identity_id = str(user.get('auth_user_id')) if user and user.get('auth_user_id') else str(uuid4())
+            identity_result = self.client.table('app_auth_identities').upsert({
+                'id': identity_id, 'email': email, 'provider': 'google', 'provider_subject': subject,
+            }, on_conflict='provider,provider_subject').execute()
+            identity = (identity_result.data or [{'id': identity_id}])[0]
+        if user:
+            updated = self.client.table('users').update({
+                'auth_user_id': identity['id'], 'auth_provider': 'google',
+                'display_name': display_name or user.get('display_name') or user.get('name') or email.split('@', 1)[0],
+                'avatar_url': avatar_url,
+            }).eq('id', user['id']).execute().data
+            user = updated[0] if updated else {**user, 'auth_user_id': identity['id'], 'auth_provider': 'google'}
+        else:
+            created = self.client.table('users').insert({
+                'username': f"{email.split('@', 1)[0]}_{identity['id'][:8]}",
+                'email': email, 'display_name': display_name or email.split('@', 1)[0],
+                'auth_user_id': identity['id'], 'auth_provider': 'google', 'avatar_url': avatar_url,
+                'role': 'student',
+            }).execute().data
+            if not created:
+                raise RuntimeError('Could not create Google-linked user')
+            user = created[0]
+        self.client.table('profiles').upsert({
+            'id': identity['id'], 'email': email,
+            'display_name': user.get('display_name') or user.get('name') or display_name, 'role': user.get('role', 'student'),
+        }, on_conflict='id').execute()
+        return user
+
 
     def get_auth_user(self, access_token: str):
         """Validate a Supabase access token and return its Auth user."""
@@ -174,24 +236,8 @@ class SupabaseDB:
     # ============ USER OPERATIONS ============
     
     def create_user(self, email: str, password: str, name: str, role: str = 'student'):
-        """Create a Supabase Auth identity and its local RBAC projection."""
-        try:
-            response = self.client.auth.sign_up({
-                'email': email,
-                'password': password,
-                'options': {'data': {'display_name': name}},
-            })
-            if not response.user:
-                raise RuntimeError('Supabase Auth did not return a user')
-            return self.ensure_external_user(
-                auth_user_id=str(response.user.id), email=email, name=name, provider='email'
-            )
-        except Exception as error:
-            raise RuntimeError("Failed to create user") from error
-
-    def sign_in_with_password(self, email: str, password: str):
-        """Authenticate email/password through Supabase Auth."""
-        return self.client.auth.sign_in_with_password({'email': email, 'password': password})
+        """Backward-compatible alias for CodeCraft-owned email/password registration."""
+        return self.sign_up_with_password(email, password, name)
     
     def get_user(self, user_id: int):
         """Get user by ID"""
@@ -416,6 +462,18 @@ class SupabaseDB:
         """Get all problems"""
         response = self.client.table('problems').select('*').range(offset, offset + limit - 1).execute()
         return response.data
+
+    def get_published_content(self, limit: int = 200):
+        """Return learner-visible Content Studio rows only."""
+        response = (
+            self.client.table('problems')
+            .select('id,title,description,difficulty,starter_code,language,slug,content_type,course_slug,lesson_slug,xp_reward,status,explanation')
+            .eq('status', 'published')
+            .order('created_at', desc=False)
+            .limit(max(1, min(limit, 500)))
+            .execute()
+        )
+        return response.data or []
     
     # ============ SUBMISSION OPERATIONS ============
     

@@ -59,7 +59,7 @@ def create_submission(current_user):
         
         # Create submission
         language = str(data.get('language') or problem.get('language') or 'python').lower()
-        if language not in {'python', 'javascript'}:
+        if language not in {'python', 'javascript', 'html', 'css'}:
             return {'error': 'Unsupported language'}, 400
 
         submission = db.create_submission(
@@ -112,7 +112,7 @@ def run_code(current_user):
         if not problem:
             return {'error': 'Problem not found'}, 404
         language = str(data.get('language') or problem.get('language') or 'python').lower()
-        if language not in {'python', 'javascript'}:
+        if language not in {'python', 'javascript', 'html', 'css'}:
             return {'error': 'Unsupported language'}, 400
         test_cases = db.get_test_cases(data['problem_id'], include_hidden=False)
         if not test_cases:

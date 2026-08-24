@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 import jwt
 from flask import Flask
+from urllib.parse import parse_qs, urlparse
 
 import backend.api.auth as auth_module
 from backend.api.auth import auth_bp
@@ -45,12 +46,10 @@ class FakeProviderDB:
         user['auth_provider'] = kwargs['provider']
         return user
 
-    def google_login_url(self, redirect_to):
-        return f'https://accounts.google.com/o/oauth2/auth?redirect_uri={redirect_to}'
-
-    def exchange_google_code(self, code):
-        assert code == 'oauth-code'
-        return self.verify_email_otp('student@gmail.com', '123456')
+    def ensure_google_user(self, *, subject, email, display_name, avatar_url=None):
+        user = self.users[7].copy()
+        user.update({'email': email, 'name': display_name, 'auth_user_id': f'app-{subject}', 'auth_provider': 'google'})
+        return user
 
 
 def make_app(monkeypatch):
@@ -92,26 +91,34 @@ def test_otp_verify_returns_app_jwt_and_preserves_student_role(monkeypatch):
     assert payload['user']['role'] == 'student'
 
 
-def test_google_start_returns_provider_url(monkeypatch):
+def test_google_start_returns_direct_provider_url(monkeypatch):
+    monkeypatch.setenv('GOOGLE_CLIENT_ID', 'google-client-id')
     app, _ = make_app(monkeypatch)
     client = app.test_client()
 
     response = client.get('/api/auth/google/start')
 
     assert response.status_code == 200
-    assert response.get_json()['url'].startswith('https://accounts.google.com/')
+    assert response.get_json()['url'].startswith('https://accounts.google.com/o/oauth2/v2/auth?')
+    assert 'client_id=google-client-id' in response.get_json()['url']
 
 
-def test_google_callback_exchanges_code_and_redirects_with_app_token(monkeypatch):
+def test_google_callback_verifies_identity_and_issues_app_token(monkeypatch):
+    monkeypatch.setenv('GOOGLE_CLIENT_ID', 'google-client-id')
+    monkeypatch.setenv('GOOGLE_CLIENT_SECRET', 'google-client-secret')
     app, _ = make_app(monkeypatch)
     app.config['SERVER_NAME'] = 'localhost'
     client = app.test_client()
+    monkeypatch.setattr(auth_module, '_google_identity', lambda code: {
+        'sub': 'google-sub-7', 'email': 'student@gmail.com', 'name': 'Student', 'email_verified': 'true',
+    })
+    start = client.get('/api/auth/google/start')
+    state = parse_qs(urlparse(start.get_json()['url']).query)['state'][0]
 
-    response = client.get('/api/auth/google/callback?code=oauth-code')
+    response = client.get('/api/auth/google/callback', query_string={'code': 'oauth-code', 'state': state})
 
     assert response.status_code == 302
     assert 'auth_token=' not in response.headers['Location']
     assert 'auth_provider=google' in response.headers['Location']
     assert 'codecraft_session=' in response.headers['Set-Cookie']
     assert 'HttpOnly' in response.headers['Set-Cookie']
-    assert 'auth_provider=google' in response.headers['Location']

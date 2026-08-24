@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 
 from backend.db import db
 from backend.services.code_executor import SubmissionEvaluator, get_executor
+from backend.services.gamification import award_submission_rewards
 
 logger = logging.getLogger(__name__)
 
@@ -71,8 +72,14 @@ class SubmissionProcessor:
             # Store results in database
             self.store_results(submission_id, results)
             
-            # Update mastery
+            # Update mastery and award rewards only after the verified result is stored.
             self.update_mastery(user_id, problem_id, results)
+            try:
+                results['rewards'] = award_submission_rewards(user_id, submission_id, problem, results)
+            except Exception:
+                # Gamification must never make a valid code submission fail.
+                logger.exception("Gamification reward failed for submission %s", submission_id)
+                results['rewards'] = {'awarded': False, 'reason': 'rewards_unavailable'}
             
             logger.info(f"Submission {submission_id} processed successfully")
             

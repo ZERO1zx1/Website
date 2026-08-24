@@ -1,0 +1,31 @@
+{% extends 'layouts/base.html' %}
+{% set page = 'practice' %}
+{% block title %}Дадлагын талбар — CodeCraft Academy{% endblock %}
+{% block content %}
+<section class="page-hero container-wide practice-hero">
+  <div><span class="eyebrow">TRAINING GROUNDS</span><h1>Алдаагаа засаж, чадвараа батал.</h1><p>Нэг дор багахан challenge сонгоод код бич. Буруу бол тайлбарыг уншаад дахин оролдоно.</p></div>
+  <div class="page-hero-note"><span>XP</span><strong>Оролдлого бүр үнэ цэнтэй</strong><small>Зөв болгосон solution бүр дараагийн алхмыг нээнэ.</small></div>
+</section>
+<section class="container-wide section-tight">
+  <form class="practice-filters" method="get" action="{{ url_for('frontend_page', page='practice') }}">
+    <label>Чиглэл<select name="course"><option value="all" {% if selected_course == 'all' %}selected{% endif %}>Бүгд</option><option value="python" {% if selected_course == 'python' %}selected{% endif %}>Python</option><option value="html" {% if selected_course == 'html' %}selected{% endif %}>HTML</option><option value="css" {% if selected_course == 'css' %}selected{% endif %}>CSS</option><option value="javascript" {% if selected_course == 'javascript' %}selected{% endif %}>JavaScript</option></select></label>
+    <label>Түвшин<select name="difficulty"><option value="all" {% if selected_difficulty == 'all' %}selected{% endif %}>Бүгд</option><option value="beginner" {% if selected_difficulty == 'beginner' %}selected{% endif %}>Анхан</option><option value="intermediate" {% if selected_difficulty == 'intermediate' %}selected{% endif %}>Дунд</option></select></label>
+    <button class="button button-dark button-small" type="submit">Шүүх</button>
+  </form>
+  <div class="section-heading compact"><div><span class="eyebrow">{{ challenges|length }} CHALLENGE</span><h2>Өнөөдөр юуг турших вэ?</h2></div><span class="course-status">Practice · Bug Lab · Project</span></div>
+  <div class="challenge-grid">
+    {% for challenge in challenges %}
+    <article class="challenge-card challenge-{{ challenge.type }}">
+      <div class="challenge-card-top"><span class="status-badge">{{ challenge.type|replace('_', ' ')|title }}</span><span>+{{ challenge.xp }} XP</span></div>
+      <span class="eyebrow">{{ challenge.course_id|upper }} · {{ challenge.difficulty|upper }}</span>
+      <h3>{{ challenge.title }}</h3><p class="challenge-hook">{{ challenge.hook }}</p><p>{{ challenge.description }}</p>
+      <div class="challenge-card-bottom"><span>Ойролцоогоор 10 минут</span><a class="button button-primary button-small" href="{{ url_for('frontend_page', page='workspace') }}?challenge={{ challenge.id }}">Эхлэх <span>→</span></a></div>
+    </article>
+    {% else %}
+    <div class="empty-state">Энэ шүүлтүүрт тохирох challenge одоогоор алга байна.</div>
+    {% endfor %}
+  </div>
+</section>
+<section class="container-wide section-tight project-discovery"><div class="section-heading compact"><div><span class="eyebrow">BUILD SOMETHING REAL</span><h2>Сурсан зүйлээ project болго.</h2></div><span class="course-status">Portfolio-д нэмэх бүтээл</span></div><div class="project-card-grid">{% for project in projects %}<article class="project-discovery-card"><span class="status-badge">{{ project.type|replace('_', ' ')|title }}</span><h3>{{ project.title }}</h3><p>{{ project.description }}</p><div class="skill-tags">{% for skill in project.skills %}<span>{{ skill }}</span>{% endfor %}</div><div class="challenge-card-bottom"><span>+{{ project.xp }} XP · {{ project.estimated_hours }} цаг</span><a class="button button-dark button-small" href="{{ url_for('frontend_page', page='project') }}?id={{ project.id }}">Замыг харах <span>→</span></a></div></article>{% endfor %}</div></section>
+<section class="section section-muted"><div class="container-wide learning-principles"><div><span class="eyebrow">Зөв дадал</span><h2>Алдаа бол дараагийн hint.</h2></div><div class="principle-list"><div><span>01</span><p><strong>Оролд</strong><br>Шийдлээ өөрөө бич.</p></div><div><span>02</span><p><strong>Шалга</strong><br>Test болон output-оо унш.</p></div><div><span>03</span><p><strong>Ойлго</strong><br>Яагаад гэдгийг тайлбарлаж чад.</p></div></div></div></section>
+{% endblock %}

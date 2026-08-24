@@ -12,6 +12,8 @@ from flask_cors import CORS
 from flask_login import LoginManager
 
 from course_data import COURSE_CATALOG
+from learning_experiences import LEARNING_PATH_NODES, PROJECT_CATALOG, PRACTICE_CHALLENGES, get_challenge, get_project
+from backend.services.content_catalog import load_challenges
 
 
 class FlaskSessionUser:
@@ -90,6 +92,7 @@ def create_app(config_name='development'):
             if origin and origin.rstrip('/') not in allowed:
                 return {'error': {'code': 'csrf_origin_rejected', 'message': 'Request origin is not allowed.'}}, 403
     
+    db_gateway = None
     if not frontend_only:
         # Initialize Flask-Login and register backend blueprints only when
         # backend credentials are intentionally available.
@@ -98,6 +101,7 @@ def create_app(config_name='development'):
         login_manager.login_view = 'auth.login'
 
         from backend.db import db
+        db_gateway = db
 
         @login_manager.user_loader
         def load_user(user_id):
@@ -108,6 +112,7 @@ def create_app(config_name='development'):
             return FlaskSessionUser(record) if record else None
 
         from backend.api.analytics import analytics_bp
+        from backend.api.admin_content import admin_content_bp
         from backend.api.auth import auth_bp
         from backend.api.courses import courses_bp
         from backend.api.learning import learning_bp
@@ -121,6 +126,7 @@ def create_app(config_name='development'):
         app.register_blueprint(submissions_bp, url_prefix='/api/submissions')
         app.register_blueprint(teacher_bp, url_prefix='/api/teacher')
         app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
+        app.register_blueprint(admin_content_bp, url_prefix='/api/admin/content')
         app.register_blueprint(learning_bp, url_prefix='/api/learning')
     
     # Multi-page CodeCraft frontend. Each learning surface has a dedicated template.
@@ -130,28 +136,54 @@ def create_app(config_name='development'):
 
     @app.route('/', methods=['GET'])
     def frontend_shell():
-        return render_template('index.html', page='home', backend_enabled=not frontend_only)
+        return render_template('pages/home.html', page='home', backend_enabled=not frontend_only)
 
-    @app.route('/<page>', methods=['GET'])
+    @app.route('/<path:page>', methods=['GET'])
     def frontend_page(page):
-        allowed = {'home', 'dashboard', 'curriculum', 'course', 'lesson', 'workspace', 'auth', 'profile'}
+        allowed = {'home', 'dashboard', 'curriculum', 'course', 'lesson', 'workspace', 'auth', 'profile', 'practice', 'project', 'admin', 'account/login', 'account/register'}
         if page not in allowed:
             return {'error': 'Not found'}, 404
         if page == 'home':
-            return render_template('index.html', page='home', backend_enabled=not frontend_only)
+            return render_template('pages/home.html', page='home', backend_enabled=not frontend_only)
         if page == 'course':
             course = COURSE_CATALOG.get(request.args.get('id', 'python'), COURSE_CATALOG['python'])
-            return render_template('course.html', page='course', course=course, backend_enabled=not frontend_only)
+            return render_template('learning/course.html', page='course', course=course, backend_enabled=not frontend_only)
+        if page == 'curriculum':
+            return render_template('learning/curriculum.html', page='curriculum', path_nodes=LEARNING_PATH_NODES, backend_enabled=not frontend_only)
+        if page == 'admin':
+            return render_template('admin/content-studio.html', page='admin', backend_enabled=not frontend_only)
+        if page == 'account/login':
+            return render_template('account/login.html', page='auth', auth_mode='login', backend_enabled=not frontend_only)
+        if page == 'account/register':
+            return render_template('account/register.html', page='auth', auth_mode='register', backend_enabled=not frontend_only)
+        if page == 'auth':
+            return render_template('account/login.html', page='auth', auth_mode='login', backend_enabled=not frontend_only)
         if page == 'lesson':
             course = COURSE_CATALOG.get(request.args.get('course', 'python'), COURSE_CATALOG['python'])
             lesson_id = request.args.get('lesson', course['first_lesson'])
             lesson = next((item for module in course['modules'] for item in module['lessons'] if item['id'] == lesson_id), course['modules'][0]['lessons'][0])
             lesson = dict(lesson)
             lesson['unit'] = next((module['title'] for module in course['modules'] if any(item['id'] == lesson['id'] for item in module['lessons'])), 'Module')
-            return render_template('lesson.html', page='lesson', course=course, lesson=lesson, backend_enabled=not frontend_only)
+            challenge_catalog = load_challenges(db_gateway, PRACTICE_CHALLENGES) if db_gateway else PRACTICE_CHALLENGES
+            lesson_challenges = [item for item in challenge_catalog if item['course_id'] == course['id'] and item['lesson_id'] == lesson_id]
+            return render_template('learning/lesson.html', page='lesson', course=course, lesson=lesson, lesson_challenges=lesson_challenges, backend_enabled=not frontend_only)
         if page == 'workspace':
-            return render_template('workspace.html', page='workspace', course_catalog=COURSE_CATALOG, backend_enabled=not frontend_only)
-        return render_template(f'{page}.html', page=page, backend_enabled=not frontend_only)
+            challenge_catalog = load_challenges(db_gateway, PRACTICE_CHALLENGES) if db_gateway else PRACTICE_CHALLENGES
+            selected_id = request.args.get('challenge', '')
+            selected_challenge = next((item for item in challenge_catalog if item.get('id') == selected_id), None)
+            return render_template('learning/workspace.html', page='workspace', course_catalog=COURSE_CATALOG, practice_challenges=challenge_catalog, selected_challenge=selected_challenge, backend_enabled=not frontend_only)
+        if page == 'practice':
+            course_id = request.args.get('course', 'all')
+            difficulty = request.args.get('difficulty', 'all')
+            challenge_catalog = load_challenges(db_gateway, PRACTICE_CHALLENGES) if db_gateway else PRACTICE_CHALLENGES
+            challenges = [item for item in challenge_catalog if course_id in {'all', item['course_id']} and difficulty in {'all', item['difficulty']}]
+            return render_template('learning/practice.html', page='practice', challenges=challenges, projects=PROJECT_CATALOG, selected_course=course_id, selected_difficulty=difficulty, backend_enabled=not frontend_only)
+        if page == 'project':
+            project = get_project(request.args.get('id', PROJECT_CATALOG[0]['id']))
+            if not project:
+                return {'error': 'Project not found'}, 404
+            return render_template('learning/project.html', page='project', project=project, backend_enabled=not frontend_only)
+        return render_template(f'learning/{page}.html' if page in {'dashboard', 'profile'} else f'pages/{page}.html', page=page, backend_enabled=not frontend_only)
 
     @app.route('/api/public-config', methods=['GET'])
     def public_config():

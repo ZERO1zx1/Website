@@ -1,0 +1,15 @@
+{% extends 'layouts/base.html' %}
+{% set page = 'project' %}
+{% block title %}{{ project.title }} — CodeCraft Academy{% endblock %}
+{% block content %}
+<section class="project-hero container-wide">
+  <div><a class="back-link" href="{{ url_for('frontend_page', page='practice') }}">← Дадлагын талбар</a><span class="eyebrow">{{ project.type|replace('_', ' ')|upper }} · {{ project.estimated_hours }} ЦАГ</span><h1>{{ project.title }}</h1><p>{{ project.subtitle }}</p><div class="project-hero-meta"><span>+{{ project.xp }} XP</span><span>{{ project.skills|length }} чадвар</span><span>Portfolio-д бэлэн</span></div></div>
+  <div class="project-callout"><span class="eyebrow">БОДИТ OUTPUT</span><strong>Сурсан зүйлээ бүтээл болго.</strong><p>{{ project.description }}</p><a class="button button-light" href="{{ url_for('frontend_page', page='workspace') }}?project={{ project.id }}">Workspace нээх <span>→</span></a></div>
+</section>
+<section class="container-wide section-tight project-layout">
+  <main class="project-main"><div class="section-heading compact"><div><span class="eyebrow">PROJECT ROADMAP</span><h2>Алхам алхмаар бүтээнэ</h2></div><span class="course-status">0 / {{ project.steps|length }} дууссан</span></div>
+    <div class="project-steps">{% for step in project.steps %}<article class="project-step"><span class="step-number">0{{ loop.index }}</span><div><h3>{{ step }}</h3><p>{% if loop.first %}Эхлээд зорилгоо жижиг хэсгүүдэд хувааж эхэл.{% elif loop.last %}Бүтээлээ тайлбарлаж, дараагийн хүнд үзүүлэхэд бэлэн болго.{% else %}Өмнөх алхмаа ажиллуулж шалгасны дараа энэ хэсгийг нэм.{% endif %}</p></div><span class="step-state">○</span></article>{% endfor %}</div>
+  </main>
+  <aside class="project-aside"><div class="aside-card"><span class="eyebrow">ЧАДВАРУУД</span><div class="skill-tags">{% for skill in project.skills %}<span>{{ skill }}</span>{% endfor %}</div></div><div class="aside-card aside-card-dark"><span class="eyebrow">PROJECT CHECKLIST</span><h3>Бүтээлээ дуусгаад share хийнэ.</h3><p>README, screenshot, ажилладаг demo болон өөрийн тайлбарыг нэмээрэй.</p><a class="button button-light button-small" href="{{ url_for('frontend_page', page='workspace') }}?project={{ project.id }}">Бүтээж эхлэх <span>→</span></a></div></aside>
+</section>
+{% endblock %}

@@ -1,8 +1,8 @@
-{% extends 'base.html' %}
+{% extends 'layouts/base.html' %}
 {% set page = 'dashboard' %}
 {% block title %}Миний ахиц — CodeCraft Academy{% endblock %}
 {% block content %}
-<section class="dashboard-page container-wide">
+<section class="dashboard-page container-wide" data-dashboard data-login-url="{{ url_for('frontend_page', page='auth') }}?mode=login" data-course-url="{{ url_for('frontend_page', page='course') }}">
   <div class="dashboard-heading"><div><span class="eyebrow">МИНИЙ АХИЦ</span><h1>Сайн уу, <span data-user-name>суралцагч</span>.</h1><p>Таны дуусгасан хичээл бүр Supabase дээр таны бүртгэлтэй хамт хадгалагдана.</p></div><a class="button button-primary" href="{{ url_for('frontend_page', page='curriculum') }}">Хичээл сонгох <span>→</span></a></div>
   <div class="dashboard-stats">
     <article class="dash-stat dash-stat-primary"><span>Нийт ахиц</span><strong data-stat-overall>0<small>%</small></strong><b data-stat-overall-caption>Эхлэхэд бэлэн</b></article>
@@ -10,6 +10,11 @@
     <article class="dash-stat"><span>Идэвхтэй чиглэл</span><strong data-stat-courses>0</strong><b>HTML · CSS · JS · Python</b></article>
     <article class="dash-stat"><span>Хадгалалт</span><strong>✓</strong><b data-sync-status>Supabase руу синк хийнэ</b></article>
   </div>
+  <section class="dashboard-gamification panel">
+    <div class="gamification-main"><span class="gamification-orbit">✦</span><div><span class="eyebrow">YOUR LEARNING ENERGY</span><h2><span data-gamification-level>Level 1</span> · <span data-gamification-xp>0 XP</span></h2><p data-gamification-message>Өнөөдөр нэг жижиг challenge хийж хэмнэлээ эхлүүл.</p></div></div>
+    <div class="gamification-streak"><span class="streak-flame">◒</span><div><strong data-gamification-streak>0 өдөр</strong><small>одоогийн streak</small></div><div><strong data-gamification-longest>0 өдөр</strong><small>хамгийн урт</small></div></div>
+    <div class="gamification-badges"><span class="eyebrow">BADGES</span><div data-gamification-badges><span class="badge-placeholder">Эхний badge-ээ аваарай</span></div></div>
+  </section>
   <div class="dashboard-columns">
     <section class="panel continue-panel">
       <div class="panel-header"><div><span class="eyebrow">ДАРААГИЙН АЛХАМ</span><h2 data-next-course>Хичээлийг сонгоно уу</h2></div><span class="status-badge" data-next-percent>0% дууссан</span></div>
@@ -39,43 +44,6 @@
 </section>
 {% endblock %}
 {% block scripts %}
-<script>
-  const user = JSON.parse(localStorage.getItem('codecraft_user') || '{}');
-  document.querySelector('[data-user-name]').textContent = user.name || user.email?.split('@')[0] || 'суралцагч';
-  const courseIcons = {html: '&lt;&gt;', css: 'CSS', javascript: 'JS', python: 'Py'};
-  const courseClasses = {html: 'orange', css: 'teal', javascript: 'yellow', python: 'purple'};
-
-  function renderSummary(summary) {
-    document.querySelector('[data-stat-overall]').innerHTML = `${summary.overall_percent}<small>%</small>`;
-    document.querySelector('[data-stat-completed]').textContent = summary.completed_lessons;
-    document.querySelector('[data-stat-completed-caption]').textContent = `${summary.total_lessons} хичээлээс`;
-    document.querySelector('[data-stat-courses]').textContent = summary.courses.length;
-    document.querySelector('[data-stat-overall-caption]').textContent = summary.completed_lessons ? 'Таны хадгалсан бодит ахиц' : 'Эхний хичээлээ эхлүүлээрэй';
-    document.querySelector('[data-sync-status]').textContent = 'Supabase-д синк хийгдсэн';
-    document.querySelector('[data-focus-count]').textContent = `${Math.min(summary.completed_lessons, 1)} / 1`;
-    const next = summary.courses.find((course) => course.progress_percent < 100) || summary.courses[0];
-    if (next) {
-      document.querySelector('[data-next-course]').textContent = next.title;
-      document.querySelector('[data-next-percent]').textContent = `${next.progress_percent}% дууссан`;
-      document.querySelector('[data-next-description]').textContent = `${next.completed_lessons} / ${next.total_lessons} хичээл дууссан. Дараагийн lesson-ээ сонгоод үргэлжлүүлээрэй.`;
-      document.querySelector('[data-next-bar]').style.width = `${next.progress_percent}%`;
-      document.querySelector('[data-next-meta]').textContent = `${next.total_lessons - next.completed_lessons} lesson үлдлээ`;
-      document.querySelector('[data-next-link]').href = `{{ url_for('frontend_page', page='course') }}?id=${encodeURIComponent(next.course_id)}`;
-    }
-    document.querySelector('[data-course-progress-list]').innerHTML = summary.courses.map((course) => `
-      <div class="progress-course"><span class="course-icon ${courseClasses[course.course_id] || 'purple'}">${courseIcons[course.course_id] || 'CC'}</span><div><strong>${course.title}</strong><small>${course.completed_lessons} / ${course.total_lessons} хичээл</small></div><b>${course.progress_percent}%</b><div class="progress-bar"><i style="width:${course.progress_percent}%"></i></div></div>
-    `).join('');
-  }
-
-  if (!localStorage.getItem('codecraft_token')) {
-    document.querySelector('[data-sync-status]').textContent = 'Нэвтэрч хадгална';
-    document.querySelector('[data-course-progress-list]').innerHTML = '<p class="empty-state">Ахиц хадгалахын тулд эхлээд <a href="{{ url_for('frontend_page', page='auth') }}?mode=login">нэвтэрнэ үү</a>.</p>';
-  } else {
-    codecraftApi('/api/progress').then(renderSummary).catch((error) => {
-      document.querySelector('[data-sync-status]').textContent = 'Синк холбогдсонгүй';
-      document.querySelector('[data-course-progress-list]').innerHTML = `<p class="empty-state">${error.message}</p>`;
-    });
-  }
-</script>
+<script src="{{ url_for('static', filename='js/pages/dashboard.js') }}" defer></script>
 {% endblock %}
-{% block scripts %}<script>const user = JSON.parse(localStorage.getItem('codecraft_user') || '{}'); const name = user.name || user.email?.split('@')[0] || 'суралцагч'; document.querySelector('[data-user-name]').textContent = name; if (window.CODECRAFT_CONFIG.backendEnabled) { window.codecraftApi('/api/analytics/dashboard').then(data => { const summary = data.summary || data.dashboard || {}; const mastery = document.querySelector('[data-stat-mastery]'); if (summary.mastery != null && mastery) { mastery.textContent = `${Math.round(Number(summary.mastery))}%`; } }).catch(() => {}); }</script>{% endblock %}
+

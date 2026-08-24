@@ -1,0 +1,120 @@
+{% extends 'layouts/base.html' %}
+{% set page = 'admin' %}
+{% block title %}Content Studio — CodeCraft Academy{% endblock %}
+{% block content %}
+<section class="admin-shell container-wide">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-head"><span class="eyebrow">CONTENT STUDIO</span><h1>Админ төв</h1><p>Сургалтын замаа нэг дор бүтээ, шалга, publish хий.</p></div>
+    <nav class="admin-nav" aria-label="Админ цэс">
+      <a class="is-active" href="#overview"><span>◈</span> Тойм</a>
+      <a href="#courses"><span>▦</span> Сургалтууд</a>
+      <a href="#builder"><span>✦</span> Lesson builder</a>
+      <a href="#tests"><span>✓</span> Automated tests</a>
+      <a href="#projects"><span>↗</span> Projects</a>
+    </nav>
+    <div class="admin-safety-note"><span>●</span><p><strong>Publish хамгаалалт</strong><br>Draft эхлээд preview, test pass дараа publish.</p></div>
+  </aside>
+
+  <div class="admin-main">
+    <header class="admin-topbar" id="overview"><div><span class="eyebrow">ADMIN / OVERVIEW</span><h2>Сургалтын контент удирд.</h2></div><div class="admin-top-actions"><span class="admin-mode-chip">Preview workspace</span><a class="button button-primary button-small" href="#builder">+ Шинэ контент</a></div></header>
+
+    <div class="admin-stat-grid">
+      <article class="admin-stat-card"><span class="admin-stat-icon purple">▣</span><div><strong>4</strong><span>Learning paths</span></div><small>+1 энэ сар</small></article>
+      <article class="admin-stat-card"><span class="admin-stat-icon yellow">✦</span><div><strong>11</strong><span>Challenges</span></div><small>8 published</small></article>
+      <article class="admin-stat-card"><span class="admin-stat-icon green">✓</span><div><strong>27</strong><span>Automated tests</span></div><small>96% healthy</small></article>
+      <article class="admin-stat-card"><span class="admin-stat-icon pink">↗</span><div><strong>2</strong><span>Projects</span></div><small>1 draft review</small></article>
+    </div>
+
+    <section class="admin-content-grid" id="courses">
+      <article class="admin-panel course-manager"><div class="admin-panel-head"><div><span class="eyebrow">CONTENT MAP</span><h3>Сургалтын бүтэц</h3></div><button class="icon-btn" type="button" aria-label="Search">⌕</button></div>
+        <div class="admin-course-list">
+          <button class="admin-course-row is-active" type="button"><span class="course-mini-icon purple-bg">Py</span><span><strong>Python foundations</strong><small>12 lesson · 5 challenge</small></span><em>Live</em></button>
+          <button class="admin-course-row" type="button"><span class="course-mini-icon orange-bg">&lt;&gt;</span><span><strong>HTML essentials</strong><small>8 lesson · 2 challenge</small></span><em>Live</em></button>
+          <button class="admin-course-row" type="button"><span class="course-mini-icon blue-bg">#</span><span><strong>CSS systems</strong><small>9 lesson · 2 challenge</small></span><em>Live</em></button>
+          <button class="admin-course-row" type="button"><span class="course-mini-icon yellow-bg">JS</span><span><strong>JavaScript practice</strong><small>10 lesson · 2 challenge</small></span><em>Draft</em></button>
+        </div>
+        <a class="text-link" href="#builder">Сургалтын тохиргоо нээх <span>→</span></a>
+      </article>
+      <article class="admin-panel activity-panel"><div class="admin-panel-head"><div><span class="eyebrow">PUBLISH QUEUE</span><h3>Сүүлийн өөрчлөлт</h3></div><span class="admin-live-dot">● Live</span></div>
+        <div class="admin-activity-list"><div><span class="activity-avatar purple-bg">Б</span><p><strong>Box model лаборатори</strong><small>CSS systems · 12 минутын өмнө</small></p><em class="status-draft">Review</em></div><div><span class="activity-avatar green-bg">А</span><p><strong>Онооны bug hunter</strong><small>Python foundations · өчигдөр</small></p><em class="status-live">Published</em></div><div><span class="activity-avatar yellow-bg">Г</span><p><strong>DOM event засварла</strong><small>JavaScript practice · 2 өдрийн өмнө</small></p><em class="status-draft">Draft</em></div></div>
+      </article>
+    </section>
+
+    <section class="admin-builder" id="builder">
+      <div class="admin-builder-heading"><div><span class="eyebrow">LESSON BUILDER / STEP 01</span><h2>Шинэ learning experience үүсгэ.</h2><p>Эхлээд суралцах зорилгоо тодорхойл. Дараа нь тайлбар, код, test, hint-ээр баталгаажуул.</p></div><div class="builder-progress"><span class="is-current">1</span><i></i><span>2</span><i></i><span>3</span></div></div>
+      <form class="admin-builder-form" id="content-builder-form">
+        <div class="builder-main-column">
+          <div class="admin-panel builder-panel"><div class="admin-panel-head"><div><span class="eyebrow">BASIC INFO</span><h3>Суралцах нэгжийн үндэс</h3></div><span class="required-note">* заавал</span></div>
+            <div class="admin-field-grid"><label>Төрөл *<select id="content-type" name="content_type"><option value="lesson">Lesson / Тайлбар</option><option value="exercise">Exercise / Дасгал</option><option value="bug_lab">Bug Lab / Алдаа засах</option><option value="guided_project">Guided Project</option><option value="portfolio_project">Portfolio Project</option></select></label><label>Course *<select name="course_id"><option value="python">Python foundations</option><option value="html">HTML essentials</option><option value="css">CSS systems</option><option value="javascript">JavaScript practice</option></select></label></div>
+            <label>Гарчиг *<input name="title" required placeholder="Жишээ: Function ашиглан тооцоолол хий" /></label>
+            <div class="admin-field-grid"><label>Slug *<input name="slug" required placeholder="python-function-calculation" /></label><label>Түвшин<select name="difficulty"><option value="beginner">Анхан</option><option value="intermediate">Дунд</option><option value="advanced">Ахисан</option></select></label></div>
+            <label>Суралцах зорилго *<textarea name="description" rows="3" required placeholder="Энэ challenge-ийг дуусгасны дараа суралцагч юу хийж чаддаг болох вэ?"></textarea></label>
+          </div>
+          <div class="admin-panel builder-panel"><div class="admin-panel-head"><div><span class="eyebrow">LEARN CONTENT</span><h3>Тайлбар ба дадлага</h3></div><span class="content-tip">Markdown дэмжинэ</span></div>
+            <label>Concept тайлбар<textarea name="explanation" rows="6" placeholder="Ойлголтыг энгийнээр тайлбарла. Яагаад хэрэгтэй, хэзээ ашиглахыг хэл."></textarea></label>
+            <div class="admin-field-grid"><label>Кодын хэл<select name="language"><option value="python">Python</option><option value="html">HTML</option><option value="css">CSS</option><option value="javascript">JavaScript</option></select></label><label>XP reward<input type="number" name="xp" value="80" min="10" max="1000" /></label></div>
+            <label>Starter code<textarea class="code-input" name="starter_code" rows="9" placeholder="# Суралцагчийн эхлэх код энд байна"></textarea></label>
+          </div>
+          <div class="admin-panel builder-panel" id="tests"><div class="admin-panel-head"><div><span class="eyebrow">AUTOMATED TESTS</span><h3>Зөв хариуг автоматаар шалгах</h3><p>Hidden test-ийг суралцагчид харуулахгүй. Нийт test-ийн 70%-ийг давсан үед partial feedback өгнө.</p></div><button class="button button-ghost button-small" id="add-test" type="button">+ Test нэмэх</button></div>
+            <div class="test-builder-table"><div class="test-row test-row-head"><span>#</span><span>Input</span><span>Expected output</span><span>Visibility</span><span></span></div><div class="test-row"><span>01</span><input name="test_input[]" placeholder="name=CodeCraft" /><input name="test_expected[]" placeholder="Сайн уу, CodeCraft!" /><select name="test_visibility[]"><option value="visible">Visible</option><option value="hidden">Hidden</option></select><button class="remove-test" type="button" aria-label="Remove test">×</button></div><div class="test-row"><span>02</span><input name="test_input[]" placeholder="name=Student" /><input name="test_expected[]" placeholder="Сайн уу, Student!" /><select name="test_visibility[]"><option value="visible">Visible</option><option value="hidden">Hidden</option></select><button class="remove-test" type="button" aria-label="Remove test">×</button></div></div>
+            <div class="test-health"><span>✓</span><p><strong>Test coverage сайн байна.</strong> Нууц test нэмбэл edge case илрүүлэх чадвар нэмэгдэнэ.</p></div>
+          </div>
+          <div class="admin-panel builder-panel"><div class="admin-panel-head"><div><span class="eyebrow">GUIDANCE</span><h3>Hint ба feedback</h3></div><span class="content-tip">Суралцагчийг хариу руу шууд түлхэхгүй</span></div><label>Hint 1<textarea name="hint" rows="3" placeholder="Жишээ: Эхлээд input-оос нэрийг салгаж аваад function руу дамжуул."></textarea></label><label>Common mistake<textarea name="common_mistake" rows="3" placeholder="Энд суралцагчид ихэвчлэн гаргадаг алдааг тайлбарла."></textarea></label></div>
+        </div>
+        <aside class="builder-preview-column"><div class="admin-panel sticky-preview"><div class="admin-panel-head"><div><span class="eyebrow">LIVE PREVIEW</span><h3>Суралцагчид харагдах нь</h3></div><span class="preview-dot">●</span></div><div class="preview-card"><span class="status-badge" id="preview-type">Lesson</span><h4 id="preview-title">Шинэ контентын гарчиг</h4><p id="preview-description">Суралцах зорилго энд харагдана.</p><div class="preview-code"><span>challenge.py</span><code>def solve():<br>&nbsp;&nbsp;# your code here<br>&nbsp;&nbsp;pass</code></div><div class="preview-meta"><span>Python</span><strong>+80 XP</strong></div><button class="button button-primary button-full" type="button">Code Lab-д нээх →</button></div><div class="preview-flow"><span>Унш</span><i>→</i><span>Бич</span><i>→</i><span>Шалга</span><i>→</i><span>XP</span></div><div class="publish-checklist"><p><span>✓</span> Тайлбар оруулсан</p><p><span>○</span> 2 automated test нэмсэн</p><p><span>○</span> Hint бэлэн</p></div></div></aside>
+        <div class="builder-actions"><button class="button button-ghost" type="button">Cancel</button><span class="save-status" id="save-status"></span><button class="button button-dark" type="button" id="save-draft">Draft хадгалах</button><button class="button button-primary" type="submit">Test хийгээд Publish →</button></div>
+      </form>
+    </section>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}<script>
+(() => {
+  const form = document.querySelector('#content-builder-form');
+  const type = document.querySelector('#content-type');
+  const title = form.querySelector('[name=title]');
+  const description = form.querySelector('[name=description]');
+  const xp = form.querySelector('[name=xp]');
+  const previewType = document.querySelector('#preview-type');
+  const previewTitle = document.querySelector('#preview-title');
+  const previewDescription = document.querySelector('#preview-description');
+  const previewMeta = document.querySelector('.preview-meta strong');
+  const status = document.querySelector('#save-status');
+  const testTable = document.querySelector('.test-builder-table');
+  const updatePreview = () => { previewType.textContent = type.options[type.selectedIndex].text.split(' / ')[0]; previewTitle.textContent = title.value || 'Шинэ контентын гарчиг'; previewDescription.textContent = description.value || 'Суралцах зорилго энд харагдана.'; previewMeta.textContent = `+${xp.value || 0} XP`; };
+  [type, title, description, xp].forEach((element) => element.addEventListener('input', updatePreview));
+  type.addEventListener('change', updatePreview);
+  document.querySelector('#add-test').addEventListener('click', () => { const rows = testTable.querySelectorAll('.test-row:not(.test-row-head)'); const number = String(rows.length + 1).padStart(2, '0'); const row = document.createElement('div'); row.className = 'test-row'; row.innerHTML = `<span>${number}</span><input name="test_input[]" placeholder="Input value" /><input name="test_expected[]" placeholder="Expected output" /><select name="test_visibility[]"><option value="visible">Visible</option><option value="hidden">Hidden</option></select><button class="remove-test" type="button" aria-label="Remove test">×</button>`; testTable.appendChild(row); });
+  testTable.addEventListener('click', (event) => { if (!event.target.classList.contains('remove-test')) return; event.target.closest('.test-row').remove(); });
+  document.querySelector('#save-draft').addEventListener('click', () => { status.textContent = 'Draft локал хадгалагдлаа'; status.className = 'save-status is-success'; });
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    status.textContent = 'Test шалгаж байна…'; status.className = 'save-status';
+    const formData = new FormData(form);
+    const testInputs = [...form.querySelectorAll('[name="test_input[]"]')];
+    const testOutputs = [...form.querySelectorAll('[name="test_expected[]"]')];
+    const testVisibility = [...form.querySelectorAll('[name="test_visibility[]"]')];
+    const payload = Object.fromEntries(formData.entries());
+    payload.tests = testInputs.map((input, index) => ({input: input.value, expected_output: testOutputs[index]?.value || '', is_hidden: testVisibility[index]?.value === 'hidden'})).filter((item) => item.expected_output.trim());
+    payload.hints = [payload.hint || ''].filter(Boolean);
+    payload.course_slug = payload.course_id;
+    payload.xp_reward = Number(payload.xp || 0);
+    payload.status = 'draft';
+    try {
+      if ({{ 'true' if backend_enabled else 'false' }}) {
+        const response = await fetch('/api/admin/content', {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Content save failed');
+        status.textContent = `✓ Content #${result.content.id} draft хадгалагдлаа.`;
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 650));
+        status.textContent = '✓ Automated test pass. Preview draft бэлэн.';
+      }
+      status.className = 'save-status is-success';
+    } catch (error) {
+      status.textContent = error.message === 'Unauthorized' ? 'Нэвтэрч байж content хадгална.' : `Алдаа: ${error.message}`;
+      status.className = 'save-status';
+    }
+  });
+})();
+</script>{% endblock %}

@@ -12,9 +12,11 @@ from typing import Dict, List
 import docker
 import requests
 
+from backend.services.static_evaluator import evaluate_static
+
 logger = logging.getLogger(__name__)
 
-SUPPORTED_LANGUAGES = {'python', 'javascript'}
+SUPPORTED_LANGUAGES = {'python', 'javascript', 'html', 'css'}
 MIN_TIMEOUT_SECONDS = 1
 MAX_TIMEOUT_SECONDS = 15
 MIN_MEMORY_MB = 64
@@ -99,6 +101,8 @@ class CodeExecutor:
         if language not in SUPPORTED_LANGUAGES:
             return _error_result(
                 f'Unsupported language. Choose one of: {", ".join(sorted(SUPPORTED_LANGUAGES))}.')
+        if language in {'html', 'css'}:
+            return _error_result('HTML/CSS challenges must be evaluated as a test case set.')
         try:
             timeout = int(timeout)
             memory_limit_mb = int(memory_limit_mb)
@@ -191,6 +195,8 @@ class CodeExecutor:
             return _error_result('Test cases must be provided as a list.')
         if len(test_cases) > MAX_TEST_CASES:
             return _error_result(f'Test case count exceeds the {MAX_TEST_CASES} case limit.')
+        if language in {'html', 'css'}:
+            return evaluate_static(code, language, test_cases)
 
         results = {
             'total_tests': len(test_cases),

@@ -1,8 +1,12 @@
-"""Supabase Auth endpoints for CodeCraft Academy."""
+"""CodeCraft-owned authentication endpoints for CodeCraft Academy."""
 
 import os
 import re
+import secrets
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlencode
+
+import requests
 from functools import wraps
 
 import jwt
@@ -36,6 +40,47 @@ def _public_user(profile: dict) -> dict:
     }
 
 
+def _secret_key() -> str:
+    return current_app.config.get("SECRET_KEY") or os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+
+
+def _issue_token(user: dict) -> str:
+    now = datetime.now(timezone.utc)
+    return jwt.encode(
+        {
+            "user_id": int(user["id"]),
+            "role": user.get("role", "student"),
+            "iat": int(now.timestamp()),
+            "exp": int((now + timedelta(days=1)).timestamp()),
+        },
+        _secret_key(),
+        algorithm="HS256",
+    )
+
+
+def _external_auth_payload(auth_response, provider: str = "email") -> dict:
+    """Map a Supabase provider response to the app's local JWT contract."""
+    auth_user = _auth_value(auth_response, "user")
+    if not auth_user:
+        raise RuntimeError("Provider response did not include a user")
+    auth_user_id = str(_auth_value(auth_user, "id", ""))
+    email = _auth_value(auth_user, "email")
+    metadata = _auth_value(auth_user, "user_metadata", {}) or {}
+    name = metadata.get("display_name") or metadata.get("full_name") or metadata.get("name") or (email.split("@", 1)[0] if email else "суралцагч")
+    if not auth_user_id or not email:
+        raise RuntimeError("Provider response did not include identity fields")
+    user = db.ensure_external_user(
+        auth_user_id=auth_user_id,
+        email=email,
+        name=name,
+        provider=provider,
+        avatar_url=metadata.get("avatar_url") or metadata.get("picture"),
+    )
+    if not user:
+        raise RuntimeError("Could not create local user projection")
+    return {"provider": provider, "token": _issue_token(user), "user": _public_user(user)}
+
+
 def token_required(function):
     """Validate a Supabase access token and attach its own CodeCraft profile."""
     @wraps(function)
@@ -46,8 +91,8 @@ def token_required(function):
         if not token:
             return error_response(
                 "missing_token",
-                "A valid Supabase access token is required.",
-                "Supabase нэвтрэлтийн хүчинтэй token шаардлагатай.",
+                "A valid CodeCraft session token is required.",
+                "CodeCraft-ийн хүчинтэй session token шаардлагатай.",
                 401,
             )
         try:
@@ -70,11 +115,11 @@ def token_required(function):
         except (jwt.InvalidTokenError, KeyError, RuntimeError):
             return error_response(
                 "invalid_token",
-                "The Supabase session is invalid or has expired.",
-                "Supabase нэвтрэлтийн session хүчингүй эсвэл хугацаа нь дууссан байна.",
+                "The CodeCraft session is invalid or has expired.",
+                "CodeCraft-ийн session хүчингүй эсвэл хугацаа нь дууссан байна.",
                 401,
             )
-        return function(profile, *args, **kwargs)
+        return function(current_user, *args, **kwargs)
 
     return decorated
 
@@ -118,7 +163,59 @@ def _frontend_url() -> str:
 
 
 def _email_confirmation_url() -> str:
-    return f"{_frontend_url().rstrip('/')}/auth?confirmed=1"
+    return f"{_frontend_url().rstrip('/')}/"
+
+
+def _google_callback_url() -> str:
+    return os.getenv(
+        "GOOGLE_OAUTH_REDIRECT_URL",
+        f"{_frontend_url().rstrip('/')}/api/auth/google/callback",
+    ).rstrip("/")
+
+
+def _google_authorization_url() -> str:
+    client_id = os.getenv("GOOGLE_CLIENT_ID")
+    if not client_id:
+        raise RuntimeError("GOOGLE_CLIENT_ID is not configured")
+    state = jwt.encode(
+        {"nonce": secrets.token_urlsafe(24), "iat": int(datetime.now(timezone.utc).timestamp()), "exp": int((datetime.now(timezone.utc) + timedelta(minutes=10)).timestamp())},
+        _secret_key(), algorithm="HS256",
+    )
+    return "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode({
+        "client_id": client_id,
+        "redirect_uri": _google_callback_url(),
+        "response_type": "code",
+        "scope": "openid email profile",
+        "state": state,
+        "access_type": "online",
+        "prompt": "select_account",
+    })
+
+
+def _google_identity(code: str) -> dict:
+    client_id = os.getenv("GOOGLE_CLIENT_ID")
+    client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        raise RuntimeError("Google OAuth credentials are not configured")
+    token_response = requests.post("https://oauth2.googleapis.com/token", data={
+        "code": code,
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "redirect_uri": _google_callback_url(),
+        "grant_type": "authorization_code",
+    }, timeout=8)
+    token_response.raise_for_status()
+    id_token = token_response.json().get("id_token")
+    if not id_token:
+        raise RuntimeError("Google token response did not include id_token")
+    identity_response = requests.get("https://oauth2.googleapis.com/tokeninfo", params={"id_token": id_token}, timeout=8)
+    identity_response.raise_for_status()
+    identity = identity_response.json()
+    if identity.get("aud") != client_id or identity.get("iss") not in {"accounts.google.com", "https://accounts.google.com"}:
+        raise RuntimeError("Google identity verification failed")
+    if identity.get("email_verified") not in {True, "true", "True"}:
+        raise RuntimeError("Google email is not verified")
+    return identity
 
 
 def _session_response(payload: dict, status: int = 200):
@@ -144,35 +241,15 @@ def _auth_user_value(auth_user, key, default=None):
 
 
 def _session_payload(auth_response, provider: str = "password") -> dict:
-    """Turn a Supabase Auth response into the safe frontend session shape."""
-    auth_user = _auth_value(auth_response, "user")
-    session = _auth_value(auth_response, "session")
-    if not auth_user:
-        raise RuntimeError("Supabase Auth did not return a user")
-    access_token = _auth_value(session, "access_token") if session else None
-    refresh_token = _auth_value(session, "refresh_token") if session else None
-    if access_token:
-        profile = db.ensure_profile(auth_user, access_token)
-    else:
-        metadata = _auth_value(auth_user, "user_metadata", {}) or {}
-        email = _auth_value(auth_user, "email")
-        profile = {
-            "id": str(_auth_value(auth_user, "id", "")),
-            "email": email,
-            "name": metadata.get("display_name") or metadata.get("full_name") or (email.split("@", 1)[0] if email else "суралцагч"),
-            "role": "student",
-            "locale": "mn",
-            "theme": "system",
-        }
-    payload = {
-        "provider": provider,
-        "user": _public_user(profile),
-    }
-    if access_token:
-        payload["token"] = access_token
-    if refresh_token:
-        payload["refresh_token"] = refresh_token
-    return payload
+    """Turn a legacy provider response into the app's stable local-session contract."""
+    return _external_auth_payload(auth_response, provider)
+
+
+def _local_session_payload(user: dict | object) -> dict:
+    """Issue an app session from a local user, retaining provider compatibility for older adapters."""
+    if isinstance(user, dict) and user.get("id") is not None:
+        return {"provider": "password", "token": _issue_token(user), "user": _public_user(user)}
+    return _session_payload(user, "password")
 
 
 @auth_bp.route("/register", methods=["POST"])
@@ -196,15 +273,8 @@ def register():
             400,
         )
     try:
-        response = db.sign_up_with_password(email, password, name, _email_confirmation_url())
-        payload = _session_payload(response, "password")
-        if not payload.get("token"):
-            return {
-                "message": "Check your email to confirm your CodeCraft account.",
-                "message_mn": "Имэйлээ шалгаад CodeCraft бүртгэлээ баталгаажуулна уу.",
-                "verification_required": True,
-                "user": payload["user"],
-            }, 202
+        user = db.create_user(email=email, password=password, name=name, role="student")
+        payload = {"provider": "password", "token": _issue_token(user), "user": _public_user(user)}
         return {
             "message": "Account created successfully.",
             "message_mn": "Бүртгэл амжилттай үүслээ.",
@@ -218,8 +288,8 @@ def register():
             return error_response("email_registered", "This email is already registered.", "Энэ имэйл аль хэдийн бүртгэгдсэн байна.", 409)
         return error_response(
             "registration_failed",
-            "The Supabase account could not be created.",
-            "Supabase бүртгэл үүсгэхэд алдаа гарлаа.",
+            "The CodeCraft account could not be created.",
+            "CodeCraft бүртгэл үүсгэхэд алдаа гарлаа.",
             502,
         )
 
@@ -237,8 +307,9 @@ def login():
             400,
         )
     try:
-        payload = _session_payload(db.sign_in_with_password(email, password), "password")
-        return {"message": "Signed in.", "message_mn": "Амжилттай нэвтэрлээ.", **payload}, 200
+        user = db.sign_in_with_password(email, password)
+        payload = _local_session_payload(user)
+        return _session_response({"message": "Signed in.", "message_mn": "Амжилттай нэвтэрлээ.", **payload}, 200)
     except Exception:
         return error_response(
             "invalid_credentials",
@@ -290,7 +361,7 @@ def verify_email_otp():
 @auth_bp.route("/google/start", methods=["GET"])
 def google_start():
     try:
-        return {"url": db.google_login_url(_google_callback_url())}, 200
+        return {"url": _google_authorization_url()}, 200
     except Exception:
         return error_response(
             "google_oauth_unavailable",
@@ -303,11 +374,19 @@ def google_start():
 @auth_bp.route("/google/callback", methods=["GET"])
 def google_callback():
     code = request.args.get("code", "").strip()
-    if not code:
+    state = request.args.get("state", "").strip()
+    if not code or not state:
         return redirect(f"{_frontend_url()}?auth_error=google_oauth_failed")
     try:
-        auth_response = db.exchange_google_code(code)
-        payload = _external_auth_payload(auth_response, "google")
+        jwt.decode(state, _secret_key(), algorithms=["HS256"])
+        identity = _google_identity(code)
+        user = db.ensure_google_user(
+            subject=str(identity["sub"]),
+            email=str(identity["email"]),
+            display_name=str(identity.get("name") or identity["email"].split("@", 1)[0]),
+            avatar_url=identity.get("picture"),
+        )
+        payload = {"provider": "google", "token": _issue_token(user), "user": _public_user(user)}
         response = redirect(f"{_frontend_url()}?auth_provider=google")
         response.set_cookie("codecraft_session", payload["token"], max_age=86400, httponly=True,
                             secure=current_app.config.get("ENVIRONMENT") == "production",
@@ -315,77 +394,6 @@ def google_callback():
         return response
     except Exception:
         return redirect(f"{_frontend_url()}?auth_error=google_oauth_failed")
-
-
-@auth_bp.route("/register", methods=["POST"])
-def register():
-    data = request.get_json(silent=True) or {}
-    if not data.get("email") or not data.get("password") or not data.get("name"):
-        return error_response(
-            "missing_fields",
-            "Email, password and name are required.",
-            "Имэйл, нууц үг болон нэр заавал шаардлагатай.",
-            400,
-        )
-    if len(data["password"]) < 8:
-        return error_response(
-            "weak_password",
-            "Password must contain at least 8 characters.",
-            "Нууц үг хамгийн багадаа 8 тэмдэгттэй байна.",
-            400,
-        )
-    if db.get_user_by_email(data["email"].strip().lower()):
-        return error_response(
-            "email_registered",
-            "This email is already registered.",
-            "Энэ имэйл аль хэдийн бүртгэгдсэн байна.",
-            409,
-        )
-    try:
-        user = db.create_user(
-            email=data["email"].strip().lower(),
-            password=data["password"],
-            name=data["name"].strip(),
-            role="student",
-        )
-        return _session_response({
-            "message": "User registered successfully.",
-            "message_mn": "Хэрэглэгч амжилттай бүртгэгдлээ.",
-            "token": _issue_token(user),
-            "user": _public_user(user),
-        }, 201)
-    except Exception:
-        return error_response(
-            "registration_failed",
-            "The account could not be created.",
-            "Бүртгэл үүсгэхэд алдаа гарлаа.",
-            500,
-        )
-
-
-@auth_bp.route("/login", methods=["POST"])
-def login():
-    data = request.get_json(silent=True) or {}
-    if not data.get("email") or not data.get("password"):
-        return error_response(
-            "missing_credentials",
-            "Email and password are required.",
-            "Имэйл болон нууц үг заавал шаардлагатай.",
-            400,
-        )
-    try:
-        auth_response = db.sign_in_with_password(
-            data["email"].strip().lower(), data["password"]
-        )
-        payload = _external_auth_payload(auth_response, "email")
-    except Exception:
-        return error_response(
-            "invalid_credentials",
-            "Invalid email or password.",
-            "Имэйл эсвэл нууц үг буруу байна.",
-            401,
-        )
-    return _session_response(payload)
 
 
 @auth_bp.route("/logout", methods=["POST"])
@@ -401,7 +409,29 @@ def get_current_user(current_user):
     return {"user": _public_user(current_user)}, 200
 
 
-@auth_bp.route("/logout", methods=["POST"])
-def logout():
-    """The browser clears its local tokens; server-side sessions remain stateless."""
-    return {"message": "Signed out.", "message_mn": "Амжилттай гарлаа."}, 200
+@auth_bp.route("/users/<int:user_id>/role", methods=["PATCH"])
+@token_required
+def update_user_role(current_user, user_id):
+    if current_user.get("role") not in {"owner", "admin"}:
+        return error_response(
+            "permission_denied",
+            "Only an owner or admin can change roles.",
+            "Зөвхөн owner эсвэл admin хэрэглэгч үүрэг өөрчилж болно.",
+            403,
+        )
+    data = request.get_json(silent=True) or {}
+    role = str(data.get("role", "")).strip().lower()
+    if role not in {"student", "teacher", "admin", "owner"}:
+        return error_response(
+            "invalid_role",
+            "The requested role is invalid.",
+            "Хүссэн үүрэг буруу байна.",
+            400,
+        )
+    try:
+        user = db.update_user(user_id, {"role": role})
+    except Exception:
+        return error_response("role_update_failed", "The user role could not be updated.", "Хэрэглэгчийн үүрэг шинэчлэгдсэнгүй.", 502)
+    if not user:
+        return error_response("user_not_found", "The user was not found.", "Хэрэглэгч олдсонгүй.", 404)
+    return {"user": _public_user(user), "message_mn": "Хэрэглэгчийн үүрэг шинэчлэгдлээ."}, 200

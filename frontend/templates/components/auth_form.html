@@ -1,0 +1,24 @@
+<section class="auth-page container-wide">
+  <div class="auth-brand-panel">
+    <span class="eyebrow">CODECRAFT ACADEMY</span>
+    <h1>Өөрийн сурах орон зайгаа нээ.</h1>
+    <p>Supabase хамгаалалттай бүртгэлээр хичээлээ хадгалж, ахицаа хаанаас ч үргэлжлүүл.</p>
+    <div class="auth-quote"><span>“</span><p>Төгс эхлэл гэж байдаггүй. Харин өнөөдөр эхлэх сонголт бий.</p></div>
+    <div class="auth-stats"><span><strong>57+</strong><small>хичээл</small></span><span><strong>4</strong><small>чиглэл</small></span><span><strong>∞</strong><small>боломж</small></span></div>
+  </div>
+  <div class="auth-card">
+    <div class="auth-tabs"><a class="auth-tab{% if auth_mode == 'login' %} is-active{% endif %}" href="{{ url_for('frontend_page', page='account/login') }}">Нэвтрэх</a><a class="auth-tab{% if auth_mode == 'register' %} is-active{% endif %}" href="{{ url_for('frontend_page', page='account/register') }}">Бүртгүүлэх</a></div>
+    <div class="auth-heading"><h2 id="auth-title">{% if auth_mode == 'register' %}Өөрийн замаа эхлүүл.{% else %}Тавтай морил.{% endif %}</h2><p id="auth-subtitle">{% if auth_mode == 'register' %}Үнэгүй бүртгэлээр ахицаа Supabase-д хадгал.{% else %}Суралцах орон зайдаа үргэлжлүүлэн нэвтэр.{% endif %}</p></div>
+    <button class="google-button" id="google-login" type="button"><span class="google-g">G</span><span>Google-ээр үргэлжлүүлэх</span></button>
+    <div class="auth-divider"><span>эсвэл имэйлээр</span></div>
+    <form id="auth-form" novalidate>
+      <div class="field-group" id="name-field"{% if auth_mode != 'register' %} hidden{% endif %}><label for="name">Нэр</label><input id="name" name="name" type="text" placeholder="Таны нэр" autocomplete="name"{% if auth_mode == 'register' %} required{% endif %}></div>
+      <div class="field-group"><label for="email">Имэйл</label><input id="email" name="email" type="email" placeholder="you@example.com" autocomplete="email" required></div>
+      <div class="field-group"><div class="field-label-row"><label for="password">Нууц үг</label><span id="password-help">Хамгийн багадаа 8 тэмдэгт</span></div><input id="password" name="password" type="password" placeholder="••••••••" autocomplete="current-password" minlength="8" required></div>
+      <label class="consent" id="consent-field"{% if auth_mode != 'register' %} hidden{% endif %}><input id="consent" type="checkbox"{% if auth_mode == 'register' %} required{% endif %}><span>CodeCraft-ийн нөхцөл, нууцлалын бодлогыг зөвшөөрч байна.</span></label>
+      <button class="button button-primary button-full" id="auth-submit" type="submit">{% if auth_mode == 'register' %}Бүртгэл үүсгэх{% else %}Нэвтрэх{% endif %} <span>→</span></button>
+      <p class="form-message" id="auth-message" role="status" aria-live="polite"></p>
+    </form>
+    <p class="auth-switch" id="auth-switch-copy">{% if auth_mode == 'register' %}Аль хэдийн бүртгэлтэй юу? <a href="{{ url_for('frontend_page', page='account/login') }}">Нэвтрэх</a>{% else %}Анх удаа ирж байна уу? <a href="{{ url_for('frontend_page', page='account/register') }}">Бүртгэл үүсгэх</a>{% endif %}</p>
+  </div>
+</section>
