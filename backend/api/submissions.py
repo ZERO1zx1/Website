@@ -13,6 +13,7 @@ from backend.api.auth import token_required
 from backend.db import db
 from backend.services.code_executor import get_executor
 from backend.services.submission_queue import enqueue_submission
+from learning_experiences import get_challenge
 
 submissions_bp = Blueprint('submissions', __name__)
 
@@ -99,15 +100,33 @@ def create_submission(current_user):
 @submissions_bp.route('/run', methods=['POST'])
 @token_required
 def run_code(current_user):
-    """Execute code against visible test cases without creating a graded submission."""
+    """Execute a DB problem or a published/static catalog challenge without saving a submission."""
     if current_user['role'] != 'student':
         return {'error': 'Only students can run code'}, 403
     if not _execution_enabled():
         return {'error': 'Code execution is disabled until the sandbox is configured'}, 503
     data = request.get_json(silent=True) or {}
-    if not data.get('problem_id') or not isinstance(data.get('code'), str) or not data['code'].strip():
-        return {'error': 'Missing required fields: problem_id, code'}, 400
+    if not isinstance(data.get('code'), str) or not data['code'].strip():
+        return {'error': 'Missing required field: code'}, 400
+    challenge_id = data.get('challenge_id')
     try:
+        if challenge_id:
+            challenge = get_challenge(str(challenge_id))
+            if not challenge:
+                return {'error': 'Challenge not found'}, 404
+            language = str(data.get('language') or challenge.get('course_id') or 'python').lower()
+            test_cases = [item for item in challenge.get('tests', []) if not item.get('is_hidden')]
+            if not test_cases and challenge.get('expected_output'):
+                test_cases = [{'input': '', 'expected_output': challenge['expected_output'], 'is_hidden': False}]
+            if not test_cases:
+                return {'error': 'No visible test cases are available'}, 409
+            result = get_executor().execute_test_cases(
+                code=data['code'], language=language, test_cases=test_cases,
+            )
+            return {'mode': 'catalog', 'challenge_id': challenge_id, **result}, 200
+
+        if not data.get('problem_id'):
+            return {'error': 'Missing problem_id or challenge_id'}, 400
         problem = db.get_problem(data['problem_id'])
         if not problem:
             return {'error': 'Problem not found'}, 404
@@ -118,9 +137,7 @@ def run_code(current_user):
         if not test_cases:
             return {'error': 'No visible test cases are available'}, 409
         result = get_executor().execute_test_cases(
-            code=data['code'],
-            language=language,
-            test_cases=test_cases,
+            code=data['code'], language=language, test_cases=test_cases,
         )
         return {'mode': 'runtime', 'problem_id': data['problem_id'], **result}, 200
     except Exception:
