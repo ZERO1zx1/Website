@@ -65,9 +65,14 @@
       <div class="lesson-section" id="quiz">
         <h2>04 · 1 минутын Review</h2>
         <div class="quiz-card">
-          <p>{{ lesson.quiz.question }}</p>
+          <p class="quiz-question">{{ lesson.quiz.question }}</p>
+          <form class="quiz-check" data-quiz-form data-course-slug="{{ course.id }}" data-lesson-slug="{{ lesson.id }}">
+            <label for="quiz-answer">Өөрийн хариуг бич</label>
+            <div class="quiz-answer-row"><input id="quiz-answer" name="answer" type="text" required maxlength="500" autocomplete="off" placeholder="Хариугаа энд бич…"><button class="button button-dark button-small" type="submit">Шалгах</button></div>
+            <p class="form-message" data-quiz-feedback role="status" aria-live="polite"></p>
+          </form>
           <details class="quiz-answer">
-            <summary>Хариуг харах</summary>
+            <summary>Хариуны тайлбарыг харах</summary>
             <div>{{ lesson.quiz.answer }}</div>
           </details>
         </div>
@@ -77,7 +82,7 @@
       <div class="lesson-task" id="practice">
         <span class="task-number">MINI PRACTICE</span>
         <h2>{{ lesson.task }}</h2>
-        <p>Кодын лабораторид ороод өөрийн шийдлийг бич. Дууссаны дараа ахицдаа тэмдэглэвэл таны явц Supabase-д найдвартай хадгалагдана.</p>
+        <p>Кодын лабораторид ороод өөрийн шийдлийг бич. Дууссаны дараа ахицдаа тэмдэглэвэл CodeCraft-ийн өөрийн бүртгэлтэй холбогдон найдвартай хадгалагдана.</p>
         <div class="button-row">
           <a class="button button-primary" href="{{ url_for('frontend_page', page='workspace') }}?course={{ course.id }}&lesson={{ lesson.id }}">Лабораторид нээх <span>→</span></a>
           <button class="button button-ghost" type="button" data-completion-button>Дууссанд тооцох</button>
@@ -97,7 +102,7 @@
         <span class="eyebrow">ТАНЫ АХИЦ</span>
         <strong data-lesson-progress-value>0 <small>/ {{ course.lesson_count }}</small></strong>
         <div class="progress-bar">
-          <i data-lesson-progress-bar style="width:0%"></i>
+          <i data-lesson-progress-bar></i>
         </div>
         <span data-lesson-progress-status>Ахиц ачаалж байна…</span>
       </div>
@@ -120,4 +125,5 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/pages/lesson.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/pages/quiz.js') }}" defer></script>
 {% endblock %}

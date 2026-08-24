@@ -38,9 +38,10 @@ class LessonProgressUpdate(StrictModel):
 class QuizAttemptCreate(StrictModel):
     course_slug: Literal["python", "html", "css", "javascript"]
     lesson_slug: str = Field(min_length=1, max_length=96, pattern=r"^[a-z0-9][a-z0-9_-]*$")
-    score: int = Field(ge=0)
-    total_questions: int = Field(gt=0, le=100)
+    score: int = Field(default=0, ge=0)
+    total_questions: int = Field(default=1, gt=0, le=100)
     answers: list[dict] = Field(default_factory=list, max_length=100)
+    answer: str | None = Field(default=None, max_length=500)
 
 
 def _validated(model):
@@ -95,21 +96,33 @@ def _catalog_summary(progress):
         lessons = [lesson for module in course.get("modules", []) for lesson in module.get("lessons", [])]
         course_completed = sum((course_slug, str(lesson.get("id"))) in completed for lesson in lessons)
         total = len(lessons)
+        next_lesson = next(
+            (lesson for lesson in lessons if (course_slug, str(lesson.get("id"))) not in completed),
+            None,
+        )
         courses.append({
             "course_id": course_slug,
             "title": course.get("title", course_slug),
             "total_lessons": total,
             "completed_lessons": course_completed,
             "progress_percent": round((course_completed / total) * 100) if total else 0,
+            "next_lesson_slug": next_lesson.get("id") if next_lesson else None,
+            "next_lesson_title": next_lesson.get("title") if next_lesson else None,
         })
     total_lessons = sum(item["total_lessons"] for item in courses)
     completed_lessons = sum(item["completed_lessons"] for item in courses)
+    recommended = next((course for course in courses if course.get("next_lesson_slug")), None)
     return {
         "courses": courses,
         "completed_lessons": completed_lessons,
         "total_lessons": total_lessons,
         "overall_percent": round((completed_lessons / total_lessons) * 100) if total_lessons else 0,
         "completed_lesson_keys": [f"{course}:{lesson}" for course, lesson in sorted(completed)],
+        "next_recommended": {
+            "course_id": recommended["course_id"],
+            "lesson_slug": recommended["next_lesson_slug"],
+            "lesson_title": recommended["next_lesson_title"],
+        } if recommended else None,
     }
 
 
@@ -173,6 +186,34 @@ def gamification(current_user):
         )
 
 
+def _normalize_quiz_text(value: str) -> str:
+    return "".join(character.lower() for character in value if character.isalnum())
+
+
+def _quiz_answer_result(course_slug: str, lesson_slug: str, answer: str):
+    course = COURSE_CATALOG.get(course_slug)
+    lesson = next(
+        (
+            item
+            for module in (course or {}).get("modules", [])
+            for item in module.get("lessons", [])
+            if item.get("id") == lesson_slug
+        ),
+        None,
+    )
+    expected = str(((lesson or {}).get("quiz") or {}).get("answer") or "")
+    actual_normalized = _normalize_quiz_text(answer)
+    expected_normalized = _normalize_quiz_text(expected)
+    if not lesson or not expected_normalized or len(actual_normalized) < 3:
+        return False, expected
+    correct = (
+        actual_normalized == expected_normalized
+        or actual_normalized in expected_normalized and len(actual_normalized) >= 4
+        or expected_normalized in actual_normalized
+    )
+    return correct, expected
+
+
 @learning_bp.route("/quiz-attempts", methods=["GET", "POST"])
 @token_required
 def quiz_attempts(current_user):
@@ -185,6 +226,15 @@ def quiz_attempts(current_user):
     if error:
         return error
     values = body.model_dump()
+    answer = values.get("answer")
+    if answer is not None:
+        correct, _ = _quiz_answer_result(values["course_slug"], values["lesson_slug"], answer)
+        values["score"] = 1 if correct else 0
+        values["total_questions"] = 1
+        values["answers"] = [{"answer": answer, "correct": correct}]
     if values["score"] > values["total_questions"]:
         return error_response("invalid_score", "Score exceeds total questions.", "Оноо асуултын тооноос их байна.", 400)
-    return {"quiz_attempt": db.create_quiz_attempt(user_id, values)}, 201
+    attempt = db.create_quiz_attempt(user_id, values)
+    if answer is not None:
+        attempt = {**(attempt or {}), "correct": values["score"] == 1, "score": values["score"], "total_questions": 1}
+    return {"quiz_attempt": attempt}, 201

@@ -28,23 +28,15 @@
   };
 
   const loadProgress = async () => {
-    if (!localStorage.getItem('codecraft_token')) {
-      if (progressStatus) progressStatus.textContent = 'Ахиц хадгалахын тулд нэвтэрнэ үү.';
-      if (completionButton) completionButton.textContent = 'Нэвтэрч хадгалах';
-      return;
-    }
     try {
       renderProgress(await window.codecraftApi('/api/learning/summary'));
-    } catch {
-      if (progressStatus) progressStatus.textContent = 'Ахицын мэдээллийг ачаалж чадсангүй.';
+    } catch (error) {
+      if (progressStatus) progressStatus.textContent = error?.status === 401 ? 'Ахиц хадгалахын тулд нэвтэрнэ үү.' : 'Ахицын мэдээллийг ачаалж чадсангүй.';
+      if (completionButton && error?.status === 401) completionButton.textContent = 'Нэвтэрч хадгалах';
     }
   };
 
   completionButton?.addEventListener('click', async () => {
-    if (!localStorage.getItem('codecraft_token')) {
-      window.location.href = lesson.dataset.loginUrl || '/auth?mode=login';
-      return;
-    }
     completionButton.disabled = true;
     try {
       const nextState = !isCompleted;
@@ -55,6 +47,10 @@
       renderProgress(await window.codecraftApi('/api/learning/summary'));
       window.showToast(payload.message_mn || (nextState ? 'Хичээлийг дууссанд тооцлоо.' : 'Хичээлийн тэмдэглэгээг цуцаллаа.'));
     } catch (error) {
+      if (error?.status === 401) {
+        window.location.href = lesson.dataset.loginUrl || '/auth?mode=login';
+        return;
+      }
       window.showToast(error.message, true);
     } finally {
       completionButton.disabled = false;

@@ -27,11 +27,14 @@ def test_frontend_static_assets_are_available(frontend_app):
     client = frontend_app.test_client()
 
     css_response = client.get('/static/css/style.css')
+    tokens_response = client.get('/static/css/tokens.css')
     adapter_response = client.get('/static/js/adapters/api-adapter.js')
     js_response = client.get('/static/js/app.js')
 
     assert css_response.status_code == 200
-    assert b'--ink:' in css_response.data
+    assert b'@import url("tokens.css")' in css_response.data
+    assert tokens_response.status_code == 200
+    assert b'--ink:' in tokens_response.data
     assert adapter_response.status_code == 200
     assert b'codehavenApiAdapter' in adapter_response.data
     assert js_response.status_code == 200

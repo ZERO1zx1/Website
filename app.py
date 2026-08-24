@@ -149,7 +149,18 @@ def create_app(config_name='development'):
             course = COURSE_CATALOG.get(request.args.get('id', 'python'), COURSE_CATALOG['python'])
             return render_template('learning/course.html', page='course', course=course, backend_enabled=not frontend_only)
         if page == 'curriculum':
-            return render_template('learning/curriculum.html', page='curriculum', path_nodes=LEARNING_PATH_NODES, backend_enabled=not frontend_only)
+            total_lesson_count = sum(
+                len(module.get('lessons', []))
+                for course in COURSE_CATALOG.values()
+                for module in course.get('modules', [])
+            )
+            return render_template(
+                'learning/curriculum.html',
+                page='curriculum',
+                path_nodes=LEARNING_PATH_NODES,
+                total_lesson_count=total_lesson_count,
+                backend_enabled=not frontend_only,
+            )
         if page == 'admin':
             return render_template('admin/content-studio.html', page='admin', backend_enabled=not frontend_only)
         if page == 'account/login':

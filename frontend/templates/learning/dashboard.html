@@ -2,13 +2,13 @@
 {% set page = 'dashboard' %}
 {% block title %}Миний ахиц — CodeCraft Academy{% endblock %}
 {% block content %}
-<section class="dashboard-page container-wide" data-dashboard data-login-url="{{ url_for('frontend_page', page='auth') }}?mode=login" data-course-url="{{ url_for('frontend_page', page='course') }}">
-  <div class="dashboard-heading"><div><span class="eyebrow">МИНИЙ АХИЦ</span><h1>Сайн уу, <span data-user-name>суралцагч</span>.</h1><p>Таны дуусгасан хичээл бүр Supabase дээр таны бүртгэлтэй хамт хадгалагдана.</p></div><a class="button button-primary" href="{{ url_for('frontend_page', page='curriculum') }}">Хичээл сонгох <span>→</span></a></div>
+<section class="dashboard-page container-wide" data-dashboard data-login-url="{{ url_for('frontend_page', page='auth') }}?mode=login" data-course-url="{{ url_for('frontend_page', page='course') }}" data-lesson-url="{{ url_for('frontend_page', page='lesson') }}">
+  <div class="dashboard-heading"><div><span class="eyebrow">МИНИЙ АХИЦ</span><h1>Сайн уу, <span data-user-name>суралцагч</span>.</h1><p>Таны дуусгасан хичээл бүр CodeCraft-ийн өөрийн бүртгэлтэй хамт аюулгүй хадгалагдана.</p></div><a class="button button-primary" href="{{ url_for('frontend_page', page='curriculum') }}">Хичээл сонгох <span>→</span></a></div>
   <div class="dashboard-stats">
     <article class="dash-stat dash-stat-primary"><span>Нийт ахиц</span><strong data-stat-overall>0<small>%</small></strong><b data-stat-overall-caption>Эхлэхэд бэлэн</b></article>
     <article class="dash-stat"><span>Дуусгасан хичээл</span><strong data-stat-completed>0</strong><b data-stat-completed-caption>0 хичээлээс</b></article>
     <article class="dash-stat"><span>Идэвхтэй чиглэл</span><strong data-stat-courses>0</strong><b>HTML · CSS · JS · Python</b></article>
-    <article class="dash-stat"><span>Хадгалалт</span><strong>✓</strong><b data-sync-status>Supabase руу синк хийнэ</b></article>
+    <article class="dash-stat"><span>Хадгалалт</span><strong>✓</strong><b data-sync-status>Сервертэй синк хийнэ</b></article>
   </div>
   <section class="dashboard-gamification panel">
     <div class="gamification-main"><span class="gamification-orbit">✦</span><div><span class="eyebrow">YOUR LEARNING ENERGY</span><h2><span data-gamification-level>Level 1</span> · <span data-gamification-xp>0 XP</span></h2><p data-gamification-message>Өнөөдөр нэг жижиг challenge хийж хэмнэлээ эхлүүл.</p></div></div>
@@ -19,7 +19,7 @@
     <section class="panel continue-panel">
       <div class="panel-header"><div><span class="eyebrow">ДАРААГИЙН АЛХАМ</span><h2 data-next-course>Хичээлийг сонгоно уу</h2></div><span class="status-badge" data-next-percent>0% дууссан</span></div>
       <p data-next-description>Сургалтын замаас эхний хичээлээ сонгоод ахицаа хадгалж эхлээрэй.</p>
-      <div class="progress-bar progress-bar-large"><i data-next-bar style="width:0%"></i></div>
+      <div class="progress-bar progress-bar-large"><i data-next-bar></i></div>
       <div class="panel-footer"><span data-next-meta>CodeCraft-ийн хичээлүүд таны хурданд тохирно.</span><a class="button button-dark button-small" data-next-link href="{{ url_for('frontend_page', page='curriculum') }}">Үргэлжлүүлэх <span>→</span></a></div>
     </section>
     <section class="panel focus-panel">
@@ -37,8 +37,8 @@
     </section>
     <section class="panel skill-panel">
       <div class="panel-header"><div><span class="eyebrow">DATA PRIVACY</span><h2>Таны явц хамгаалагдсан</h2></div><a href="{{ url_for('frontend_page', page='profile') }}">↗</a></div>
-      <p class="lesson-intro">Та зөвхөн өөрийн Supabase Auth бүртгэлээрээ явцаа уншиж, өөрчилж чадна. Нууц үг website-ийн database-д хадгалагддаггүй.</p>
-      <div class="lesson-note success"><strong>RLS хамгаалалттай</strong><span>Lesson completion болон course percentage нь хэрэглэгчийн UUID-гаар тусгаарлагдана.</span></div>
+      <p class="lesson-intro">Та зөвхөн өөрийн CodeCraft бүртгэлээрээ явцаа уншиж, өөрчилж чадна. Нууц үг hash хэлбэрээр хадгалагдана.</p>
+      <div class="lesson-note success"><strong>RLS хамгаалалттай</strong><span>Lesson completion болон course percentage нь таны app identity-гаар тусгаарлагдана.</span></div>
     </section>
   </div>
 </section>

@@ -262,6 +262,11 @@ COURSE_CATALOG = {
     }
 }
 
+from curriculum_extensions import EXTRA_MODULES
+
+for _course_id, _modules in EXTRA_MODULES.items():
+    COURSE_CATALOG[_course_id]['modules'].extend(_modules)
+
 for _course in COURSE_CATALOG.values():
     _course['lesson_count'] = sum(len(module['lessons']) for module in _course['modules'])
     _course['first_lesson'] = _course['modules'][0]['lessons'][0]['id']

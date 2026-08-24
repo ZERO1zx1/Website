@@ -3,7 +3,6 @@
 
   const page = document.querySelector('[data-profile-page]');
   if (!page || typeof window.codecraftApi !== 'function') return;
-  const token = localStorage.getItem('codecraft_token');
   const themeSelect = page.querySelector('[data-preference-theme]');
   const localeSelect = page.querySelector('[data-preference-locale]');
   const saveStatus = page.querySelector('[data-save-status]');
@@ -18,7 +17,7 @@
     text('[data-profile-initials]', name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase());
     if (themeSelect) themeSelect.value = profile.theme || localStorage.getItem('codecraft_theme') || 'system';
     if (localeSelect) localeSelect.value = profile.locale || 'mn';
-    localStorage.setItem('codecraft_user', JSON.stringify({ ...profile, name }));
+    window.localStorage.setItem('codecraft_user', JSON.stringify({ ...profile, name }));
   };
 
   const renderCourses = (summary = {}) => {
@@ -60,7 +59,7 @@
   };
 
   const savePreferences = async () => {
-    if (!token || !themeSelect || !localeSelect) return;
+    if (!themeSelect || !localeSelect) return;
     saveStatus.textContent = 'Хадгалж байна…';
     try {
       const payload = await window.codecraftApi('/api/learning/profile', {
@@ -82,31 +81,32 @@
 
   page.querySelector('[data-logout]')?.addEventListener('click', async () => {
     try { await fetch(`${window.CODECRAFT_CONFIG.apiBase}/api/auth/logout`, { method: 'POST', credentials: 'same-origin' }); } catch (_) {}
-    ['codecraft_token', 'codecraft_refresh_token', 'codecraft_user'].forEach((key) => localStorage.removeItem(key));
+    window.localStorage.removeItem('codecraft_user');
     window.location.href = page.dataset.homeUrl || '/';
   });
   themeSelect?.addEventListener('change', savePreferences);
   localeSelect?.addEventListener('change', savePreferences);
 
-  if (!token) {
+  const showUnauthenticated = () => {
     populateProfile(storedUser);
     if (saveStatus) saveStatus.textContent = 'Нэвтрэх шаардлагатай';
     const container = page.querySelector('[data-profile-courses]');
-    if (container) {
-      container.replaceChildren();
-      const empty = document.createElement('p');
-      empty.className = 'empty-state';
-      empty.append('Ахиц харахын тулд ');
-      const link = document.createElement('a');
-      link.href = page.dataset.loginUrl || '/auth?mode=login';
-      link.textContent = 'нэвтэрнэ үү';
-      empty.append(link, '.');
-      container.append(empty);
-    }
-    return;
-  }
+    if (!container) return;
+    container.replaceChildren();
+    const empty = document.createElement('p');
+    empty.className = 'empty-state';
+    empty.append('Ахиц харахын тулд ');
+    const link = document.createElement('a');
+    link.href = page.dataset.loginUrl || '/auth?mode=login';
+    link.textContent = 'нэвтэрнэ үү';
+    empty.append(link, '.');
+    container.append(empty);
+  };
 
   Promise.all([window.codecraftApi('/api/learning/profile'), window.codecraftApi('/api/learning/summary')])
     .then(([profile, summary]) => { populateProfile(profile.profile); renderCourses(summary); saveStatus.textContent = 'Хадгалагдсан'; })
-    .catch((error) => { saveStatus.textContent = 'Синк холбогдсонгүй'; window.showToast(error.message, true); });
+    .catch((error) => {
+      if (error?.status === 401) showUnauthenticated();
+      else { saveStatus.textContent = 'Синк холбогдсонгүй'; window.showToast(error.message, true); }
+    });
 })();

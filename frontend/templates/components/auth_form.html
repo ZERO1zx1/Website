@@ -2,13 +2,13 @@
   <div class="auth-brand-panel">
     <span class="eyebrow">CODECRAFT ACADEMY</span>
     <h1>Өөрийн сурах орон зайгаа нээ.</h1>
-    <p>Supabase хамгаалалттай бүртгэлээр хичээлээ хадгалж, ахицаа хаанаас ч үргэлжлүүл.</p>
+    <p>CodeCraft-ийн өөрийн бүртгэлээр хичээлээ хадгалж, ахицаа хаанаас ч үргэлжлүүл.</p>
     <div class="auth-quote"><span>“</span><p>Төгс эхлэл гэж байдаггүй. Харин өнөөдөр эхлэх сонголт бий.</p></div>
     <div class="auth-stats"><span><strong>57+</strong><small>хичээл</small></span><span><strong>4</strong><small>чиглэл</small></span><span><strong>∞</strong><small>боломж</small></span></div>
   </div>
   <div class="auth-card">
     <div class="auth-tabs"><a class="auth-tab{% if auth_mode == 'login' %} is-active{% endif %}" href="{{ url_for('frontend_page', page='account/login') }}">Нэвтрэх</a><a class="auth-tab{% if auth_mode == 'register' %} is-active{% endif %}" href="{{ url_for('frontend_page', page='account/register') }}">Бүртгүүлэх</a></div>
-    <div class="auth-heading"><h2 id="auth-title">{% if auth_mode == 'register' %}Өөрийн замаа эхлүүл.{% else %}Тавтай морил.{% endif %}</h2><p id="auth-subtitle">{% if auth_mode == 'register' %}Үнэгүй бүртгэлээр ахицаа Supabase-д хадгал.{% else %}Суралцах орон зайдаа үргэлжлүүлэн нэвтэр.{% endif %}</p></div>
+    <div class="auth-heading"><h2 id="auth-title">{% if auth_mode == 'register' %}Өөрийн замаа эхлүүл.{% else %}Тавтай морил.{% endif %}</h2><p id="auth-subtitle">{% if auth_mode == 'register' %}Үнэгүй бүртгэлээр ахицаа аюулгүй хадгал.{% else %}Суралцах орон зайдаа үргэлжлүүлэн нэвтэр.{% endif %}</p></div>
     <button class="google-button" id="google-login" type="button"><span class="google-g">G</span><span>Google-ээр үргэлжлүүлэх</span></button>
     <div class="auth-divider"><span>эсвэл имэйлээр</span></div>
     <form id="auth-form" novalidate>

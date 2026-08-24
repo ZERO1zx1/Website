@@ -72,6 +72,14 @@ def test_canonical_summary_returns_catalog_shape(client):
     assert payload['overall_percent'] == 0
     assert {course['course_id'] for course in payload['courses']} == {'python', 'html', 'css', 'javascript'}
     assert payload['completed_lesson_keys'] == []
+    python_course = next(course for course in payload['courses'] if course['course_id'] == 'python')
+    assert python_course['next_lesson_slug'] == 'py-start'
+    assert python_course['next_lesson_title'] == 'Python гэж юу вэ?'
+    assert payload['next_recommended'] == {
+        'course_id': 'python',
+        'lesson_slug': 'py-start',
+        'lesson_title': 'Python гэж юу вэ?',
+    }
 
 
 def test_course_progress_validation_and_identity_scope(client):
@@ -81,6 +89,32 @@ def test_course_progress_validation_and_identity_scope(client):
     assert invalid.status_code == 400
     assert valid.status_code == 200
     assert valid.get_json()["course_progress"]["user_id"] == FakeDB.user["auth_user_id"]
+
+
+def test_quiz_self_check_scores_answer_server_side(client):
+    correct = client.post(
+        "/api/learning/quiz-attempts",
+        json={
+            "course_slug": "python",
+            "lesson_slug": "py-start",
+            "answer": "source code bytecode runtime execution",
+        },
+    )
+    incorrect = client.post(
+        "/api/learning/quiz-attempts",
+        json={
+            "course_slug": "python",
+            "lesson_slug": "py-start",
+            "answer": "CSS stylesheet",
+        },
+    )
+
+    assert correct.status_code == 201
+    assert correct.get_json()["quiz_attempt"]["correct"] is True
+    assert correct.get_json()["quiz_attempt"]["score"] == 1
+    assert incorrect.status_code == 201
+    assert incorrect.get_json()["quiz_attempt"]["correct"] is False
+    assert incorrect.get_json()["quiz_attempt"]["score"] == 0
 
 
 def test_quiz_score_cannot_exceed_total(client):
