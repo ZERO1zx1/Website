@@ -68,6 +68,35 @@ def award_xp(user_id: int, event_key: str, event_type: str, xp_amount: int, sour
     return {"awarded": True, "xp_amount": xp_amount, "total_xp": total, "level": _level_for_xp(total), "profile": result.data[0] if result.data else None}
 
 
+def _award_eligible_badges(user_id: int, profile: dict, problem: dict):
+    """Evaluate badge rules after an accepted event; user_badges is unique."""
+    badge_rows = db.client.table("badges").select("*").execute().data or []
+    earned_rows = db.client.table("user_badges").select("badge_id").eq("user_id", user_id).execute().data or []
+    earned_ids = {row.get("badge_id") for row in earned_rows}
+    accepted = db.client.table("submissions").select("id").eq("user_id", user_id).eq("status", "accepted").execute().data or []
+    bug_labs = db.client.table("submissions").select("id,problems(content_type)").eq("user_id", user_id).eq("status", "accepted").execute().data or []
+    bug_labs_count = sum(1 for row in bug_labs if (row.get("problems") or {}).get("content_type") == "bug_lab")
+    values = {
+        "accepted_submissions": len(accepted),
+        "streak_days": int(profile.get("current_streak") or 0),
+        "total_xp": int(profile.get("total_xp") or 0),
+        "bug_labs": bug_labs_count,
+    }
+    newly_earned = []
+    for badge in badge_rows:
+        badge_id = badge.get("id")
+        condition = badge.get("condition_type")
+        if badge_id in earned_ids or values.get(condition, 0) < int(badge.get("condition_value") or 1):
+            continue
+        inserted = db.client.table("user_badges").upsert({"user_id": user_id, "badge_id": badge_id}, on_conflict="user_id,badge_id").execute()
+        earned = inserted.data[0] if inserted.data else {"user_id": user_id, "badge_id": badge_id}
+        newly_earned.append({"badge": badge, "earned": earned})
+        bonus = int(badge.get("xp_reward") or 0)
+        if bonus:
+            award_xp(user_id, f"badge:{badge_id}", "badge_earned", bonus, badge_id, {"badge_slug": badge.get("slug")})
+    return newly_earned
+
+
 def award_submission_rewards(user_id: int, submission_id: int, problem: dict, results: dict):
     """Reward only a fully accepted submission; retries remain idempotent."""
     if results.get("status") != "accepted":
@@ -75,7 +104,9 @@ def award_submission_rewards(user_id: int, submission_id: int, problem: dict, re
     xp_amount = int(problem.get("xp_reward") or 80)
     reward = award_xp(user_id, f"submission:{submission_id}", "accepted_submission", xp_amount, submission_id, {"problem_id": problem.get("id")})
     streak = record_activity(user_id, "accepted_submission", submission_id)
-    return {"awarded": reward.get("awarded", False), "xp": reward, "streak": streak}
+    profile = reward.get("profile") or _profile(user_id) or streak
+    badges = _award_eligible_badges(user_id, profile, problem)
+    return {"awarded": reward.get("awarded", False), "xp": reward, "streak": streak, "badges": badges}
 
 
 def get_summary(user_id: int):
