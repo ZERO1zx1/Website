@@ -12,6 +12,7 @@ from flask_cors import CORS
 from flask_login import LoginManager
 
 from course_data import COURSE_CATALOG
+from learning_experiences import PROJECT_CATALOG, PRACTICE_CHALLENGES, get_challenge, get_project
 
 
 class FlaskSessionUser:
@@ -134,7 +135,7 @@ def create_app(config_name='development'):
 
     @app.route('/<page>', methods=['GET'])
     def frontend_page(page):
-        allowed = {'home', 'dashboard', 'curriculum', 'course', 'lesson', 'workspace', 'auth', 'profile'}
+        allowed = {'home', 'dashboard', 'curriculum', 'course', 'lesson', 'workspace', 'auth', 'profile', 'practice', 'project'}
         if page not in allowed:
             return {'error': 'Not found'}, 404
         if page == 'home':
@@ -148,9 +149,21 @@ def create_app(config_name='development'):
             lesson = next((item for module in course['modules'] for item in module['lessons'] if item['id'] == lesson_id), course['modules'][0]['lessons'][0])
             lesson = dict(lesson)
             lesson['unit'] = next((module['title'] for module in course['modules'] if any(item['id'] == lesson['id'] for item in module['lessons'])), 'Module')
-            return render_template('lesson.html', page='lesson', course=course, lesson=lesson, backend_enabled=not frontend_only)
+            lesson_challenges = [item for item in PRACTICE_CHALLENGES if item['course_id'] == course['id'] and item['lesson_id'] == lesson_id]
+            return render_template('lesson.html', page='lesson', course=course, lesson=lesson, lesson_challenges=lesson_challenges, backend_enabled=not frontend_only)
         if page == 'workspace':
-            return render_template('workspace.html', page='workspace', course_catalog=COURSE_CATALOG, backend_enabled=not frontend_only)
+            selected_challenge = get_challenge(request.args.get('challenge', ''))
+            return render_template('workspace.html', page='workspace', course_catalog=COURSE_CATALOG, practice_challenges=PRACTICE_CHALLENGES, selected_challenge=selected_challenge, backend_enabled=not frontend_only)
+        if page == 'practice':
+            course_id = request.args.get('course', 'all')
+            difficulty = request.args.get('difficulty', 'all')
+            challenges = [item for item in PRACTICE_CHALLENGES if course_id in {'all', item['course_id']} and difficulty in {'all', item['difficulty']}]
+            return render_template('practice.html', page='practice', challenges=challenges, projects=PROJECT_CATALOG, selected_course=course_id, selected_difficulty=difficulty, backend_enabled=not frontend_only)
+        if page == 'project':
+            project = get_project(request.args.get('id', PROJECT_CATALOG[0]['id']))
+            if not project:
+                return {'error': 'Project not found'}, 404
+            return render_template('project.html', page='project', project=project, backend_enabled=not frontend_only)
         return render_template(f'{page}.html', page=page, backend_enabled=not frontend_only)
 
     @app.route('/api/public-config', methods=['GET'])

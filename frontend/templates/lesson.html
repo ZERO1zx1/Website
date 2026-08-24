@@ -83,6 +83,13 @@
           <button class="button button-ghost" type="button" data-completion-button>Дууссанд тооцох</button>
         </div>
       </div>
+
+      {% if lesson_challenges %}
+      <div class="lesson-section lesson-challenge-section" id="challenges">
+        <div class="section-heading compact"><div><span class="eyebrow">PRACTICE SET</span><h2>Ойлгосноо кодоор батал.</h2></div><span class="course-status">{{ lesson_challenges|length }} дасгал</span></div>
+        <div class="lesson-challenge-list">{% for challenge in lesson_challenges %}<article class="lesson-challenge-card"><div><span class="status-badge">{{ challenge.type|replace('_', ' ')|title }}</span><h3>{{ challenge.title }}</h3><p>{{ challenge.description }}</p></div><div class="lesson-challenge-footer"><span>+{{ challenge.xp }} XP · Hint-тэй</span><a class="button button-dark button-small" href="{{ url_for('frontend_page', page='workspace') }}?challenge={{ challenge.id }}">Эхлэх <span>→</span></a></div></article>{% endfor %}</div>
+      </div>
+      {% endif %}
     </article>
 
     <aside class="lesson-aside">

@@ -317,77 +317,6 @@ def google_callback():
         return redirect(f"{_frontend_url()}?auth_error=google_oauth_failed")
 
 
-@auth_bp.route("/register", methods=["POST"])
-def register():
-    data = request.get_json(silent=True) or {}
-    if not data.get("email") or not data.get("password") or not data.get("name"):
-        return error_response(
-            "missing_fields",
-            "Email, password and name are required.",
-            "Имэйл, нууц үг болон нэр заавал шаардлагатай.",
-            400,
-        )
-    if len(data["password"]) < 8:
-        return error_response(
-            "weak_password",
-            "Password must contain at least 8 characters.",
-            "Нууц үг хамгийн багадаа 8 тэмдэгттэй байна.",
-            400,
-        )
-    if db.get_user_by_email(data["email"].strip().lower()):
-        return error_response(
-            "email_registered",
-            "This email is already registered.",
-            "Энэ имэйл аль хэдийн бүртгэгдсэн байна.",
-            409,
-        )
-    try:
-        user = db.create_user(
-            email=data["email"].strip().lower(),
-            password=data["password"],
-            name=data["name"].strip(),
-            role="student",
-        )
-        return _session_response({
-            "message": "User registered successfully.",
-            "message_mn": "Хэрэглэгч амжилттай бүртгэгдлээ.",
-            "token": _issue_token(user),
-            "user": _public_user(user),
-        }, 201)
-    except Exception:
-        return error_response(
-            "registration_failed",
-            "The account could not be created.",
-            "Бүртгэл үүсгэхэд алдаа гарлаа.",
-            500,
-        )
-
-
-@auth_bp.route("/login", methods=["POST"])
-def login():
-    data = request.get_json(silent=True) or {}
-    if not data.get("email") or not data.get("password"):
-        return error_response(
-            "missing_credentials",
-            "Email and password are required.",
-            "Имэйл болон нууц үг заавал шаардлагатай.",
-            400,
-        )
-    try:
-        auth_response = db.sign_in_with_password(
-            data["email"].strip().lower(), data["password"]
-        )
-        payload = _external_auth_payload(auth_response, "email")
-    except Exception:
-        return error_response(
-            "invalid_credentials",
-            "Invalid email or password.",
-            "Имэйл эсвэл нууц үг буруу байна.",
-            401,
-        )
-    return _session_response(payload)
-
-
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
     response = make_response({"message": "Signed out."}, 200)
@@ -399,9 +328,3 @@ def logout():
 @token_required
 def get_current_user(current_user):
     return {"user": _public_user(current_user)}, 200
-
-
-@auth_bp.route("/logout", methods=["POST"])
-def logout():
-    """The browser clears its local tokens; server-side sessions remain stateless."""
-    return {"message": "Signed out.", "message_mn": "Амжилттай гарлаа."}, 200

@@ -31,6 +31,7 @@
       <a class="{% if page == 'home' %}is-active{% endif %}" href="{{ url_for('frontend_page', page='home') }}">Нүүр</a>
       <a class="{% if page in ['curriculum','course','lesson'] %}is-active{% endif %}" href="{{ url_for('frontend_page', page='curriculum') }}">Сурах зам</a>
       <a class="{% if page == 'workspace' %}is-active{% endif %}" href="{{ url_for('frontend_page', page='workspace') }}">Кодын лаборатори</a>
+      <a class="{% if page == 'practice' %}is-active{% endif %}" href="{{ url_for('frontend_page', page='practice') }}">Дадлага</a>
       <a class="{% if page == 'dashboard' %}is-active{% endif %}" href="{{ url_for('frontend_page', page='dashboard') }}">Ахиц</a>
     </nav>
     <div class="header-actions">
@@ -44,6 +45,7 @@
     <a href="{{ url_for('frontend_page', page='home') }}">Нүүр</a>
     <a href="{{ url_for('frontend_page', page='curriculum') }}">Сурах зам</a>
     <a href="{{ url_for('frontend_page', page='workspace') }}">Кодын лаборатори</a>
+    <a href="{{ url_for('frontend_page', page='practice') }}">Дадлагын талбар</a>
     <a href="{{ url_for('frontend_page', page='dashboard') }}">Миний ахиц</a>
     <a href="{{ url_for('frontend_page', page='profile') }}">Профайл</a>
   </div>
