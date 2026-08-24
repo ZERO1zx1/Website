@@ -167,7 +167,10 @@ def _email_confirmation_url() -> str:
 
 
 def _google_callback_url() -> str:
-    return f"{_frontend_url().rstrip('/')}/api/auth/google/callback"
+    return os.getenv(
+        "GOOGLE_OAUTH_REDIRECT_URL",
+        f"{_frontend_url().rstrip('/')}/api/auth/google/callback",
+    ).rstrip("/")
 
 
 def _google_authorization_url() -> str:
