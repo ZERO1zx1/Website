@@ -77,7 +77,7 @@
       <div class="lesson-task" id="practice">
         <span class="task-number">MINI PRACTICE</span>
         <h2>{{ lesson.task }}</h2>
-        <p>Кодын лабораторид ороод өөрийн шийдлийг бич. Дууссаны дараа ахицдаа тэмдэглэвэл таны явц Supabase-д найдвартай хадгалагдана.</p>
+        <p>Кодын лабораторид ороод өөрийн шийдлийг бич. Дууссаны дараа ахицдаа тэмдэглэвэл CodeCraft-ийн өөрийн бүртгэлтэй холбогдон найдвартай хадгалагдана.</p>
         <div class="button-row">
           <a class="button button-primary" href="{{ url_for('frontend_page', page='workspace') }}?course={{ course.id }}&lesson={{ lesson.id }}">Лабораторид нээх <span>→</span></a>
           <button class="button button-ghost" type="button" data-completion-button>Дууссанд тооцох</button>
@@ -97,7 +97,7 @@
         <span class="eyebrow">ТАНЫ АХИЦ</span>
         <strong data-lesson-progress-value>0 <small>/ {{ course.lesson_count }}</small></strong>
         <div class="progress-bar">
-          <i data-lesson-progress-bar style="width:0%"></i>
+          <i data-lesson-progress-bar></i>
         </div>
         <span data-lesson-progress-status>Ахиц ачаалж байна…</span>
       </div>

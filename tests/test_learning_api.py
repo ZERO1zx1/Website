@@ -72,6 +72,14 @@ def test_canonical_summary_returns_catalog_shape(client):
     assert payload['overall_percent'] == 0
     assert {course['course_id'] for course in payload['courses']} == {'python', 'html', 'css', 'javascript'}
     assert payload['completed_lesson_keys'] == []
+    python_course = next(course for course in payload['courses'] if course['course_id'] == 'python')
+    assert python_course['next_lesson_slug'] == 'py-start'
+    assert python_course['next_lesson_title'] == 'Python гэж юу вэ?'
+    assert payload['next_recommended'] == {
+        'course_id': 'python',
+        'lesson_slug': 'py-start',
+        'lesson_title': 'Python гэж юу вэ?',
+    }
 
 
 def test_course_progress_validation_and_identity_scope(client):

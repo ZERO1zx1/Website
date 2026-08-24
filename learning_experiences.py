@@ -253,6 +253,12 @@ PROJECT_CATALOG = [
 ]
 
 
+from learning_experience_extensions import EXTRA_PRACTICE_CHALLENGES, EXTRA_PROJECTS
+
+PRACTICE_CHALLENGES.extend(EXTRA_PRACTICE_CHALLENGES)
+PROJECT_CATALOG.extend(EXTRA_PROJECTS)
+
+
 def get_challenge(challenge_id: str):
     return next((item for item in PRACTICE_CHALLENGES if item["id"] == challenge_id), None)
 

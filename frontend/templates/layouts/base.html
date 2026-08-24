@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="mn" data-backend="{{ 'enabled' if backend_enabled else 'demo' }}">
+<html lang="mn" data-backend="{{ 'enabled' if backend_enabled else 'demo' }}" data-api-base="{{ request.script_root }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,14 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-  <script>
-    (function() {
-      var stored = localStorage.getItem('codecraft_theme');
-      var resolved = stored === 'system' || !stored ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : stored;
-      document.documentElement.dataset.theme = resolved;
-      if (stored) { localStorage.setItem('codecraft_theme', stored); }
-    })();
-  </script>
+  <script src="{{ url_for('static', filename='js/core/theme.js') }}"></script>
   {% block head %}{% endblock %}
 </head>
 <body class="page-{{ page|default('home') }}">
@@ -61,7 +54,7 @@
     <div class="footer-bottom"><span>© 2026 CodeCraft Academy</span><span>HTML · CSS · JavaScript · Python</span></div>
   </footer>
   <div class="toast" data-toast role="status" aria-live="polite"></div>
-  <script>window.CODECRAFT_CONFIG = { apiBase: {{ request.script_root|tojson }}, backendEnabled: {{ backend_enabled|tojson }} };</script>
+  <script src="{{ url_for('static', filename='js/core/config.js') }}" defer></script>
   <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
   {% block scripts %}{% endblock %}
 </body>

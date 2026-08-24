@@ -20,7 +20,7 @@
     text('[data-stat-completed-caption]', `${Number(summary.total_lessons) || 0} хичээлээс`);
     text('[data-stat-courses]', courses.length);
     text('[data-stat-overall-caption]', completed ? 'Таны хадгалсан бодит ахиц' : 'Эхний хичээлээ эхлүүлээрэй');
-    text('[data-sync-status]', 'Supabase-д синк хийгдсэн');
+    text('[data-sync-status]', 'Сервертэй синк хийгдсэн');
     text('[data-focus-count]', `${Math.min(completed, 1)} / 1`);
 
     const next = courses.find((course) => clampPercent(course.progress_percent) < 100) || courses[0];
@@ -127,11 +127,10 @@
     list.append(message);
   };
 
-  if (!localStorage.getItem('codecraft_token')) {
-    showUnauthenticated();
-    return;
-  }
   Promise.all([window.codecraftApi('/api/learning/summary'), window.codecraftApi('/api/learning/gamification')])
     .then(([summary, gamification]) => { renderSummary(summary); renderGamification(gamification); })
-    .catch(showError);
+    .catch((error) => {
+      if (error?.status === 401 || error?.message?.includes('session')) showUnauthenticated();
+      else showError(error);
+    });
 })();

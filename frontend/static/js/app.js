@@ -57,7 +57,9 @@
       payload = {message_mn: `Сервер JSON биш response буцаалаа (HTTP ${response.status}).`};
     }
     if (!response.ok) {
-      throw new Error(payload.message_mn || payload.error?.message_mn || payload.error || 'Хүсэлтийг гүйцэтгэх боломжгүй байна.');
+      const error = new Error(payload.message_mn || payload.error?.message_mn || payload.error || 'Хүсэлтийг гүйцэтгэх боломжгүй байна.');
+      error.status = response.status;
+      throw error;
     }
     return payload;
   };

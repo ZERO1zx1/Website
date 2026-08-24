@@ -3,7 +3,7 @@
 {% block title %}Профайл — CodeCraft Academy{% endblock %}
 {% block content %}
 <section class="profile-page container-wide" data-profile-page data-home-url="{{ url_for('frontend_page', page='home') }}" data-login-url="{{ url_for('frontend_page', page='auth') }}?mode=login">
-  <div class="page-hero simple"><div><span class="eyebrow">МИНИЙ ПРОФАЙЛ</span><h1>Суралцах орон зайгаа өөртөө тохируул.</h1><p>Таны бүртгэл болон хичээлийн явц Supabase Auth-д холбогдсон байна.</p></div></div>
+  <div class="page-hero simple"><div><span class="eyebrow">МИНИЙ ПРОФАЙЛ</span><h1>Суралцах орон зайгаа өөртөө тохируул.</h1><p>Таны бүртгэл CodeCraft-ийн өөрийн auth, харин хичээлийн явц Supabase database-д аюулгүй хадгалагдана.</p></div></div>
   <div class="profile-grid">
     <section class="panel profile-card"><div class="profile-avatar" data-profile-initials>CC</div><div><span class="eyebrow" data-profile-role>СУРАЛЦАГЧ</span><h2 data-profile-name>CodeCraft суралцагч</h2><p data-profile-email>Нэвтэрсний дараа таны имэйл харагдана.</p></div><button class="button button-ghost button-small" data-logout type="button">Гарах</button></section>
     <section class="panel settings-card"><div class="panel-header"><div><span class="eyebrow">ТОХИРГОО</span><h2>Суралцах preferences</h2></div><span class="saved-badge" data-save-status>Ачаалж байна…</span></div>
@@ -11,7 +11,7 @@
       <label class="setting-row"><span><strong>Хэл</strong><small>Хичээлийн интерфэйсийн үндсэн хэл</small></span><select data-preference-locale><option value="mn">Монгол</option><option value="en">English</option></select></label>
     </section>
     <section class="panel profile-progress"><div class="panel-header"><div><span class="eyebrow">ТАНЫ СУРАЛЦАХ ЗАМ</span><h2>Дуусгасан хичээлүүд</h2></div><a href="{{ url_for('frontend_page', page='curriculum') }}">Хөтөлбөр харах →</a></div><div data-profile-courses><p class="empty-state">Ахиц ачаалж байна…</p></div></section>
-    <section class="panel role-card"><span class="eyebrow">ACCOUNT SECURITY</span><h2>Supabase Auth хамгаалалт</h2><p>Таны имэйл, нууц үг болон Google нэвтрэлтийг Supabase Auth удирдана. CodeCraft нь зөвхөн суралцах profile болон явцыг хадгална.</p><a class="button button-dark button-small" href="{{ url_for('frontend_page', page='auth') }}">Нэвтрэлтийн хуудас <span>→</span></a></section>
+    <section class="panel role-card"><span class="eyebrow">ACCOUNT SECURITY</span><h2>CodeCraft account security</h2><p>Таны имэйл, нууц үг болон Google нэвтрэлтийг CodeCraft backend өөрөө удирдана. Supabase нь зөвхөн profile, progress болон gamification data хадгална.</p><a class="button button-dark button-small" href="{{ url_for('frontend_page', page='auth') }}">Нэвтрэлтийн хуудас <span>→</span></a></section>
   </div>
 </section>
 {% endblock %}

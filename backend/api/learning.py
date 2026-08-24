@@ -95,21 +95,33 @@ def _catalog_summary(progress):
         lessons = [lesson for module in course.get("modules", []) for lesson in module.get("lessons", [])]
         course_completed = sum((course_slug, str(lesson.get("id"))) in completed for lesson in lessons)
         total = len(lessons)
+        next_lesson = next(
+            (lesson for lesson in lessons if (course_slug, str(lesson.get("id"))) not in completed),
+            None,
+        )
         courses.append({
             "course_id": course_slug,
             "title": course.get("title", course_slug),
             "total_lessons": total,
             "completed_lessons": course_completed,
             "progress_percent": round((course_completed / total) * 100) if total else 0,
+            "next_lesson_slug": next_lesson.get("id") if next_lesson else None,
+            "next_lesson_title": next_lesson.get("title") if next_lesson else None,
         })
     total_lessons = sum(item["total_lessons"] for item in courses)
     completed_lessons = sum(item["completed_lessons"] for item in courses)
+    recommended = next((course for course in courses if course.get("next_lesson_slug")), None)
     return {
         "courses": courses,
         "completed_lessons": completed_lessons,
         "total_lessons": total_lessons,
         "overall_percent": round((completed_lessons / total_lessons) * 100) if total_lessons else 0,
         "completed_lesson_keys": [f"{course}:{lesson}" for course, lesson in sorted(completed)],
+        "next_recommended": {
+            "course_id": recommended["course_id"],
+            "lesson_slug": recommended["next_lesson_slug"],
+            "lesson_title": recommended["next_lesson_title"],
+        } if recommended else None,
     }
 
 
