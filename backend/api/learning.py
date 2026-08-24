@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from backend.api.auth import token_required
 from backend.db import db
+from backend.services.gamification import get_summary
 from backend.rbac import error_response
 
 learning_bp = Blueprint("learning", __name__)
@@ -107,6 +108,20 @@ def lesson_progress(current_user):
     completed = values.pop("completed")
     result = db.set_lesson_progress(user_id, values, completed)
     return {"lesson_progress": result, "completed": completed}, 200
+
+
+@learning_bp.route("/gamification", methods=["GET"])
+@token_required
+def gamification(current_user):
+    try:
+        return get_summary(int(current_user["id"])), 200
+    except Exception:
+        return error_response(
+            "gamification_unavailable",
+            "Gamification summary is temporarily unavailable.",
+            "XP болон badge-ийн мэдээлэл түр боломжгүй байна.",
+            503,
+        )
 
 
 @learning_bp.route("/quiz-attempts", methods=["GET", "POST"])
