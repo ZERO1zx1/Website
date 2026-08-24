@@ -6,7 +6,7 @@ CodeCraft Academy нь Монгол хэл дээрх Flask + Jinja олон х�
 
 - Domain-based frontend: `layouts`, `pages`, `account`, `learning`, `admin`, `components` template folder-ууд
 - Нүүр, хөтөлбөр, курс, хичээл, workspace, dashboard, auth, profile гэсэн responsive Jinja хуудсууд
-- `Practice Grounds`, `Bug Lab`, `Guided Project`, `Portfolio Project` бүхий learning path; Python, HTML, CSS, JavaScript-ийн 15 challenge
+- `Practice Grounds`, `Bug Lab`, `Guided Project`, `Portfolio Project` бүхий learning path; Python, HTML, CSS, JavaScript-ийн 35 challenge, 58 lesson, 6 project
 - Admin Content Studio-оор lesson/challenge, starter code, automated test, hidden test, hint, XP болон draft metadata үүсгэнэ
 - Python/JavaScript sandbox grading, HTML/CSS static requirement grading, submission queue ба accepted result feedback
 - Server-side XP event ledger, current/longest streak, badge evaluator болон dashboard summary
@@ -17,13 +17,13 @@ CodeCraft Academy нь Монгол хэл дээрх Flask + Jinja олон х�
 
 ## Local ажиллуулах
 
-Python 3.12, Git шаардлагатай.
+Python 3.12+ болон Git шаардлагатай. Windows дээр Python суулгасны дараа `py --version` командаар шалгана.
 
 ```bash
 git clone https://github.com/ZERO1zx1/Website.git
 cd Website
 python -m venv .venv
-# Windows: .venv\Scripts\activate
+# Windows PowerShell: .\.venv\Scripts\Activate.ps1
 # macOS/Linux: source .venv/bin/activate
 python -m pip install -r requirements.txt
 cp .env.example .env
@@ -49,7 +49,7 @@ Credential бэлэн биш бол `.env`-д `FRONTEND_ONLY=true` тавьж UI
 
 ## Supabase
 
-Шинэ project дээр `backend/db/migrations` файлуудыг дараах дарааллаар ажиллуулна: `001_auth_roles.sql`, `002_learning_platform.sql`, `003_external_auth_identities.sql`, `004_content_studio.sql`, `005_gamification.sql`, `006_local_app_auth.sql`. `006_local_app_auth.sql` нь CodeCraft-ийн `app_auth_identities` хүснэгт үүсгэж, password hash болон local app UUID-г learning persistence-тэй холбодог. Supabase Auth хэрэглэгч үүсгэхгүй.
+Шинэ project дээр `backend/db/migrations` файлуудыг дараах дарааллаар ажиллуулна: `001_auth_roles.sql`, `002_learning_platform.sql`, `003_external_auth_identities.sql`, `004_content_studio.sql`, `005_gamification.sql`, `006_local_app_auth.sql`, `007_catalog_attempts.sql`. `006_local_app_auth.sql` нь CodeCraft-ийн `app_auth_identities` хүснэгт үүсгэж, password hash болон local app UUID-г learning persistence-тэй холбодог. Supabase Auth хэрэглэгч үүсгэхгүй.
 
 `005_gamification.sql` нь XP ledger, learning day, streak profile, badge definition болон user badge хүснэгтүүдийг үүсгэнэ. `006_local_app_auth.sql` apply хийгдээгүй үед local Login/Register database auth ажиллахгүй.
 
@@ -91,6 +91,8 @@ Production-д `FLASK_ENV=production`, HTTPS, managed secrets, migration backup, 
 - Execute 503: sandbox URL/token тохируулаагүй; host execution руу fallback хийхгүй.
 - Google login буцахгүй: Supabase redirect URL болон `GOOGLE_OAUTH_REDIRECT_URL` ижил эсэхийг шалга.
 - Progress хадгалагдахгүй: `006_local_app_auth.sql` migration ажилласан, хэрэглэгчийн CodeCraft app identity болон database connection-ийг шалга.
+- Windows дээр `ModuleNotFoundError: No module named 'yaml'`: PowerShell дээр `.venv\\Scripts\\Activate.ps1` идэвхжүүлээд `python -m pip install -r requirements.txt` ажиллуул. `requirements.txt` дотор `PyYAML` байгаа.
+- `RequestsDependencyWarning`: global Python package-уудыг холихгүйгээр шинэ virtual environment үүсгэж, `python -m pip install --upgrade pip` дараа `python -m pip install -r requirements.txt` ажиллуул.
 
 Нэгтгэлийн mapping: [docs/repository-consolidation-audit.md](docs/repository-consolidation-audit.md).
 
