@@ -86,6 +86,8 @@ def test_register_hashes_password_and_ignores_client_role(monkeypatch):
 
     assert response.status_code == 201
     assert response.get_json()['token']
+    assert 'codecraft_session=' in response.headers['Set-Cookie']
+    assert 'HttpOnly' in response.headers['Set-Cookie']
     registered_payload = jwt.decode(response.get_json()['token'], 'test-secret-key-with-at-least-32-bytes', algorithms=['HS256'])
     assert registered_payload['role'] == 'student'
     created = fake_db.get_user_by_email('student@example.com')

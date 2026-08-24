@@ -275,11 +275,11 @@ def register():
     try:
         user = db.create_user(email=email, password=password, name=name, role="student")
         payload = {"provider": "password", "token": _issue_token(user), "user": _public_user(user)}
-        return {
+        return _session_response({
             "message": "Account created successfully.",
             "message_mn": "Бүртгэл амжилттай үүслээ.",
             **payload,
-        }, 201
+        }, 201)
     except Exception as exc:
         import sys
         print(f"REGISTER_ERROR: {exc}", file=sys.stderr)
