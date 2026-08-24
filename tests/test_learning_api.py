@@ -91,6 +91,32 @@ def test_course_progress_validation_and_identity_scope(client):
     assert valid.get_json()["course_progress"]["user_id"] == FakeDB.user["auth_user_id"]
 
 
+def test_quiz_self_check_scores_answer_server_side(client):
+    correct = client.post(
+        "/api/learning/quiz-attempts",
+        json={
+            "course_slug": "python",
+            "lesson_slug": "py-start",
+            "answer": "source code bytecode runtime execution",
+        },
+    )
+    incorrect = client.post(
+        "/api/learning/quiz-attempts",
+        json={
+            "course_slug": "python",
+            "lesson_slug": "py-start",
+            "answer": "CSS stylesheet",
+        },
+    )
+
+    assert correct.status_code == 201
+    assert correct.get_json()["quiz_attempt"]["correct"] is True
+    assert correct.get_json()["quiz_attempt"]["score"] == 1
+    assert incorrect.status_code == 201
+    assert incorrect.get_json()["quiz_attempt"]["correct"] is False
+    assert incorrect.get_json()["quiz_attempt"]["score"] == 0
+
+
 def test_quiz_score_cannot_exceed_total(client):
     response = client.post(
         "/api/learning/quiz-attempts",
